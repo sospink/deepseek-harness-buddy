@@ -1006,6 +1006,12 @@ importers:
 
   packages/buddy/api-drive:
     dependencies:
+      docx-preview:
+        specifier: 0.4.0
+        version: 0.4.0
+      jszip:
+        specifier: 3.10.1
+        version: 3.10.1
       pdfjs-dist:
         specifier: 6.2.108
         version: 6.2.108
@@ -1046,6 +1052,9 @@ importers:
 
   packages/buddy/client-ui-drive:
     dependencies:
+      '@deepseek-ai/dsh-util-crypto':
+        specifier: workspace:^
+        version: link:../../util/crypto
       clsx:
         specifier: ^2.0.0
         version: 2.1.1
@@ -14190,6 +14199,9 @@ packages:
   dockerfile-ast@0.7.1:
     resolution: {integrity: sha512-oX/A4I0EhSkGqrFv0YuvPkBUSYp1XiY8O8zAKc8Djglx8ocz+JfOr8gP0ryRMC2myqvDLagmnZaU9ot1vG2ijw==}
 
+  docx-preview@0.4.0:
+    resolution: {integrity: sha512-OdKtE/uj3M4RfGarLkGjahUzRg8/kBp0Sraj1r1NAY1tp/sTpHOBqDrzVf9onMBt9vxP6SdQ6bpLCUCsFwjgcA==}
+
   dom-accessibility-api@0.5.16:
     resolution: {integrity: sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg==}
 
@@ -19767,6 +19779,10 @@ snapshots:
     dependencies:
       vscode-languageserver-textdocument: 1.0.12
       vscode-languageserver-types: 3.18.0
+
+  docx-preview@0.4.0:
+    dependencies:
+      jszip: 3.10.1
 
   dom-accessibility-api@0.5.16: {}
 

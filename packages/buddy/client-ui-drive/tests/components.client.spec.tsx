@@ -2,6 +2,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 const pdfRuntime = vi.hoisted(() => ({ load: vi.fn(() => new Promise(() => undefined)) }))
 vi.mock('../src/client/pdf-runtime.ts', () => ({ loadPdfRuntime: pdfRuntime.load }))
+vi.mock('../src/client/DocxPreview.tsx', () => ({
+  DocxPreview: () => <div aria-label="DOCX 预览">隔离 DOCX 预览</div>,
+}))
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { Context } from '@deepseek-ai/cordis'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
@@ -152,7 +155,7 @@ describe('DriveOverlay', () => {
     fireEvent.click(screen.getByRole('button', { name: '显示已删除文件' }))
     fireEvent.click(screen.getByText('说明.docx'))
     expect(screen.getAllByText('DOCX')).toHaveLength(2)
-    expect(screen.getByText('该格式的在线预览将在后续切片启用。当前可下载原始文件。')).not.toBeNull()
+    expect(screen.getByLabelText('DOCX 预览')).not.toBeNull()
     expect(screen.getByText('—')).not.toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '恢复' }))
     await waitFor(() => { expect(restore).toHaveBeenCalledWith(docx.id) })

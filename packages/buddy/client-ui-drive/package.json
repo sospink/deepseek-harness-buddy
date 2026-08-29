@@ -54,6 +54,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@deepseek-ai/dsh-util-crypto": "workspace:^",
     "clsx": "^2.0.0",
     "mdast-util-from-markdown": "^2.0.3",
     "mdast-util-gfm": "^3.1.0",
@@ -92,6 +93,7 @@
     "@deepseek-ai/dsh-client-ui-slots": "workspace:^",
     "@deepseek-ai/dsh-invariants": "workspace:^",
     "@deepseek-ai/dsh-typert-protocol": "workspace:^",
+    "@deepseek-ai/dsh-util-crypto": "workspace:^",
     "@sospink/dsh-buddy-api-drive": "workspace:^",
     "@testing-library/react": "^16.3.2",
     "@types/mdast": "^4.0.4",

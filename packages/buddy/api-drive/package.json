@@ -50,6 +50,8 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "docx-preview": "0.4.0",
+    "jszip": "3.10.1",
     "pdfjs-dist": "6.2.108",
     "zod": "^4.4.3"
   },

@@ -2,5 +2,5 @@
 # side as of the last confirmed-consistent state. Both languages carry equal authority;
 # after editing either side, bring the other along and re-record with:
 #   pnpm run verify-translation-pairing --write packages/buddy/api-drive/README.md
-README.md: 5a128d3a4720bead655811e3d759500f2c6f20ff
-README.zh.md: 2527e17b9331e69646db9640daffda8a8fc9b8fc
+README.md: a0abf1df827283096ed84c972e4de1d776a33a50
+README.zh.md: c7e3f462e7d508fbc685ce4a35a99de23d8f8fcd

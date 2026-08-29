@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`@sospink/dsh-buddy-api-drive` is the Host browser adapter for `ctx.drive`. It exposes metadata commands and a reconnect-safe full-snapshot stream through generated Typert Remote namespace `drive`, then registers authenticated binary routes for raw uploads, immutable content reads, and pinned PDF.js assets. The package owns browser transport and failure mapping only; the Drive provider remains the authority for admission, metadata, blobs, quotas, audit, and recovery.
+`@sospink/dsh-buddy-api-drive` is the Host browser adapter for `ctx.drive`. It exposes metadata commands and a reconnect-safe full-snapshot stream through generated Typert Remote namespace `drive`, then registers authenticated binary routes for raw uploads, immutable content reads, and pinned PDF.js and DOCX preview assets. The package owns browser transport and failure mapping only; the Drive provider remains the authority for admission, metadata, blobs, quotas, audit, and recovery.
 
 ## Use this package
 
@@ -31,6 +31,10 @@ The generated `ctx.remote.drive` namespace provides `baseline`, `createFolder`, 
 
 `GET|HEAD /api/buddy-drive/assets/pdf.worker-6.2.108.mjs` serves the pinned PDF.js Worker from the installed `pdfjs-dist` package. `GET|HEAD /api/buddy-drive/assets/cmaps/<name>.bcmap` serves only filenames enumerated from that package's packed CMap directory. Both surfaces are authenticated, same-origin, immutable, and `nosniff`; unknown files, nested paths, traversal forms, and unsupported methods are rejected. No PDF runtime or CMap is fetched from a CDN.
 
+### DOCX preview asset routes
+
+`GET|HEAD /api/buddy-drive/assets/docx-preflight-0.4.0.js` serves a self-contained JSZip Worker that rechecks OOXML structure, entry/expanded-byte/compression budgets, unsafe member paths, macros, AltChunk, embedded packages, DTD/entities, and external relationships. `GET|HEAD /api/buddy-drive/assets/docx-runtime-0.4.0.js` serves pinned JSZip plus `docx-preview` UMD bytes for execution only inside the opaque preview iframe. Both routes are authenticated, same-origin, immutable, and `nosniff`; the browser does not use a CDN.
+
 ## Understand the implementation
 
 | File | Role |
@@ -39,7 +43,8 @@ The generated `ctx.remote.drive` namespace provides `baseline`, `createFolder`, 
 | [`src/commands.ts`](src/commands.ts) | Unary command projection and stable `TypertRemoteFailure` mapping |
 | [`src/feed.ts`](src/feed.ts) | Complete baseline traversal and reconnect snapshot generations |
 | [`src/http.ts`](src/http.ts) | Authenticated upload/content/PDF-asset handlers, query validation, ranges, and defensive headers |
-| [`src/pdf-assets.ts`](src/pdf-assets.ts) | Pinned Worker bytes and allowlisted packed CMap lookup/cache |
+| [`src/pdf-assets.ts`](src/pdf-assets.ts) | Pinned PDF Worker bytes and allowlisted packed CMap lookup/cache |
+| [`src/docx-assets.ts`](src/docx-assets.ts) | Self-contained OOXML preflight Worker and iframe-only DOCX runtime bytes |
 | [`src/paths.ts`](src/paths.ts) | Browser-safe public HTTP route constants |
 | [`src/body.ts`](src/body.ts) | Exact bounded raw request-body intake |
 | [`src/types.ts`](src/types.ts) | Browser-safe Remote and HTTP response vocabulary |
@@ -73,6 +78,7 @@ Independent of model requests: Remote calls and browser downloads do not alter a
 - **Raw uploads are buffered by the WebServer route** — the route enforces the Drive file cap but does not yet stream directly into a provider transaction; stage 2 retains the 50 MiB default.
 - **No multi-range response** — one byte range is supported for PDF and ordinary browser reads; multipart ranges reject with `416`.
 - **Pinned PDF.js asset family** — Worker and CMap paths are coupled to `pdfjs-dist@6.2.108`; dependency upgrades must update the versioned Worker path and rerun browser fixtures.
+- **Pinned DOCX asset family** — Worker/Runtime paths are coupled to `docx-preview@0.4.0` and `jszip@3.10.1`; upgrades require re-auditing private JSZip metadata used only by Worker preview budgets and rerunning malicious OOXML fixtures.
 - **Local browser authentication only** — Connection authentication protects the local Web application; enterprise identity and per-file authorization remain stage 5 work.
 
 ### Dev Note

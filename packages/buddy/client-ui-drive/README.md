@@ -19,7 +19,7 @@ The sidebar action opens the Drive and restores focus when the Drive closes. The
 
 Markdown files have a real rendered/source preview backed by the immutable content route and Harness `MarkdownText`. The browser retains at most 2 MiB, cancels stale reads when selection changes, and escapes parsed image markers before rendering so document-authored HTTP(S) images cannot issue requests. Raw HTML remains literal under the Harness renderer.
 
-PDF files use a real PDF.js Canvas viewer backed by the immutable Range route, a pinned same-origin Worker, and authenticated packed CMaps. The viewer keeps one page resident, supports previous/next navigation, 50%–200% zoom, and explicit text search across at most 500 pages. Annotation rendering and scripting layers never mount. Document/page JavaScript actions are detected only to display a blocked warning; absolute HTTP(S) annotations become separate explicit-click links, while dangerous protocols remain absent. DOCX details continue to state explicitly that their preview slice is pending.
+PDF files use a real PDF.js Canvas viewer backed by the immutable Range route, a pinned same-origin Worker, and authenticated packed CMaps. The viewer keeps one page resident, supports previous/next navigation, 50%–200% zoom, and explicit text search across at most 500 pages. Annotation rendering and scripting layers never mount. Document/page JavaScript actions are detected only to display a blocked warning; absolute HTTP(S) annotations become separate explicit-click links, while dangerous protocols remain absent. DOCX files use a two-boundary preview. A dedicated Worker rechecks the OOXML ZIP with a 20 MiB encoded budget, 1,000-entry cap, 64 MiB expanded budget, 100:1 ratio cap, and a 10-second timeout. Only the transferred safe buffer reaches a `sandbox="allow-scripts"` iframe without `allow-same-origin`; its CSP disables network, forms, objects, child frames, and navigation. Pinned `docx-preview` renders there with `renderAltChunks:false` and base64 resources, the iframe sanitizes active elements/attributes, auto-fits fixed Word pages to the details width, and sends only boot/ready/failure plus page count to the parent.
 
 ## Understand the implementation
 
@@ -34,6 +34,8 @@ PDF files use a real PDF.js Canvas viewer backed by the immutable Range route, a
 | [`src/client/PdfPreview.tsx`](src/client/PdfPreview.tsx) | Single-page Canvas viewer, navigation, zoom, search, script warning, and explicit links |
 | [`src/client/pdf-preview.ts`](src/client/pdf-preview.ts) | PDF budgets, Range options, text search, Canvas sizing, and annotation URL policy |
 | [`src/client/pdf-runtime.ts`](src/client/pdf-runtime.ts) | Lazy PDF.js runtime boundary |
+| [`src/client/DocxPreview.tsx`](src/client/DocxPreview.tsx) | Bounded download, Worker preflight, opaque iframe lifecycle, timeout, and status UI |
+| [`src/client/docx-preview.ts`](src/client/docx-preview.ts) | Worker/frame protocol, budgets, CSP srcdoc, sanitizer, and responsive page fitting |
 | [`src/client/locales.ts`](src/client/locales.ts) | Typed Chinese and English product copy |
 
 ## Further Exploration
@@ -60,7 +62,9 @@ Independent of model requests; browser file management never alters a request pr
 
 ## Known Limitations and Deferred Work
 
-- **DOCX remains an explicit placeholder** — Markdown and PDF preview are implemented; isolated DOCX rendering remains a later slice, and originals stay downloadable.
+- **DOCX fidelity is browser-derived** — `docx-preview` preserves common pagination, tables, images, headers/footers, and styles but is not Microsoft Word; complex fields, tracked changes, comments, shapes, and fonts may differ.
+- **DOCX has no parent-visible text/search surface** — the opaque iframe deliberately withholds Word DOM and text from the parent. Semantic extraction/search remains deferred and must use a separately bounded, sanitized Worker pipeline.
+- **DOCX preview budget is stricter than storage admission** — the browser caps encoded DOCX at 20 MiB and expanded content at 64 MiB even though Host storage accepts larger files; oversized originals remain downloadable.
 - **PDF search is page-level** — one search checks at most 500 pages and navigates to the first matching page; it does not yet paint match highlights or expose a text layer.
 - **PDF page virtualization is single-resident** — only the current Canvas page is retained. Thumbnail strips, continuous scrolling, printing, forms, attachments, outlines, and internal destinations remain deferred.
 - **PDF client bundle cost** — PDF.js is inlined into the one Loader-owned `client.js` to avoid unsupported dynamic chunks; the uncompressed Buddy Client artifact is currently about 1.38 MiB.

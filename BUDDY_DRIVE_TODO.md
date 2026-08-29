@@ -24,7 +24,7 @@
 | R3 | 上传角色分工文档 | Drive Core、Upload API、Drive UI | 云盘上传与分类 | Blob Store、`buddy_drive` Domain | Markdown 角色分工样本已从浏览器上传，Host 重启后文件夹、文件和分类仍存在 | 已验收 |
 | R4 | 支持 Markdown | Admission、Markdown Preview | 文件预览面板 | 原文件 Blob | Chrome 已验证真实源码/渲染预览、原始 HTML 字面化且远程图片不发起请求；Safari 尚待验收 | 已实现 |
 | R5 | 支持 PDF | Admission、PDF.js Preview | 文件预览面板 | Range Content Route | Chrome 已验证中文双页 Canvas、搜索跳页、缩放、同源 Worker/CMap、3 个 `206` Range、脚本阻止和外链白名单；Safari 尚待验收 | 已实现 |
-| R6 | 支持 DOCX | Admission、DOCX Preview | 文件预览面板 | OOXML Blob、Preview Worker | OOXML 结构/ZIP Bomb 校验、隔离在线预览 | 进行中 |
+| R6 | 支持 DOCX | Admission、DOCX Preview | 文件预览面板 | OOXML Blob、Preview Worker | Chrome 已验证 Worker OOXML 预检、opaque iframe、中文双页/表格/图片、自动适配宽度、父页面不可读正文且无外网请求；Safari 尚待验收 | 已实现 |
 | R7 | 沟通功能暂不做 | Bundle Composition | 无入口 | 不挂载 Team/Mailbox | Buddy Drive Bundle 仅组合 Drive Local、Drive API 与 Drive UI，浏览器无沟通入口 | 已验收 |
 | R8 | 探索或开发 WorkBuddy 类资料库插件 | 插件评估、Drive Seam | 不适用 | 不适用 | 评估 `dsh-files`、`dsh-file-explorer`、`dsh-univer-office`、MinerU 并记录取舍 | 已实现 |
 | R9 | 后续可持续同步官方 Harness | Fork-owned Packages、窄 Bundle Patch | 不适用 | Git `upstream` | 自有实现限制在 `packages/buddy` 与明确集成点，上游包不被散改 | 进行中 |
@@ -160,8 +160,18 @@
 - [x] Markdown 使用 Harness `MarkdownText`，提供源码/预览切换并默认禁止远程图片。
 - [x] PDF.js 支持分页、缩放、搜索、单页虚拟化和 Range Read。
 - [x] 禁止 PDF 内嵌 JavaScript，外链必须显式点击。
-- [ ] DOCX 使用隔离 iframe/Document 和 `docx-preview`，关闭 AltChunk 和外部资源。
-- [ ] DOCX 解析运行于 Worker，具备超时和资源限制。
+
+### 阶段 3C DOCX 隔离预览实现（2026-08-29）
+
+- `docx-preview@0.4.0` 的 `parseAsync` 依赖 DOMParser，WordDocument 不可 Structured Clone；最终边界为 Worker OOXML 安全预检 + opaque-origin sandbox iframe 内完整视觉解析，而非虚假声明整个排版引擎运行在 Worker。
+- Host 提供认证同源固定版本 Preflight Worker 与 iframe Runtime Route；Worker 自包含 JSZip，执行 20 MiB 编码、1,000 Entries、64 MiB Expanded、100:1 Ratio 和 10 秒超时预算，并拒绝路径穿越、宏、AltChunk、ActiveX/Embeddings、DTD/Entity、External Relationship 与嵌入包。
+- iframe 只有 `sandbox="allow-scripts"`，没有 `allow-same-origin`；CSP 设置 `connect-src 'none'`、`form-action 'none'`、`object/frame/child-src 'none'`。`docx-preview` 使用 `renderAltChunks:false`、`useBase64URL:true`，渲染后清除主动元素/属性。
+- 父页面只接受绑定 Nonce 的 boot/ready/failure 与页数，不接收 Word 正文或 DOM；20 MiB 下载、10 秒 Preflight、15 秒 Render Timeout 均可取消，原文件下载始终独立。
+- 固定 Word 纸张通过 iframe 内 ResizeObserver 自动缩放：真实 Fixture 从 816px 缩至约 290px，父 iframe `bodyScrollWidth` 等于 314px 可用宽度，无横向裁切。
+- Chrome 中文双页 Fixture 已验证：角色表格、列表、分页和内嵌 PNG 真实渲染；父页面读取 iframe Document/Origin 被浏览器隔离；网络仅出现 Content、Runtime、Worker 三个 Drive 请求；控制台 `0 warning/0 error`。Safari 证据仍待补充。
+
+- [x] DOCX 使用 opaque-origin sandbox iframe 和 `docx-preview`，关闭 AltChunk 和外部资源。
+- [x] DOCX OOXML 安全预检运行于 Worker，视觉解析在 opaque iframe 中运行；两侧均具备超时和资源限制。
 - [ ] Mammoth 仅用于受限文本提取，输出必须清洗，不作为主视觉预览。
 - [ ] 预览失败不能影响原始 Blob 下载和其他文件预览。
 

@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 摘要
 
-`@sospink/dsh-buddy-api-drive` 是 `ctx.drive` 的 Host 浏览器 Adapter。它通过生成的 Typert Remote `drive` Namespace 暴露元数据命令和可重连完整快照流，并注册认证二进制路由，处理原始上传、不可变内容读取和固定版本 PDF.js 资源。本包只拥有浏览器传输和失败映射；Drive Provider 仍然是准入、元数据、Blob、配额、审计和恢复的权威。
+`@sospink/dsh-buddy-api-drive` 是 `ctx.drive` 的 Host 浏览器 Adapter。它通过生成的 Typert Remote `drive` Namespace 暴露元数据命令和可重连完整快照流，并注册认证二进制路由，处理原始上传、不可变内容读取和固定版本 PDF.js 与 DOCX 预览资源。本包只拥有浏览器传输和失败映射；Drive Provider 仍然是准入、元数据、Blob、配额、审计和恢复的权威。
 
 ## 使用本包
 
@@ -31,6 +31,10 @@ kind: "package-reference"
 
 `GET|HEAD /api/buddy-drive/assets/pdf.worker-6.2.108.mjs` 从已安装的 `pdfjs-dist` 包提供固定版本 PDF.js Worker。`GET|HEAD /api/buddy-drive/assets/cmaps/<name>.bcmap` 只提供该包 Packed CMap 目录中枚举到的文件名。两个 Surface 都要求认证、保持同源、使用 Immutable 缓存并设置 `nosniff`；未知文件、嵌套路径、Traversal 形式和不支持的方法都会被拒绝。PDF Runtime 和 CMap 均不从 CDN 获取。
 
+### DOCX 预览资源路由
+
+`GET|HEAD /api/buddy-drive/assets/docx-preflight-0.4.0.js` 提供自包含 JSZip Worker，重新检查 OOXML 结构、条目/解压字节/压缩比预算、不安全 Member Path、宏、AltChunk、嵌入包、DTD/Entity 和 External Relationship。`GET|HEAD /api/buddy-drive/assets/docx-runtime-0.4.0.js` 提供固定版本 JSZip 与 `docx-preview` UMD 字节，只在 opaque 预览 iframe 内执行。两个路由均要求认证、保持同源、使用 Immutable 缓存并设置 `nosniff`；浏览器不使用 CDN。
+
 ## 实现说明
 
 | 文件 | 职责 |
@@ -39,7 +43,8 @@ kind: "package-reference"
 | [`src/commands.ts`](src/commands.ts) | Unary Command 投影和稳定 `TypertRemoteFailure` 映射 |
 | [`src/feed.ts`](src/feed.ts) | 完整 Baseline 遍历和可重连 Snapshot Generation |
 | [`src/http.ts`](src/http.ts) | 认证上传/内容/PDF 资源 Handler、Query 校验、Range 和防御响应头 |
-| [`src/pdf-assets.ts`](src/pdf-assets.ts) | 固定 Worker 字节和白名单 Packed CMap 查找/缓存 |
+| [`src/pdf-assets.ts`](src/pdf-assets.ts) | 固定 PDF Worker 字节和白名单 Packed CMap 查找/缓存 |
+| [`src/docx-assets.ts`](src/docx-assets.ts) | 自包含 OOXML 预检 Worker 和仅供 iframe 使用的 DOCX Runtime 字节 |
 | [`src/paths.ts`](src/paths.ts) | 浏览器安全的公开 HTTP 路由常量 |
 | [`src/body.ts`](src/body.ts) | 精确有界原始 Request Body Intake |
 | [`src/types.ts`](src/types.ts) | 浏览器安全的 Remote 与 HTTP Response 词汇 |
@@ -73,6 +78,7 @@ kind: "package-reference"
 - **原始上传由 WebServer Route 缓冲**——路由执行 Drive 文件上限，但尚未直接流入 Provider Transaction；阶段 2 保留默认 50 MiB 上限。
 - **不支持 Multi-range Response**——PDF 和普通浏览器读取支持一个字节范围；Multipart Range 返回 `416`。
 - **固定 PDF.js 资源家族**——Worker 和 CMap 路径与 `pdfjs-dist@6.2.108` 耦合；依赖升级时必须更新带版本的 Worker Path，并重跑浏览器 Fixture。
+- **固定 DOCX 资源家族**——Worker/Runtime 路径与 `docx-preview@0.4.0`、`jszip@3.10.1` 耦合；升级时必须重新审查仅用于 Worker 预览预算的 JSZip 私有元数据，并重跑恶意 OOXML Fixture。
 - **仅本地浏览器认证**——Connection Authentication 保护本地 Web 应用；企业身份与逐文件授权属于阶段 5。
 
 ### 开发备注

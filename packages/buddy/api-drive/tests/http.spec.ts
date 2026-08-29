@@ -356,3 +356,49 @@ describe('PDF CMap route', () => {
     expect(unauthorized.status).toBe(401)
   })
 })
+
+describe('DOCX preview asset routes', () => {
+  it('serves pinned preflight and iframe runtimes for GET and HEAD', async () => {
+    const value = await harness()
+    const { createDriveDocxRuntimeRoute, createDriveDocxWorkerRoute } = await import('../src/http.ts')
+    const { DRIVE_DOCX_RUNTIME_PATH, DRIVE_DOCX_WORKER_PATH } = await import('../src/paths.ts')
+    for (const [route, path, marker] of [
+      [createDriveDocxWorkerRoute(value.ctx), DRIVE_DOCX_WORKER_PATH, "message.type !== 'inspect'"],
+      [createDriveDocxRuntimeRoute(value.ctx), DRIVE_DOCX_RUNTIME_PATH, 'docx-preview'],
+    ] as const) {
+      expect(route.path).toBe(path)
+      const get = new ResponseCapture()
+      await route.handler(request({ method: 'GET', url: path }), get.asServerResponse())
+      expect(get.status).toBe(200)
+      expect(get.getHeader('content-type')).toBe('text/javascript; charset=utf-8')
+      expect(get.getHeader('cross-origin-resource-policy')).toBe('same-origin')
+      expect(get.getHeader('cache-control')).toContain('immutable')
+      expect(get.body().byteLength).toBeGreaterThan(50_000)
+      expect(get.body().toString('utf8')).toContain(marker)
+
+      const head = new ResponseCapture()
+      await route.handler(request({ method: 'HEAD', url: path }), head.asServerResponse())
+      expect(head.status).toBe(200)
+      expect(head.body()).toHaveLength(0)
+      expect(Number(head.getHeader('content-length'))).toBe(get.body().byteLength)
+    }
+  })
+
+  it('authenticates and restricts DOCX asset methods', async () => {
+    const { createDriveDocxRuntimeRoute, createDriveDocxWorkerRoute } = await import('../src/http.ts')
+    const denied = await harness(403)
+    for (const route of [createDriveDocxWorkerRoute(denied.ctx), createDriveDocxRuntimeRoute(denied.ctx)]) {
+      const forbidden = new ResponseCapture()
+      await route.handler(request(), forbidden.asServerResponse())
+      expect(forbidden.status).toBe(403)
+    }
+
+    const value = await harness()
+    for (const route of [createDriveDocxWorkerRoute(value.ctx), createDriveDocxRuntimeRoute(value.ctx)]) {
+      const method = new ResponseCapture()
+      await route.handler(request({ method: 'POST' }), method.asServerResponse())
+      expect(method.status).toBe(405)
+      expect(method.getHeader('allow')).toBe('GET, HEAD')
+    }
+  })
+})

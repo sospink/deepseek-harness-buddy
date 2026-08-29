@@ -20,6 +20,7 @@ import type { BuddyDriveClient } from './service.ts'
 import type { DriveUiInjected } from './DriveTrigger.tsx'
 import { MarkdownPreview } from './MarkdownPreview.tsx'
 import { PdfPreview } from './PdfPreview.tsx'
+import { DocxPreview } from './DocxPreview.tsx'
 import css from './DriveOverlay.module.css'
 
 export type DriveOverlayProps = PropsRuntime<'shell.overlay'>
@@ -234,7 +235,7 @@ function FileDetails({ client, file, run, t }: {
         ? <MarkdownPreview url={client.contentUrl(file)} t={t} />
         : file.mediaType === 'application/pdf'
           ? <PdfPreview url={client.contentUrl(file)} t={t} />
-          : <div className={css.previewPlaceholder}><span>{t('previewPending')}</span></div>}
+          : <DocxPreview url={client.contentUrl(file)} t={t} />}
       <h2>{file.name}</h2>
       <dl>
         <div><dt>{t('fileType')}</dt><dd>{mediaLabel(file.mediaType)}</dd></div>

@@ -30,7 +30,8 @@ describe('BuddyDriveController', () => {
   it('registers routes, forwards every Remote method, follows snapshots, and disposes', async () => {
     const value = await fixture()
     expect([...value.routes.keys()].sort()).toEqual([
-      '/api/buddy-drive/assets/cmaps', '/api/buddy-drive/assets/pdf.worker-6.2.108.mjs',
+      '/api/buddy-drive/assets/cmaps', '/api/buddy-drive/assets/docx-preflight-0.4.0.js',
+      '/api/buddy-drive/assets/docx-runtime-0.4.0.js', '/api/buddy-drive/assets/pdf.worker-6.2.108.mjs',
       '/api/buddy-drive/content', '/api/buddy-drive/upload',
     ])
     expect(value.controller.baseline()).toMatchObject({ library: { id: 'default' }, folders: [], files: [] })
@@ -58,6 +59,6 @@ describe('BuddyDriveController', () => {
 
     await value.fiber.dispose()
     expect(value.routes.size).toBe(0)
-    expect(value.dispose).toHaveBeenCalledTimes(4)
+    expect(value.dispose).toHaveBeenCalledTimes(6)
   })
 })
