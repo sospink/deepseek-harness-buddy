@@ -9,7 +9,7 @@ kind: "package-bundle"
 
 ## 摘要
 
-`@sospink/dsh-buddy-drive-app` 是完整 Buddy 资料云盘栈的可选 Bundle 层。在 `@deepseek-ai/dsh-web-app` 之后应用；Patch 会在 `$DSH_HOME/buddy-drive` 挂载本地 Drive Provider、生成式 Remote 与认证二进制 API，以及独立浏览器 UI。移除本 Bundle 即可移除 Buddy Drive Row，无需修改上游 Package。
+`@sospink/dsh-buddy-drive-app` 是完整 Buddy 资料云盘栈的可选 Bundle 层。在 `@deepseek-ai/dsh-web-app` 之后应用；Patch 会在 `$DSH_HOME/buddy-drive` 挂载本地 Drive Provider、生成式 Remote 与认证二进制 API、独立浏览器 UI，以及只读定位安全 Agent Preset/Tool 包。移除本 Bundle 即可移除 Buddy Drive Row，无需修改上游 Package。
 
 ## 使用本包
 
@@ -50,7 +50,7 @@ kind: "package-bundle"
 
 #### Token 影响
 
-直接 Token 为零。
+普通 Preset 的直接 Token 为零。定位安全 Agent 会增加 `@sospink/dsh-buddy-tool-drive` 记录的 Complete Persona、三个 Drive Tool Schema 和显式结果。
 
 #### KV Cache 影响
 

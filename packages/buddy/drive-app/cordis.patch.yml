@@ -16,3 +16,15 @@
 
     - id: buddy-client-ui-drive
       name: '@sospink/dsh-buddy-client-ui-drive'
+
+# A later bundle layer replaces a row's whole config. Restate every official
+# default while adding the fork-owned read-only preset root.
+- id: agent-presets
+  name: '@deepseek-ai/dsh-agent-presets'
+  config:
+    default: standard
+    roots:
+      - path: !!js "process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:path').dirname(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('@sospink/dsh-buddy-drive-app/package.json')), 'node_modules', '@sospink', 'dsh-buddy-tool-drive', 'presets')"
+        trust: system
+    includeShippedRoot: true
+    includeUserRoot: true

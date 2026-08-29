@@ -20,6 +20,7 @@ kind: "package-group"
 | [`api-drive/`](api-drive/README.zh.md) | 生成式 Remote 元数据命令和认证上传/内容路由 | `ctx.buddyDriveController`、`ctx.remote.drive` |
 | [`client-ui-drive/`](client-ui-drive/README.zh.md) | 独立侧栏/Overlay 云盘工作区和重连浏览器状态 | `ctx.buddyDriveUi` |
 | [`drive-app/`](drive-app/README.zh.md) | 挂载完整 Drive 栈的可选 Web Bundle | Patch 层 |
+| [`tool-drive/`](tool-drive/README.zh.md) | 只读 list/search/read 工具和定位安全 Agent Preset | Scoped `ctx.tools` Consumer |
 
 ## 相关文档
 

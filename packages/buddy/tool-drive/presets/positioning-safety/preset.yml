@@ -1,0 +1,3 @@
+name: 定位安全 Agent
+description: 只通过受控资料云盘读取明确版本的定位安全助手；无 Shell、Workspace、网页、子代理、团队或资料修改能力。
+order: 1

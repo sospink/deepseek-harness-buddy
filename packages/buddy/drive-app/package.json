@@ -38,7 +38,8 @@
   "dependencies": {
     "@sospink/dsh-buddy-api-drive": "workspace:^",
     "@sospink/dsh-buddy-client-ui-drive": "workspace:^",
-    "@sospink/dsh-buddy-drive-local": "workspace:^"
+    "@sospink/dsh-buddy-drive-local": "workspace:^",
+    "@sospink/dsh-buddy-tool-drive": "workspace:^"
   },
   "peerDependencies": {
     "@deepseek-ai/cordis": "workspace:^",

@@ -2,7 +2,7 @@
 
 > 基线日期：2026-08-29
 > 当前上游提交：`cd5ef8148158c3a752a658978873241fdf8e2bbc`（`dsh-v0.1.2-alpha.1`）
-> 开发分支：`feature/buddy-drive-web`
+> 开发分支：`feature/buddy-safety-agent`
 > 架构提案：`.agents/notes/proposed/feature/2026-08-29-safety-agent-drive-library.zh.md`
 
 ## 状态定义
@@ -20,7 +20,7 @@
 | ID | 原始需求 | 实现模块 | 用户入口 | 后端/持久化 | 验收证据 | 状态 |
 |---|---|---|---|---|---|---|
 | R1 | 将三角协作改为单独云盘模式 | Buddy Drive Bundle、独立 Overlay | 侧栏“资料云盘” | `ctx.drive` | 真实 Bundle 与浏览器入口已验收，未挂载成员表、任务板、邮箱或通信入口 | 已验收 |
-| R2 | 定位安全 Agent | Agent Preset、只读 Drive Tools | 新建定位安全 Agent 会话 | Session Log、Tool Pipeline | Agent 只读取显式选择或工具请求的文件版本，并返回来源 | 未开始 |
+| R2 | 定位安全 Agent | Agent Preset、只读 Drive Tools | 新建定位安全 Agent 会话 | Session Log、Tool Pipeline | 真实 Profile 可创建 `positioning-safety` Session；Mock Agent 显式读取版本并引用 File/Version/Digest，首次请求无正文，`tool/result` 可精确回放 | 已验收 |
 | R3 | 上传角色分工文档 | Drive Core、Upload API、Drive UI | 云盘上传与分类 | Blob Store、`buddy_drive` Domain | Markdown 角色分工样本已从浏览器上传，Host 重启后文件夹、文件和分类仍存在 | 已验收 |
 | R4 | 支持 Markdown | Admission、Markdown Preview | 文件预览面板 | 原文件 Blob | Chrome 已验证真实源码/渲染预览、原始 HTML 字面化且远程图片不发起请求；Safari 尚待验收 | 已实现 |
 | R5 | 支持 PDF | Admission、PDF.js Preview | 文件预览面板 | Range Content Route | Chrome 已验证中文双页 Canvas、搜索跳页、缩放、同源 Worker/CMap、3 个 `206` Range、脚本阻止和外链白名单；Safari 尚待验收 | 已实现 |
@@ -172,7 +172,7 @@
 
 - [x] DOCX 使用 opaque-origin sandbox iframe 和 `docx-preview`，关闭 AltChunk 和外部资源。
 - [x] DOCX OOXML 安全预检运行于 Worker，视觉解析在 opaque iframe 中运行；两侧均具备超时和资源限制。
-- [ ] Mammoth 仅用于受限文本提取，输出必须清洗，不作为主视觉预览。
+- [x] Mammoth 仅用于 Phase 4 一次性 Node Worker 的有界 Raw Text 提取，输出做文本规范化，不作为主视觉预览。
 - [ ] 预览失败不能影响原始 Blob 下载和其他文件预览。
 
 ### 阶段 3 退出条件
@@ -183,20 +183,33 @@
 
 ## 阶段 4：定位安全 Agent 与只读资料能力
 
-- [ ] 新建定位安全 Agent Preset。
-- [ ] 实现 `drive_list`、`drive_search`、`drive_read`。
-- [ ] Tool Result 带 File ID、Version ID、名称、分类和来源标记。
-- [ ] 对输出字节、条目数和文本窗口做完整预算。
-- [ ] 系统提示明确资料内容是不可信证据，不是系统指令。
-- [ ] 不自动把资料库内容注入 Prompt。
-- [ ] 第一版不提供 Agent 删除、覆盖、移动和发布工具。
-- [ ] Buddy Bundle 不挂载 Agent Team、Team UI 和 Team Tool。
+### 阶段 4 实现与验收证据（2026-08-29）
+
+- 新增 `@sospink/dsh-buddy-tool-drive`，只注册 `drive_list`、`drive_search`、`drive_read`；工具参数没有 Path，也没有 create/version/rename/move/classify/delete/restore/publish 操作。
+- `drive_read` 强制同时提供 File ID 和 Version ID，校验文件未删除、版本存在且属于该文件；模型结果包含名称、File ID、Version ID、Digest、分类、Media Type、Folder Path、Tags 和行窗口。
+- Markdown 在 Host 有界 UTF-8 解码；PDF.js/Mammoth 在一次性 Node Worker 中提取，具备 20 MiB Source、512 KiB Text、10 秒 Wall、128 MiB Heap 和取消预算。Mammoth 只使用 `extractRawText`，不启用 HTML 或 External File Access。
+- List/Search/Read 同时受 Canonical JSON 与 Rendered UTF-8 预算约束；搜索最多 100 Files/20 Hits，诚实报告 skipped/truncated；Read 默认最多 200 Lines。
+- Prompt 与每个 Search/Read Result 都声明文档为不可信证据；没有任何资料自动进入 Prompt。Harness 将精确模型可见来源头和文本窗口持久化为普通 `tool/result`，无需新增 Session Event。
+- 定位安全 Preset 使用 Complete Persona、关闭 Runtime Context，先挂三个 Scope-local Drive Tool，再对当前/未来所有继承工具建立 Deny，并以 Guard 默认拒绝任何非 `drive_*` 调用。Preset 不含 Shell、FS、Web、Workspace、Skill、Goal、Subagent、Team、Mailbox 或写工具 Row。
+- Buddy Bundle 增加 fork-owned system Preset Root，同时完整保留官方 Shipped Root、用户可写 Root 和默认 `standard`。真实 Web Picker 同时显示标准/PTC/极简/创造/定位安全五种模式。
+- 隔离 Profile 真实 Remote 已创建 Workspace 和 `agentPreset: positioning-safety` Session；`session/list` Projection 持久显示 `agentPreset: positioning-safety`，浏览器控制台 `0 error/0 warning`。
+- 无密钥 Mock LLM 端到端：首次请求只有 `drive_list/search/read` Schema 且不含角色正文；模型显式 `drive_read` 后，第二次请求、Session `tool/result` 与 `deriveMessages()` 保存完全相同的 File/Version/Digest/文本；最终回答引用准确版本。
+- 工具包源码严格覆盖率：Statements `337/337`、Branches `196/196`、Functions `81/81`、Lines `266/266`，全部 `100%`；10 个 Test Files、35 个 Tests 全部通过，另有 Built Worker Test 通过。
+
+- [x] 新建定位安全 Agent Preset。
+- [x] 实现 `drive_list`、`drive_search`、`drive_read`。
+- [x] Tool Result 带 File ID、Version ID、名称、分类和来源标记。
+- [x] 对输出字节、条目数和文本窗口做完整预算。
+- [x] 系统提示明确资料内容是不可信证据，不是系统指令。
+- [x] 不自动把资料库内容注入 Prompt。
+- [x] 第一版不提供 Agent 删除、覆盖、移动和发布工具。
+- [x] Buddy Bundle 不挂载 Agent Team、Team UI 和 Team Tool。
 
 ### 阶段 4 退出条件
 
-- [ ] Agent 能基于用户选定的角色分工文档回答并引用准确版本。
-- [ ] Agent 无法通过 Drive Tool 修改资料，也无法通过 Workspace Path 绕过。
-- [ ] Session 回放可以重建每次模型看到的资料内容与来源。
+- [x] Agent 能基于用户选定的角色分工文档回答并引用准确版本。
+- [x] Agent 无法通过 Drive Tool 修改资料，也无法通过 Workspace Path 绕过。
+- [x] Session 回放可以重建每次模型看到的资料内容与来源。
 
 ## 阶段 5：部署加固与可选知识检索
 
@@ -209,13 +222,15 @@
 
 ## 当前开发批次
 
-本批次只认定以下交付范围，未完成项不得提前标记为阶段完成：
+本批次只认定以下 Phase 4 交付范围，未完成项不得提前标记为阶段完成：
 
-1. Drive Service Definition 和类型模型。
-2. 本地 Blob 与元数据 Provider。
-3. Markdown、PDF、DOCX 基础准入校验。
-4. 文件夹、上传、列表、读取、软删除、恢复和版本历史。
-5. 上述能力的聚焦测试与真实 Cordis 组合测试。
+1. 新增只读 `drive_list`、`drive_search`、`drive_read`，并强制按 File ID 与 Version ID 精确读取。
+2. 新增“定位安全 Agent” Preset，以 Agent Scope 默认拒绝非 Drive 工具，且不挂载 Shell、Workspace、Web、Team 或通信能力。
+3. 为 Markdown、PDF、DOCX 提供有界文本提取，限制源文件、输出、堆内存、执行时间和结果窗口。
+4. 证明资料正文不会自动注入首次模型请求，显式读取结果可通过普通 `tool/result` 精确持久化和回放。
+5. 将 Preset 组合进 Buddy Drive Bundle，同时保留官方预设和用户预设根，并以测试、真实 Profile 与浏览器证据验收。
+
+Phase 3 的 Safari 兼容性、恶意样本跨浏览器复验和长文档性能预算不属于本批次已完成范围，仍保持未完成状态。
 
 ## 决策与遗留风险
 

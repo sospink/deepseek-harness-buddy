@@ -14,7 +14,7 @@ describe('Buddy Drive application bundle', () => {
     }
     expect(manifest.dsh?.bundle?.patch).toBe('./cordis.patch.yml')
     const patches = loadOverlayPatches('buddy-drive-app', resolve(root, 'cordis.patch.yml'))
-    expect(patches).toHaveLength(1)
+    expect(patches).toHaveLength(2)
     const rows = patches[0]?.insert ?? []
     expect(rows.map(row => [row.id, row.name])).toEqual([
       ['buddy-drive-local', '@sospink/dsh-buddy-drive-local'],
@@ -26,8 +26,20 @@ describe('Buddy Drive application bundle', () => {
       maxFileBytes: 52_428_800,
       maxLibraryBytes: 2_147_483_648,
     })
-    expect(Object.keys(manifest.dependencies ?? {}).sort()).toEqual(
-      rows.map(row => row.name).sort(),
-    )
+    expect(Object.keys(manifest.dependencies ?? {}).sort()).toEqual([
+      ...rows.map(row => row.name), '@sospink/dsh-buddy-tool-drive',
+    ].sort())
+    expect(patches[1]).toMatchObject({
+      id: 'agent-presets',
+      name: '@deepseek-ai/dsh-agent-presets',
+      config: {
+        default: 'standard', includeShippedRoot: true, includeUserRoot: true,
+        roots: [{ trust: 'system' }],
+      },
+    })
+    const rootExpression = (patches[1]?.config as { roots?: Array<{ path?: { __jsExpr?: string } }> })
+      .roots?.[0]?.path?.__jsExpr
+    expect(rootExpression).toContain("createRequire(baseUrl).resolve('@sospink/dsh-buddy-drive-app/package.json')")
+    expect(rootExpression).toContain("'node_modules', '@sospink', 'dsh-buddy-tool-drive', 'presets'")
   })
 })
