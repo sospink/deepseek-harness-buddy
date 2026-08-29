@@ -31,10 +31,14 @@ Match order is fixed: exact table first, then longest matching prefix, then the 
 ```ts type-equiv
 /** Web server listen and response-compression config. */
 interface Config {
-  /** Listen host; the two supported values are loopback and all-interfaces. */
-  host: '127.0.0.1' | '0.0.0.0'
+  /** Listen host. The carrier is always bound to the loopback interface. */
+  host: '127.0.0.1'
   /** Listen port; zero requests an OS-assigned port. */
   port: number
+  /** Deployment posture. `proxy-fronted` requires an HTTPS reverse proxy. @default 'loopback-only' */
+  deploymentMode?: WebDeploymentMode
+  /** HTTPS origin served by the trusted reverse proxy; required in proxy-fronted mode. */
+  publicOrigin?: string
   /** Response compression for socket-backed HTTP requests. @default 'none' */
   compression?: 'none' | 'gzip'
   /** Gzip DEFLATE level from 0 through 9. @default 1 */
@@ -44,7 +48,12 @@ interface Config {
 }
 ```
 
-`host` accepts only `127.0.0.1` (default posture) and `0.0.0.0` (deliberate network exposure). The carrier itself owns no TLS, authentication, or Origin policy, so a non-loopback bind exposes the server unless the composition supplies those controls. `compression` defaults to `none`; the shipped Web bundle selects gzip level 1 with a 1024-byte threshold. The shipped `dsh web` command selects loopback and rejects `--host 0.0.0.0`; its Connection plugin supplies Host/Origin checks plus browser-session authentication for every Host API route and stream. Other compositions own their bind and route-authentication policy. The dist location is an assembly fact of the frontend plugin that claims the seat.
+```ts type-equiv
+/** Deployment posture for the browser carrier. */
+type WebDeploymentMode = 'loopback-only' | 'proxy-fronted'
+```
+
+`host` accepts only `127.0.0.1`; the carrier never binds all interfaces. `deploymentMode` defaults to `loopback-only`. `proxy-fronted` keeps the upstream on loopback and requires an absolute HTTPS `publicOrigin` owned by the fronting proxy. A non-loopback bind or an invalid proxy origin fails activation. The carrier does not terminate TLS or authenticate users; the proxy owns TLS termination, network admission, user identity, and authorization. `compression` defaults to `none`; the shipped Web bundle selects gzip level 1 with a 1024-byte threshold. The dist location is an assembly fact of the frontend plugin that claims the seat.
 
 ## The service
 

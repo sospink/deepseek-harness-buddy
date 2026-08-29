@@ -140,6 +140,11 @@ describe('BrowserAuth', () => {
     })
   })
 
+  it('marks the browser cookie Secure when the carrier is behind TLS', async () => {
+    const auth = await BrowserAuth.create({}, credentials(new RecordCredentials()), 30, true)
+    expect(exchange(auth).state.headers?.['set-cookie']).toContain('; Secure')
+  })
+
   it('accepts the cookie for index serving and gives every unauthenticated request one response', async () => {
     const auth = await createAuth(new RecordCredentials())
     const { cookie } = exchange(auth)

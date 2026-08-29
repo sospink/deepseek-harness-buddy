@@ -70,6 +70,7 @@ export class HostConnectionService extends Service implements HostConnectionHand
     ctx: Context,
     private readonly trustedHosts: readonly string[],
     private readonly browserAuth: BrowserAuth,
+    private readonly publicOrigin?: string,
   ) {
     super(ctx, 'connection')
   }
@@ -94,12 +95,20 @@ export class HostConnectionService extends Service implements HostConnectionHand
 
   /** Apply the configured Host/Origin fence, then browser authentication. */
   requestRejection(request: ConnectionTrustRequest): ConnectionRequestRejection {
-    if (!isTrustedApiRequest(request, this.trustedHosts)) return 403
+    if (!isTrustedApiRequest(request, this.trustedHosts, this.publicOrigin)) return 403
     return this.browserAuth.isAuthenticated(request) ? undefined : 401
   }
 
   /** Authenticate an index request through the process-token exchange or cookie. */
   authorizeIndex(request: ConnectionIndexRequest, response: ConnectionIndexResponse): boolean {
+    if (!isTrustedApiRequest(request, this.trustedHosts, this.publicOrigin)) {
+      response.writeHead(403, {
+        'cache-control': 'no-store',
+        'content-type': 'text/plain; charset=utf-8',
+      })
+      response.end(request.method === 'HEAD' ? undefined : 'forbidden')
+      return false
+    }
     return this.browserAuth.authorizeIndex(request, response)
   }
 

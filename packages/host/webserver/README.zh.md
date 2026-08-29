@@ -36,7 +36,18 @@ kind: "package-reference"
     port: 3000
 ```
 
-`host` 只接受两个值：`127.0.0.1`（默认姿态，仅回环）与 `0.0.0.0`（有意向网络开放——服务器自身不携带 TLS、认证或来源策略）。`port` 为 0 时请求 OS 分配端口；之后用 `ctx.webServer.port` 读取正在监听的端口。
+`host` 只接受 `127.0.0.1`；载体从不绑定所有网卡。`deploymentMode` 默认为 `loopback-only`。`proxy-fronted` 保持上游仅监听回环，并要求 `publicOrigin` 是由前置代理拥有的绝对 HTTPS origin。非回环绑定、缺失的公网 origin 或 HTTP origin 都会让激活失败。`port` 为 0 时请求 OS 分配端口；之后用 `ctx.webServer.port` 读取正在监听的端口。
+
+```yaml
+- name: '@deepseek-ai/dsh-host-webserver'
+  config:
+    host: 127.0.0.1
+    port: 3000
+    deploymentMode: proxy-fronted
+    publicOrigin: https://harness.example
+```
+
+本包不终止 TLS，也不认证用户。代理必须终止 HTTPS、保留配置的 `Host` 与 `Origin`，并在转发到回环端口前限制目标用户。
 
 设置 `compression: 'gzip'` 可以包装符合条件的 socket-backed 响应，而不改变 route API。客户端必须接受 gzip，且媒体类型必须可压缩；已知长度小于 `compressionThresholdBytes` 的响应保持未压缩，未知长度 stream 则立即符合条件。已有编码、`Cache-Control: no-transform`、range 响应、SSE、ZIP 与已打包的 `.gz` Worker image 均保持不变。随附 Web bundle 使用 level 1 与 1024 字节阈值；其他组合默认不压缩。
 
@@ -109,7 +120,7 @@ index 启动输入分两层。`collectIndexInjections()` 收集一张全新的�
 
 这些限制说明服务器在何处有意保持最小。它们是当前包约束，不是任务积压。
 
-- **不提供服务器级 TLS、认证或来源策略**：`dsh-client-connection` 等 route owner 会实施自己的请求策略。绑定非回环地址仍会向该网络公开未受保护的 route 与静态资源。
+- **没有 TLS 终止、用户身份或租户策略**：`proxy-fronted` 只描述 HTTPS 反向代理部署并由载体执行公网 origin 校验；`dsh-client-connection` 等 route owner 执行浏览器会话认证。TLS 终止、用户身份、授权和网络准入仍由代理负责。
 - **Socket 选项固定不变**：配置只选择绑定宿主与端口；在具体部署产生需求前，backlog 和其他 socket 设置仍保持内部实现。
 
 <a id="dev-note"></a>

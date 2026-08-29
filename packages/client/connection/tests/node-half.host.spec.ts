@@ -16,7 +16,8 @@ import { provideBrowserCredentials } from './browser-credentials.ts'
 function fakeHttpServer(
   routes: WebRoute[],
   upgrades: WebUpgradeRoute[],
-): Pick<WebServer, 'register' | 'registerUpgrade' | 'tapIndex' | 'port'> {
+  options: { proxyOrigin?: string } = {},
+): Pick<WebServer, 'register' | 'registerUpgrade' | 'tapIndex' | 'port' | 'deploymentMode' | 'publicOrigin'> {
   return {
     register(route) {
       if (routes.some(candidate => candidate.kind === route.kind && candidate.path === route.path)) {
@@ -31,6 +32,8 @@ function fakeHttpServer(
     },
     tapIndex: () => () => {},
     port: 0,
+    deploymentMode: options.proxyOrigin === undefined ? 'loopback-only' : 'proxy-fronted',
+    publicOrigin: options.proxyOrigin,
   }
 }
 
@@ -81,7 +84,7 @@ function fakeResponse(): {
   return { response, state }
 }
 
-async function mounted(config?: { trustedHosts?: string[] }): Promise<{
+async function mounted(config?: { trustedHosts?: string[]; proxyOrigin?: string }): Promise<{
   routes: WebRoute[]
   upgrades: WebUpgradeRoute[]
   connection: HostConnectionHandle
@@ -91,7 +94,7 @@ async function mounted(config?: { trustedHosts?: string[] }): Promise<{
   const routes: WebRoute[] = []
   const upgrades: WebUpgradeRoute[] = []
   provideBrowserCredentials(ctx)
-  ctx.provide('webServer', fakeHttpServer(routes, upgrades) as WebServer)
+  ctx.provide('webServer', fakeHttpServer(routes, upgrades, config) as WebServer)
   const fiber = ctx.plugin({ inject: [...inject], apply }, config)
   await fiber.await()
   return {
@@ -204,8 +207,7 @@ describe('connection node half', () => {
       cookie: browserCookie(connection, '127.0.0.1:3080'),
     }), loopback.response)
     expect(loopback.state.status).toBe(404)
-    // An all-interfaces composition derives port-less LAN IP literals, which
-    // pass markerless curl on any port.
+    // An explicitly trusted non-loopback authority passes the same fence.
     const lan = fakeResponse()
     await routes[0]!.handler(fakeRequest({
       host: '192.168.1.5:3080',
@@ -235,6 +237,26 @@ describe('connection node half', () => {
       host: 'harness.example',
       cookie: browserCookie(connection, 'harness.example'),
     }))).toBeUndefined()
+    await dispose()
+  })
+
+  it('enforces the TLS proxy authority and CSRF Origin on proxy-fronted requests', async () => {
+    const { routes, connection, dispose } = await mounted({ proxyOrigin: 'https://harness.example' })
+    const cookie = browserCookie(connection, 'harness.example')
+
+    const direct = fakeResponse()
+    await routes[0]!.handler(fakePost({ host: '127.0.0.1:3080', cookie }, '/api/session.list', {}), direct.response)
+    expect(direct.state).toMatchObject({ status: 403, body: 'forbidden' })
+
+    const missingOrigin = fakeResponse()
+    await routes[0]!.handler(fakePost({ host: 'harness.example', cookie }, '/api/session.list', {}), missingOrigin.response)
+    expect(missingOrigin.state).toMatchObject({ status: 403, body: 'forbidden' })
+
+    const accepted = fakeResponse()
+    await routes[0]!.handler(fakePost({
+      host: 'harness.example', origin: 'https://harness.example', cookie,
+    }, '/api/session.list', {}), accepted.response)
+    expect(accepted.state.status).toBe(404)
     await dispose()
   })
 

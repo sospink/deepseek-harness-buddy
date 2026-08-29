@@ -31,10 +31,14 @@ interface WebRoute {
 ```ts type-equiv
 /** Web server listen and response-compression config. */
 interface Config {
-  /** Listen host; the two supported values are loopback and all-interfaces. */
-  host: '127.0.0.1' | '0.0.0.0'
+  /** Listen host. The carrier is always bound to the loopback interface. */
+  host: '127.0.0.1'
   /** Listen port; zero requests an OS-assigned port. */
   port: number
+  /** Deployment posture. `proxy-fronted` requires an HTTPS reverse proxy. @default 'loopback-only' */
+  deploymentMode?: WebDeploymentMode
+  /** HTTPS origin served by the trusted reverse proxy; required in proxy-fronted mode. */
+  publicOrigin?: string
   /** Response compression for socket-backed HTTP requests. @default 'none' */
   compression?: 'none' | 'gzip'
   /** Gzip DEFLATE level from 0 through 9. @default 1 */
@@ -44,7 +48,12 @@ interface Config {
 }
 ```
 
-`host` 只接受 `127.0.0.1`（默认姿态）和 `0.0.0.0`（刻意的网络暴露）。载体本身不拥有 TLS、认证或 Origin 策略，因此绑定到非回环地址会暴露服务器，除非组合层提供这些控制。`compression` 默认为 `none`；随附的 Web 组合选择 gzip level 1 和 1024 字节阈值。随附的 `dsh web` 命令选择 loopback 并拒绝 `--host 0.0.0.0`；其 Connection 插件为每个 Host API route 与 stream 提供 Host/Origin 校验和浏览器会话认证。其他组合自行拥有绑定与路由认证策略。dist 位置是认领席位的前端插件的组装事实。
+```ts type-equiv
+/** Deployment posture for the browser carrier. */
+type WebDeploymentMode = 'loopback-only' | 'proxy-fronted'
+```
+
+`host` 只接受 `127.0.0.1`；载体从不绑定所有网卡。`deploymentMode` 默认为 `loopback-only`。`proxy-fronted` 保持上游仅监听回环，并要求 `publicOrigin` 是前置代理拥有的绝对 HTTPS origin。非回环绑定或无效代理 origin 都会让激活失败。载体不终止 TLS，也不认证用户；TLS 终止、网络准入、用户身份和授权由代理负责。`compression` 默认为 `none`；随附 Web 组合选择 gzip level 1 和 1024 字节阈值。dist 位置是认领席位的前端插件的组装事实。
 
 ## 服务
 

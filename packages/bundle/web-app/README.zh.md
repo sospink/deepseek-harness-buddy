@@ -49,9 +49,9 @@ dsh --profile web --no-open --port 8080
 
 生成的[配置目录](../../../docs/config-catalog.zh.md#deepseek-aidsh-web-app)是每个受支持字段及其 JSDoc 的穷尽式真源。
 
-### LAN 访问与可信主机
+### 回环与 TLS 代理部署
 
-默认情况下 GUI 只接受本机的连接。绑定所有网络接口的部署也会允许 LAN 内的浏览器访问，此时打印的 URL 会附带一个 LAN 地址；`--trusted-host` 在两种情况下都能添加额外主机。Host 与 Origin 检查控制可达性，token 交换则认证每个 Host API 方法与 WebSocket stream。LAN 地址只在启动时采样一次，因此之后的网络变化不会被感知——重启 GUI 以重新公告。
+GUI 始终绑定 `127.0.0.1`；直接绑定 `0.0.0.0` 会被拒绝。需要网络部署时，传入 `--proxy-origin https://harness.example`，并在回环端口前放置 TLS 反向代理。代理必须保留 `Host: harness.example` 与匹配的 HTTPS `Origin`；Connection 随后使用 `Secure`、绑定 authority 的浏览器 cookie，并拒绝直连回环地址访问这个代理部署。`--trusted-host` 仍是其他组合的显式 Host/Origin allowlist 输入，不是用户身份或租户系统。
 
 ### 通过 SSH 运行
 
@@ -79,21 +79,21 @@ patch 会替换目标行的整个 `config`，因此每个 Web 行都重述自己
 
 URL 行与浏览器交接都是就绪信号：监督方一观察到该行就发起 RPC，浏览器一打开就请求页面，因此两者只在 Loader 配置树结算且 Connection 认证可用后运行——在没有 Loader 的手工构建树中则立即运行。启动中途被释放的树不会宣告任何内容。
 
-### LAN 信任采样
+### Web 信任解析
 
-`resolveLanTrust` 在启动时只采样一次网络：loopback 绑定（`127.0.0.1`）不派生任何 LAN 地址，绑定所有网卡则会加入每个非 internal IPv4 字面量。派生字面量加上显式的 `--trusted-host` 权威标识组成 `/api` 浏览器信任栅栏，打印的 LAN URL 始终与该栅栏一致。
+`resolveWebTrust` 只接受回环绑定并保留显式的 `--trusted-host` authority。代理配置的公网 authority 由 Connection 加入，并在那里于 API 分发前执行 Host、HTTPS Origin、浏览器会话认证和 CSRF 校验。
 
 ### 源码地图
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | `web-app` 粘合插件：dist 解析、LAN 信任采样、提示词段落、bash 变量、URL 行、浏览器交接 |
-| [`src/startup.ts`](src/startup.ts) | `web-startup` 提供方：`--host`、`--port`、`--trusted-host`、`--no-open`、`--help` |
+| [`src/index.ts`](src/index.ts) | `web-app` 粘合插件：dist 解析、Web 信任解析、提示词段落、bash 变量、URL 行、浏览器交接 |
+| [`src/startup.ts`](src/startup.ts) | `web-startup` 提供方：`--host`、`--port`、`--proxy-origin`、`--trusted-host`、`--no-open`、`--help` |
 | [`cordis.patch.yml`](cordis.patch.yml) | Web patch：重述的基础值、Web 宿主行、浏览器名录、preset 之后的 agent 层 |
 | [`src/invariant.ts`](src/invariant.ts) | 不变式伴生插件：无运行时不变式；每项贡献都由 registry 释放 |
 | [`tests/web-app.spec.ts`](tests/web-app.spec.ts) | dist 解析、fallback 席位、提示词段落、就绪宣告 |
 | [`tests/startup.spec.ts`](tests/startup.spec.ts) | 在真实 Loader 树上的命令行解析 |
-| [`tests/trusted-hosts.spec.ts`](tests/trusted-hosts.spec.ts) | LAN 信任采样 |
+| [`tests/trusted-hosts.spec.ts`](tests/trusted-hosts.spec.ts) | Web 信任解析 |
 | [`tests/browser-open.spec.ts`](tests/browser-open.spec.ts) | 页面可达后的默认浏览器交接 |
 
 ### 不变式归属
@@ -142,11 +142,11 @@ URL 行与浏览器交接都是就绪信号：监督方一观察到该行就发�
 这些限制告诉你在不常见的环境下会遇到什么——源码 checkout、SSH 会话或严格网络。它们是当前包约束，不是通用的浏览器对比或任务积压。
 
 - **前端必须已构建**——源码 checkout 需要先运行 `pnpm run build`；dist 缺失时启动会以构建提示停止，且没有从源码直接服务的回退路径。
-- **LAN 地址只在启动时采样一次**——启动后的网卡变化不会重新公告；打印的 LAN URL 始终与采样结果一致。
+- **CLI 不终止 TLS，也不提供用户身份和租户隔离**——请在独立管理的 TLS、身份感知反向代理后使用 `--proxy-origin`；此模式不会把本地 Drive 变成企业云服务。
 - **只能观察到交接的启动**——GUI 只报告浏览器被请求打开，而不是它确实打开了；之后的浏览器退出永远不会上报，打印的 URL 是你的手动回退路径。
 - **SSH 会话保留 URL 但跳过浏览器交接**——打印的 URL 指向远端宿主机 loopback 端点；SSH 客户端或编辑器必须暴露并打开本地转发地址。
 - **`BROWSER` 覆盖只能来自环境**——被发现的 `.env` 不能设置 `BROWSER`；只有继承值能为自动交接选择可执行文件。
-- **不支持绑定所有网络接口**——出于安全考虑，`--host 0.0.0.0` 会在启动时被拒绝；请使用默认 loopback 主机。
+- **不支持绑定所有网络接口**——`--host 0.0.0.0` 会在启动时被拒绝；需要网络访问时，请使用默认回环主机，并在 TLS 反向代理后传入 `--proxy-origin`。
 
 <a id="dev-note"></a>
 ### 开发备注

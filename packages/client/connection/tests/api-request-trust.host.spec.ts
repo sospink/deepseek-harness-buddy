@@ -3,8 +3,11 @@
 import { describe, expect, it } from 'vitest'
 import { assertTrustedAuthority, isTrustedApiRequest } from '../src/api-request-trust.ts'
 
-function request(headers: Record<string, string | undefined>): { headers: Record<string, string | undefined> } {
-  return { headers }
+function request(
+  headers: Record<string, string | undefined>,
+  method?: string,
+): { headers: Record<string, string | undefined>; method?: string } {
+  return { headers, ...(method === undefined ? {} : { method }) }
 }
 
 describe('isTrustedApiRequest', () => {
@@ -66,6 +69,21 @@ describe('isTrustedApiRequest', () => {
     }), [])).toBe(true)
     // Origin-less browser shapes (same-origin GETs) still carry sec-fetch-site.
     expect(isTrustedApiRequest(request({ host: 'localhost:3080', 'sec-fetch-site': 'same-origin' }), [])).toBe(true)
+  })
+
+  it('requires the configured HTTPS proxy authority and Origin on unsafe methods', () => {
+    const proxy = 'https://harness.example'
+    expect(isTrustedApiRequest(request({ host: 'harness.example' }, 'GET'), ['harness.example'], proxy)).toBe(true)
+    expect(isTrustedApiRequest(request({
+      host: 'harness.example', origin: proxy,
+    }, 'POST'), ['harness.example'], proxy)).toBe(true)
+    expect(isTrustedApiRequest(request({ host: 'harness.example' }, 'POST'), ['harness.example'], proxy)).toBe(false)
+    expect(isTrustedApiRequest(request({
+      host: 'harness.example', origin: 'http://harness.example',
+    }, 'POST'), ['harness.example'], proxy)).toBe(false)
+    expect(isTrustedApiRequest(request({
+      host: '127.0.0.1:3080', origin: proxy,
+    }, 'GET'), ['harness.example'], proxy)).toBe(false)
   })
 
   it('reads Fetch Headers while preserving absent browser markers', () => {

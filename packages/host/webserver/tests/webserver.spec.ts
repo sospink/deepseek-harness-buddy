@@ -15,7 +15,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import { Context } from '@deepseek-ai/cordis'
 import Loader from '@deepseek-ai/cordis-plugin-loader'
 import Include from '@deepseek-ai/cordis-plugin-include'
-import HttpServer, { renderIndexInjections } from '../src/index.ts'
+import HttpServer, { normalizePublicOrigin, renderIndexInjections } from '../src/index.ts'
 
 let root: string | undefined
 let context: Context | undefined
@@ -101,6 +101,7 @@ describe('real Loader composition', () => {
     expect(HttpServer.Config({ host: '127.0.0.1', port: 0 })).toEqual({
       host: '127.0.0.1',
       port: 0,
+      deploymentMode: 'loopback-only',
       compression: 'none',
       compressionLevel: 1,
       compressionThresholdBytes: 1024,
@@ -108,6 +109,25 @@ describe('real Loader composition', () => {
     expect(() => HttpServer.Config({
       host: '127.0.0.1', port: 0, compressionLevel: 10,
     })).toThrow()
+    expect(() => HttpServer.Config({ host: '0.0.0.0', port: 0 } as never)).toThrow()
+    expect(() => normalizePublicOrigin('https://harness.example')).not.toThrow()
+    expect(normalizePublicOrigin('https://HARNESS.example:443/')).toBe('https://harness.example')
+    expect(() => normalizePublicOrigin('http://harness.example')).toThrow(/HTTPS origin/)
+    expect(() => normalizePublicOrigin('https://harness.example/path')).toThrow(/HTTPS origin/)
+    expect(() => new HttpServer(new Context(), HttpServer.Config({
+      host: '127.0.0.1', port: 0, deploymentMode: 'proxy-fronted', publicOrigin: 'https://harness.example',
+    }))).not.toThrow()
+    expect(() => new HttpServer(new Context(), HttpServer.Config({
+      host: '127.0.0.1', port: 0, deploymentMode: 'proxy-fronted',
+    }))).toThrow(/requires an HTTPS publicOrigin/)
+    expect(() => new HttpServer(new Context(), HttpServer.Config({
+      host: '127.0.0.1', port: 0, publicOrigin: 'https://harness.example',
+    }))).toThrow(/only valid with deploymentMode proxy-fronted/)
+    const proxy = new HttpServer(new Context(), HttpServer.Config({
+      host: '127.0.0.1', port: 0, deploymentMode: 'proxy-fronted', publicOrigin: 'https://harness.example',
+    }))
+    expect(proxy.deploymentMode).toBe('proxy-fronted')
+    expect(proxy.publicOrigin).toBe('https://harness.example')
 
     const loaded = await loadComposition(0, true)
     const server = loaded.webServer

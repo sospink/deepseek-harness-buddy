@@ -411,15 +411,16 @@ Source: [`packages/shell/bash-sandbox/src/index.ts:35`](../packages/shell/bash-s
 Requires: `webServer` · `credentials`
 
 ```ts config-catalog
-/** Plugin config: the deployment's non-loopback serving authorities. */
+/** Plugin config: additional authorities accepted by the Web trust fence. */
 export interface ConnectionConfig {
   /**
    * Authorities this deployment serves beyond loopback: exact `host:port`, or
    * port-less `host` matching any port. The /api trust fence refuses any
    * request whose Host is neither loopback nor listed here, so a
    * non-loopback (`0.0.0.0`) deployment must declare the names it is reached
-   * by; the Web runtime derives LAN IP literals from an active all-interface
-   * bind. An entry that is not a bare, canonical authority fails plugin load.
+   * by; a proxy-fronted Web runtime adds its configured public origin
+   * automatically. An entry that is not a bare, canonical authority fails
+   * plugin load.
    */
   trustedHosts?: string[]
   /** Absolute browser-session lifetime in days. Default: 30. */
@@ -907,10 +908,14 @@ Source: [`packages/host/frontend-static/src/index.ts:30`](../packages/host/front
 ```ts config-catalog
 /** Web server listen and response-compression config. */
 export interface Config {
-  /** Listen host; the two supported values are loopback and all-interfaces. */
-  host: '127.0.0.1' | '0.0.0.0'
+  /** Listen host. The carrier is always bound to the loopback interface. */
+  host: '127.0.0.1'
   /** Listen port; zero requests an OS-assigned port. */
   port: number
+  /** Deployment posture. `proxy-fronted` requires an HTTPS reverse proxy. @default 'loopback-only' */
+  deploymentMode?: WebDeploymentMode
+  /** HTTPS origin served by the trusted reverse proxy; required in proxy-fronted mode. */
+  publicOrigin?: string
   /** Response compression for socket-backed HTTP requests. @default 'none' */
   compression?: 'none' | 'gzip'
   /** Gzip DEFLATE level from 0 through 9. @default 1 */
@@ -918,9 +923,12 @@ export interface Config {
   /** Minimum known response length eligible for gzip; unknown-length streams are eligible. @default 1024 */
   compressionThresholdBytes?: number
 }
+
+/** Deployment posture for the browser carrier. */
+export type WebDeploymentMode = 'loopback-only' | 'proxy-fronted'
 ```
 
-Source: [`packages/host/webserver/src/index.ts:59`](../packages/host/webserver/src/index.ts)
+Source: [`packages/host/webserver/src/index.ts:62`](../packages/host/webserver/src/index.ts)
 
 <a id="deepseek-aidsh-invariants"></a>
 
@@ -3245,7 +3253,7 @@ export interface Config {
 }
 ```
 
-Source: [`packages/bundle/web-app/src/index.ts:45`](../packages/bundle/web-app/src/index.ts)
+Source: [`packages/bundle/web-app/src/index.ts:44`](../packages/bundle/web-app/src/index.ts)
 
 <a id="deepseek-aidsh-web-fetch-http"></a>
 
@@ -3399,6 +3407,76 @@ export interface Config {
 
 Source: [`packages/workflow/workflow-worker-thread/src/index.ts:32`](../packages/workflow/workflow-worker-thread/src/index.ts)
 
+<a id="sospinkdsh-buddy-drive-local"></a>
+
+## `@sospink/dsh-buddy-drive-local`
+
+Requires: `storageDomain`
+
+```ts config-catalog
+/** Local provider configuration. */
+export interface Config {
+  /** Private provider-owned root; never a Workspace path. */
+  root: string
+  /** Maximum size of one admitted file in bytes. */
+  maxFileBytes?: number
+  /** Maximum aggregate size of one library in bytes. */
+  maxLibraryBytes?: number
+  /** Maximum number of entries accepted from one DOCX archive. */
+  maxDocxEntries?: number
+  /** Maximum expanded size of one DOCX archive in bytes. */
+  maxDocxExpandedBytes?: number
+  /** Maximum allowed DOCX compression ratio. */
+  maxDocxCompressionRatio?: number
+  /** Maximum number of audit events retained by the local provider. */
+  maxAuditEvents?: number
+}
+```
+
+Source: [`packages/buddy/drive-local/src/index.ts:64`](../packages/buddy/drive-local/src/index.ts)
+
+<a id="sospinkdsh-buddy-tool-drive"></a>
+
+## `@sospink/dsh-buddy-tool-drive`
+
+Requires: `drive` · `tools` · `systemPrompt`
+
+```ts config-catalog
+/** Loader-configurable complete budgets for the three read-only tools. */
+export interface Config {
+  /** Maximum number of folders loaded into the read-only catalog. */
+  maxCatalogFolders?: number
+  /** Maximum number of files loaded into the read-only catalog. */
+  maxCatalogFiles?: number
+  /** Maximum number of items returned by list operations. */
+  maxListItems?: number
+  /** Maximum number of files scanned by search operations. */
+  maxSearchFiles?: number
+  /** Maximum number of search hits returned. */
+  maxSearchResults?: number
+  /** Maximum UTF-8 query size in bytes. */
+  maxQueryBytes?: number
+  /** Maximum snippet size in bytes. */
+  maxSnippetBytes?: number
+  /** Maximum source content read in bytes. */
+  maxSourceBytes?: number
+  /** Maximum extracted text retained in bytes. */
+  maxExtractTextBytes?: number
+  /** Maximum number of lines returned by read operations. */
+  maxReadLines?: number
+  /** Maximum rendered tool value size in bytes. */
+  maxValueBytes?: number
+  /** Maximum rendered response size in bytes. */
+  maxRenderBytes?: number
+  /** Extraction worker timeout in milliseconds. */
+  extractionTimeoutMs?: number
+  /** Extraction worker heap limit in megabytes. */
+  maxWorkerHeapMb?: number
+}
+```
+
+Source: [`packages/buddy/tool-drive/src/index.ts:40`](../packages/buddy/tool-drive/src/index.ts)
+
 ## Loadable plugins with no config
 
 These load from a `cordis.yml` entry with no `config:` block; they declare no configuration API.
@@ -3478,6 +3556,9 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 - `@deepseek-ai/dsh-user-questions` ([`packages/interaction/user-questions/src/index.ts`](../packages/interaction/user-questions/src/index.ts))
 - `@deepseek-ai/dsh-webhook` — requires `agents` · `agentDefaultModel` · `agentPresets` · `permissionPresets` · `sessionTitle` · `workspaceRegistry` ([`packages/webhook/webhook/src/index.ts`](../packages/webhook/webhook/src/index.ts))
 - `@deepseek-ai/dsh-workspace` — requires `storageDomain` · `sessionPersistence` ([`packages/workspace/workspace/src/index.ts`](../packages/workspace/workspace/src/index.ts))
+- `@sospink/dsh-buddy-api-drive` — requires `typert` · `drive` · `webServer` · `connection` ([`packages/buddy/api-drive/src/index.ts`](../packages/buddy/api-drive/src/index.ts))
+- `@sospink/dsh-buddy-client-ui-drive` ([`packages/buddy/client-ui-drive/src/index.ts`](../packages/buddy/client-ui-drive/src/index.ts))
+- `@sospink/dsh-buddy-drive-app` ([`packages/buddy/drive-app/src/index.ts`](../packages/buddy/drive-app/src/index.ts))
 
 ## Seam packages (not directly loadable)
 
@@ -3499,6 +3580,7 @@ Abstract service classes — a deployment loads a concrete implementation packag
 - `@deepseek-ai/dsh-spill` — abstract `SpillStore` ([`packages/spill/spill/src/index.ts`](../packages/spill/spill/src/index.ts))
 - `@deepseek-ai/dsh-subprocess` — abstract `SubprocessRuntime` ([`packages/subprocess/subprocess/src/index.ts`](../packages/subprocess/subprocess/src/index.ts))
 - `@deepseek-ai/dsh-workflow` — abstract `WorkflowEngine` ([`packages/workflow/workflow/src/index.ts`](../packages/workflow/workflow/src/index.ts))
+- `@sospink/dsh-buddy-drive` — abstract `DriveStore` ([`packages/buddy/drive/src/index.ts`](../packages/buddy/drive/src/index.ts))
 
 ## Library packages (no plugin entry)
 

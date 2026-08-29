@@ -89,7 +89,7 @@ afterEach(async () => {
 
 /** Write a two-row cordis.yml (webserver + chooser), then boot it through the real Loader. */
 async function loadComposition(
-  bindHost: '127.0.0.1' | '0.0.0.0',
+  bindHost: string,
   options: { failSurface?: boolean } = {},
 ): Promise<{ ctx: Context; configPath: string }> {
   root = await mkdtemp(join(tmpdir(), 'dsh-directory-picker-auto-'))
@@ -216,14 +216,9 @@ describe('real Loader composition', () => {
     expect(picker.capability().kind).toBe('browse')
   })
 
-  it('mounts the browse backend for an all-interfaces bind even on an attended host', { timeout: 60_000 }, async () => {
+  it('rejects an all-interfaces bind before the adaptive chooser can mount', { timeout: 60_000 }, async () => {
     stubAttendedHost()
-    const { ctx } = await loadComposition('0.0.0.0')
-
-    expect(entryNames(ctx)).toContain(BROWSE)
-    expect(entryNames(ctx)).toContain(BROWSE_SURFACE)
-    expect(entryNames(ctx)).not.toContain(NATIVE)
-    expect(entryNames(ctx)).not.toContain(NATIVE_SURFACE)
+    await expect(loadComposition('0.0.0.0')).rejects.toThrow(/expected 127\.0\.0\.1 but got 0\.0\.0\.0/)
   })
 
   it('unmounts the backend when the surface entry fails to load', { timeout: 60_000 }, async () => {

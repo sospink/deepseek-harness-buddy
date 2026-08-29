@@ -14,7 +14,6 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
-import { networkInterfaces } from 'node:os'
 import { fileURLToPath } from 'node:url'
 import type { Context } from '@deepseek-ai/cordis'
 import z from '@deepseek-ai/schemastery'
@@ -67,9 +66,7 @@ export const Config: z<Config> = z.object({
 
 /** Bind-dependent Web values shared by the trust fence and URL display. */
 export interface WebRuntimeValues {
-  /** LAN IPv4 literals sampled once when the server binds all interfaces. */
-  lanAddresses: string[]
-  /** LAN literals followed by explicit invocation authorities. */
+  /** Explicit invocation authorities used by the Connection trust fence. */
   trustedHosts: string[]
 }
 
@@ -79,8 +76,6 @@ const DSH_WEB_URL = 'DSH_WEB_URL' as const
 // Display-only mirror of the webserver schema's loopback host: the address the
 // local URL always prints. Not a source of truth — the schema is.
 const LOOPBACK_HOST = '127.0.0.1'
-/** The webserver schema's all-interfaces bind literal. */
-const ALL_INTERFACES_HOST = '0.0.0.0'
 
 /** Whether this process was launched through SSH, including a forwarded-port session. */
 function launchedThroughSsh(ctx: Context): boolean {
@@ -123,22 +118,17 @@ try {
 `
 
 /**
- * Resolve one LAN-trust snapshot from the active server bind.
- *
- * Derived entries are port-less IP literals: DNS rebinding needs an
- * attacker-controlled name, while an IP-literal Host is safe on any port and
- * an OS-assigned port is unknowable before bind.
+ * Resolve the invocation trust snapshot. Direct network-interface binding is
+ * intentionally unavailable; network access uses the proxy-fronted mode.
  * @param bindHost - the active webserver bind host.
  * @param extra - explicit `--trusted-host` values, in argument order.
- * @returns the LAN display addresses and invocation-derived fence authorities.
+ * @returns invocation-derived fence authorities.
  */
-export function resolveLanTrust(bindHost: string, extra: readonly string[]): WebRuntimeValues {
-  const lanAddresses = bindHost === ALL_INTERFACES_HOST
-    ? Object.values(networkInterfaces()).flat()
-      .filter((iface): iface is NonNullable<typeof iface> => iface !== undefined && iface.family === 'IPv4' && !iface.internal)
-      .map(iface => iface.address)
-    : []
-  return { lanAddresses, trustedHosts: [...lanAddresses, ...extra] }
+export function resolveWebTrust(bindHost: string, extra: readonly string[]): WebRuntimeValues {
+  if (bindHost !== LOOPBACK_HOST) {
+    throw new Error(`web-app: unsupported WebServer bind host ${JSON.stringify(bindHost)}`)
+  }
+  return { trustedHosts: [...extra] }
 }
 
 /** Model-visible orientation and acceptance boundary for sessions created through `dsh web`. */
@@ -159,6 +149,8 @@ function webSurfacePrompt(webUrl: string): string {
 function localWebUrl(ctx: Context): string {
   const port = ctx.get('webServer')?.port
   if (port === undefined) throw new Error('web-app: webServer service missing while resolving Web runtime')
+  const publicOrigin = ctx.get('webServer')?.publicOrigin
+  if (publicOrigin !== undefined) return publicOrigin
   return `http://${LOOPBACK_HOST}:${String(port)}`
 }
 
@@ -233,7 +225,7 @@ export const internals: {
  * @param config - validated {@link Config}.
  */
 export function apply(ctx: Context, config: Config): void {
-  const runtime = resolveLanTrust(ctx.webServer.host, config.trustedHosts)
+  const runtime = resolveWebTrust(ctx.webServer.host, config.trustedHosts)
   // The loopback URL belongs to this host. Under SSH, the operator reaches it
   // through a local forwarding address that this process cannot derive.
   const handoffBrowser = config.openBrowser && !launchedThroughSsh(ctx)
@@ -270,15 +262,9 @@ export function apply(ctx: Context, config: Config): void {
         if (ANNOUNCED_ROOTS.has(connectionCtx.root)) return
         const webUrl = localWebUrl(connectionCtx)
         const authenticatedUrl = connectionCtx.connection.authenticatedUrl(webUrl)
-        // Reuse the exact LAN snapshot provided to the /api trust fence.
-        const lanCandidate = runtime.lanAddresses[0]
-        const port = connectionCtx.webServer.port
-        const lanUrl = lanCandidate === undefined
-          ? undefined
-          : connectionCtx.connection.authenticatedUrl(`http://${lanCandidate}:${String(port)}`)
         ANNOUNCED_ROOTS.add(connectionCtx.root)
         if (config.printUrl) {
-          console.log(`dsh web: ${authenticatedUrl}${lanUrl === undefined ? '' : ` (LAN: ${lanUrl})`}`)
+          console.log(`dsh web: ${authenticatedUrl}`)
         }
         if (handoffBrowser) {
           console.log('dsh web: opening the default browser; pass --no-open to disable')

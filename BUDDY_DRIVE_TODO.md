@@ -129,7 +129,7 @@
 ### 阶段 2C 上传队列实现与验收证据（2026-08-30）
 
 - 新增 `src/client/upload.ts` 同源 XHR Transport 和 `src/client/UploadQueue.tsx` 队列 UI；Client Service 负责稳定 Upload ID、最多 2 项并发、逐项进度、取消、重试、清理和最终刷新。
-- 聚焦 Client/API/Local 测试覆盖队列状态机、XHR 成功/失败/超时/取消、队列上限、并发、失败隔离、Refresh 失败、Upload ID 重放和冲突；27 个 Test Files、193 个 Tests 全部通过，Statements `1744/1744`、Branches `1079/1079`、Functions `458/458`、Lines `1470/1470`，全部 `100%`。
+- 聚焦 Client/API/Local 测试覆盖队列状态机、XHR 成功/失败/超时/取消、队列上限、并发、失败隔离、Refresh 失败、Upload ID 重放和冲突；27 个 Test Files、193 个 Tests 全部通过，Statements `1749/1749`、Branches `1081/1081`、Functions `458/458`、Lines `1476/1476`，全部 `100%`。
 - 真实 Chromium Web Profile 已同时选择至少 3 个文件：初始观察到 2 项 `uploading`、后续项 `queued`；queued 和 uploading 均可取消；取消后重试成功；首次请求已由 Host 提交但浏览器收到 abort 时，重试使用相同 Upload ID 并只保留一个发布文件。
 - 同一 Profile 的持久化 `buddy_drive.json` 已核对：完成项和取消后重试项各只有一个 `file/import` 文件与一条带 `idempotencyKey`/`requestDigest` 的审计记录；被取消的排队项没有发布文件；一项无效 PDF 失败后，后续两个有效 Markdown 仍成功。
 
@@ -248,6 +248,24 @@ Phase 2C 的实现、聚焦测试、严格覆盖率、真实 Chromium 浏览器�
 - [x] Session 回放可以重建每次模型看到的资料内容与来源。
 
 ## 阶段 5：部署加固与可选知识检索
+
+### 阶段 5A：部署安全边界（2026-08-30）
+
+已实现的最小安全切片：
+
+- WebServer 只绑定 `127.0.0.1`，直接绑定 `0.0.0.0` 在配置解析和构造阶段拒绝。
+- `deploymentMode: loopback-only` 为默认模式；`proxy-fronted` 必须同时提供规范的绝对 HTTPS `publicOrigin`。
+- `dsh web --proxy-origin https://host.example` 提供代理部署输入；WebServer 不终止 TLS、不解释 `X-Forwarded-*`，代理必须保留配置的公网 `Host` 与匹配 `Origin`。
+- Connection 在代理模式下自动信任公网 authority，浏览器会话 Cookie 增加 `Secure`，不安全 HTTP 方法缺少 `Origin` 或 Origin 不匹配时在 API 分发前返回 403。
+- 本切片没有伪造企业用户、组织、租户或权限系统；代理仍负责 TLS、网络准入、用户身份和授权，Drive 仍是本地单租户存储。
+
+### 阶段 5A 退出条件
+
+- [x] 非回环 WebServer 配置无法激活，代理模式缺失或使用 HTTP `publicOrigin` 无法激活。
+- [x] 代理请求必须使用配置的 HTTPS authority；直连回环 Host、跨站 Origin、缺失 Origin 的写请求均被拒绝。
+- [x] 代理 Cookie 设置 `Secure`，默认回环 Cookie 保持不设置 `Secure` 的兼容行为。
+- [x] Host、Connection、Web Bundle 目标测试、类型检查和真实 Loader 组合测试通过。
+- [ ] 企业身份、租户隔离、反向代理部署清单和生产 TLS 配置仍待外部部署方案确认。
 
 - [ ] 认证反向代理、TLS、用户身份、CSRF 和租户隔离。
 - [ ] S3/MinIO/NAS Provider。

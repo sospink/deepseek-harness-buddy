@@ -36,7 +36,18 @@ Compose the webserver as the HTTP transport of a browser-facing host, then let t
     port: 3000
 ```
 
-`host` accepts exactly two values: `127.0.0.1` (default posture, loopback only) and `0.0.0.0` (deliberate network exposure — the server carries no TLS, authentication, or origin policy of its own). `port` 0 requests an OS-assigned port; `ctx.webServer.port` reads the listening port afterwards.
+`host` accepts only `127.0.0.1`; the carrier never binds all interfaces. `deploymentMode` defaults to `loopback-only`. `proxy-fronted` keeps the upstream on loopback and requires `publicOrigin` to be an absolute HTTPS origin owned by the fronting proxy. A non-loopback bind or a missing/HTTP public origin fails activation. `port` 0 requests an OS-assigned port; `ctx.webServer.port` reads the listening port afterwards.
+
+```yaml
+- name: '@deepseek-ai/dsh-host-webserver'
+  config:
+    host: 127.0.0.1
+    port: 3000
+    deploymentMode: proxy-fronted
+    publicOrigin: https://harness.example
+```
+
+This package does not terminate TLS or authenticate users. The proxy must terminate HTTPS, preserve the configured `Host` and `Origin`, and restrict access to the intended users before forwarding to the loopback port.
 
 Set `compression: 'gzip'` to wrap eligible socket-backed responses without changing route APIs. The client must accept gzip and the media type must be compressible; known response lengths below `compressionThresholdBytes` remain uncompressed, while unknown-length streams are eligible immediately. Existing encodings, `Cache-Control: no-transform`, range responses, SSE, ZIP, and the packaged `.gz` Worker image remain unchanged. The shipped Web bundle uses compression level 1 with a 1024-byte threshold; other compositions default to no compression.
 
@@ -109,7 +120,7 @@ None; this package neither assembles nor sends a provider request.
 
 These limits define where the server is intentionally minimal. They are current package constraints, not a task backlog.
 
-- **No server-wide TLS, authentication, or origin policy** — route owners such as `dsh-client-connection` enforce their own request policy. Binding a non-loopback address still exposes unprotected routes and static assets to that network.
+- **No TLS termination, user identity, or tenant policy** — `proxy-fronted` describes an HTTPS reverse-proxy deployment and enforces its origin at the carrier, while route owners such as `dsh-client-connection` enforce browser-session authentication. The proxy remains responsible for TLS termination, user identity, authorization, and network admission.
 - **Socket options are fixed** — config selects the bind host and port, while backlog and other socket settings remain internal until a deployment needs them.
 
 <a id="dev-note"></a>

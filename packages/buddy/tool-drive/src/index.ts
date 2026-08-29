@@ -38,19 +38,33 @@ const DEFAULTS = {
 
 /** Loader-configurable complete budgets for the three read-only tools. */
 export interface Config {
+  /** Maximum number of folders loaded into the read-only catalog. */
   maxCatalogFolders?: number
+  /** Maximum number of files loaded into the read-only catalog. */
   maxCatalogFiles?: number
+  /** Maximum number of items returned by list operations. */
   maxListItems?: number
+  /** Maximum number of files scanned by search operations. */
   maxSearchFiles?: number
+  /** Maximum number of search hits returned. */
   maxSearchResults?: number
+  /** Maximum UTF-8 query size in bytes. */
   maxQueryBytes?: number
+  /** Maximum snippet size in bytes. */
   maxSnippetBytes?: number
+  /** Maximum source content read in bytes. */
   maxSourceBytes?: number
+  /** Maximum extracted text retained in bytes. */
   maxExtractTextBytes?: number
+  /** Maximum number of lines returned by read operations. */
   maxReadLines?: number
+  /** Maximum rendered tool value size in bytes. */
   maxValueBytes?: number
+  /** Maximum rendered response size in bytes. */
   maxRenderBytes?: number
+  /** Extraction worker timeout in milliseconds. */
   extractionTimeoutMs?: number
+  /** Extraction worker heap limit in megabytes. */
   maxWorkerHeapMb?: number
 }
 

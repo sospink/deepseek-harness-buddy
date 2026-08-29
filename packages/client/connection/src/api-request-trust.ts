@@ -7,10 +7,10 @@
  * nor Fetch-Metadata to reads (images and navigations — those
  * headers go only to trustworthy destinations), so an unmarked request may
  * still be a rebound browser read and Host is the one header rebinding cannot
- * forge. Non-browser and remote clients pass the same fence via loopback,
- * deployment-derived LAN IP literals, or a declared `trustedHosts` authority.
- * Network reachability and authentication stay out of scope: binding policy
- * belongs to the webserver config, and this fence is not an auth layer.
+ * forge. Non-browser and remote clients pass the same fence via loopback or a
+ * declared `trustedHosts` authority.
+ * Network reachability and user identity stay out of scope: binding policy
+ * belongs to the webserver config, and this fence is not an identity provider.
  */
 
 import { isLoopbackHostname } from './loopback-hostname.ts'
@@ -68,8 +68,7 @@ function canonicalAuthority(entry: string, entryUrl: URL): string {
 /**
  * Whether the request authority matches a `trustedHosts` entry. An entry with
  * an explicit port matches that exact authority; a port-less entry matches the
- * hostname on any port (the shape the CLI derives for IP-literal LAN serving,
- * where the bound port may be OS-assigned). Both sides compare through WHATWG
+ * hostname on any port. Both sides compare through WHATWG
  * normalization, so case and a redundant `:80` never decide trust.
  */
 function isTrustedAuthority(hostUrl: URL, trustedHosts: readonly string[]): boolean {
@@ -86,9 +85,14 @@ function isTrustedAuthority(hostUrl: URL, trustedHosts: readonly string[]): bool
  * Decide whether one /api request may reach the RPC bridge.
  * @param request - Node HTTP or Fetch request facts (headers).
  * @param trustedHosts - non-loopback authorities this deployment serves: exact `host:port`, or port-less `host` matching any port.
+ * @param expectedOrigin - canonical HTTPS origin required by a TLS reverse-proxy deployment.
  * @returns true when the Host is ours (loopback or trusted) and any attached browser markers are same-origin.
  */
-export function isTrustedApiRequest(request: ConnectionTrustRequest, trustedHosts: readonly string[]): boolean {
+export function isTrustedApiRequest(
+  request: ConnectionTrustRequest,
+  trustedHosts: readonly string[],
+  expectedOrigin?: string,
+): boolean {
   // Host fence (DNS-rebinding defense), applied to every request: the browser
   // fills Host from the URL it believes it is talking to, so a rebound page
   // carries the attacker's domain here even though the socket lands on this
@@ -101,17 +105,25 @@ export function isTrustedApiRequest(request: ConnectionTrustRequest, trustedHost
   const hostUrl = parseAuthority(host)
   if (hostUrl === undefined) return false
   if (!isLoopbackHostname(hostUrl.hostname) && !isTrustedAuthority(hostUrl, trustedHosts)) return false
+  if (expectedOrigin !== undefined && hostUrl.host !== new URL(expectedOrigin).host) return false
   // Cross-site fence: modern browsers label the initiator relationship on
   // every fetch; an explicit cross-site marker is refused regardless of Origin.
   if (header(request.headers, 'sec-fetch-site') === 'cross-site') return false
   // Origin fence: when a browser attaches an Origin it must be exactly this
-  // authority (compared through the same normalization as the Host). Absent
-  // Origin is fine — the Host fence above already bound the request. The
+  // authority (compared through the same normalization as the Host). Unsafe
+  // cookie-authenticated methods must carry an Origin, so a cross-site form
+  // cannot submit a side-effecting request without a CORS preflight. The
   // literal "null" (sandboxed iframes, file: pages) is an opaque origin, refused.
   const origin = header(request.headers, 'origin')
-  if (origin === undefined) return true
+  const unsafeMethod = request.method !== undefined
+    && !['GET', 'HEAD', 'OPTIONS', 'TRACE'].includes(request.method.toUpperCase())
+  if (origin === undefined) return !unsafeMethod || expectedOrigin === undefined
   try {
-    return new URL(origin).host === hostUrl.host
+    const originUrl = new URL(origin)
+    if (originUrl.host !== hostUrl.host) return false
+    return expectedOrigin === undefined
+      ? true
+      : originUrl.origin === expectedOrigin
   } catch {
     return false
   }

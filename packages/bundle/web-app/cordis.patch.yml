@@ -114,6 +114,8 @@
       config:
         host: !!js ctx.webStartup.host ?? '127.0.0.1'
         port: !!js ctx.webStartup.port ?? 3080
+        deploymentMode: !!js ctx.webStartup.deploymentMode ?? 'loopback-only'
+        publicOrigin: !!js ctx.webStartup.publicOrigin
         compression: gzip
         compressionLevel: 1
         compressionThresholdBytes: 1024
@@ -122,9 +124,9 @@
     # assembly fact of dsh-web-app, never user config), mounts the
     # frontend-static fallback owner, registers the web-surface prompt
     # section and the bash runtime variable, prints the URL line, and opens the
-    # canonical local URL after the full tree settles. The webStartup provider
-    # supplies invocation-only values; after the server binds, this row samples
-    # LAN trust once and provides `webRuntime`. A complete agent-preset persona
+    # canonical URL after the full tree settles. The webStartup provider
+    # supplies invocation-only values; this row provides the Web trust list. A
+    # complete agent-preset persona
     # suppresses the prompt section for that agent while retaining the host-owned
     # shell variable.
     - id: web-runtime
@@ -158,9 +160,7 @@
       name: '@deepseek-ai/dsh-client-connection'
       inject: [webRuntime]
       config:
-        # LAN literals derived from the active bind plus --trusted-host extras.
-        # A deployment adding authorities keeps this expression and concatenates
-        # its literals, for example: ['app.internal', ...ctx.webRuntime.trustedHosts].
+        # --trusted-host extras; the proxy public authority is added by Connection.
         trustedHosts: !!js ctx.webRuntime.trustedHosts
 
     - id: api-remotes

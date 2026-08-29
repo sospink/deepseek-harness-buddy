@@ -106,6 +106,8 @@ export type RpcMessage = ClientRequest | ServerResponse
 export interface ConnectionTrustRequest {
   /** Request headers supplied by either the Fetch or node:http representation. */
   readonly headers: Headers | Readonly<Record<string, string | readonly string[] | undefined>>
+  /** HTTP method, when the carrier exposes it; used for proxy CSRF checks. */
+  readonly method?: string | undefined
 }
 
 /** HTTP status returned before dispatch, or undefined when the request may proceed. */

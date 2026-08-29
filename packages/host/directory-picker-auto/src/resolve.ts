@@ -6,8 +6,6 @@
  * @module @deepseek-ai/dsh-host-directory-picker-auto/resolve
  */
 
-import type { Config as HttpServerConfig } from '@deepseek-ai/dsh-host-webserver'
-
 /** Concrete interaction backend the resolver chooses between. */
 export type DirectoryPickerBackendKind = 'native' | 'browse'
 
@@ -18,8 +16,8 @@ export type DirectoryPickerEnv = Readonly<
 
 /** Host facts the backend choice is a pure function of, sampled once at boot. */
 export interface DirectoryPickerHostFacts {
-  /** Effective webserver bind host (the schema's closed loopback/all-interfaces union). */
-  bindHost: HttpServerConfig['host']
+  /** Effective webserver bind host; the WebServer rejects non-loopback values before this resolver runs. */
+  bindHost: string
   /** Host process platform. */
   platform: NodeJS.Platform
   /** Environment sample; SSH marks a remote operator, DISPLAY/WAYLAND_DISPLAY a Linux display. */
@@ -34,7 +32,7 @@ const present = (value: string | undefined): boolean => value !== undefined && v
 /**
  * Resolve which backend serves this boot. `native` requires every signal that
  * the operator can see the host display and the native backend can serve it:
- * a loopback-only bind (an all-interfaces bind admits remote browsers no OS
+ * a loopback-only bind (a non-loopback bind admits remote browsers no OS
  * chooser can reach), no SSH launch (under SSH port-forwarding the chooser
  * would open on the unattended server), and a servable display session —
  * assumed on darwin/win32, requiring `DISPLAY`/`WAYLAND_DISPLAY` plus a

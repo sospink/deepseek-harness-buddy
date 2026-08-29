@@ -27,6 +27,10 @@ export interface WebStartupValues {
   host?: string
   /** `--port`, absent when the invocation did not name one. */
   port?: number
+  /** Select the TLS reverse-proxy deployment posture. */
+  deploymentMode?: 'proxy-fronted'
+  /** HTTPS origin served by the trusted reverse proxy. */
+  publicOrigin?: string
   /** Explicit `--trusted-host` authorities, in argument order. */
   trustedHosts: string[]
 }
@@ -36,6 +40,7 @@ interface WebOptions {
   host?: string
   open: boolean
   port?: string
+  proxyOrigin?: string
   trustedHost?: string[]
 }
 
@@ -51,6 +56,7 @@ function webCommand(): Command {
     .option('--host <host>', 'bind host')
     .option('--no-open', 'do not open the Web UI in the default browser')
     .option('--port <port>', 'listen port; pass 0 to let the OS pick a free one')
+    .option('--proxy-origin <https-origin>', 'serve behind a TLS reverse proxy at this HTTPS origin')
     .option('--trusted-host <authority...>', 'extra authority the /api browser-trust fence accepts (host or host:port; repeatable)')
     .addHelpText('after', `
 Examples:
@@ -62,8 +68,8 @@ Examples:
 
 /**
  * Parse and provide the Web invocation as an ordinary Cordis service. The
- * command's action publishes the flags this invocation named; `--host 0.0.0.0`
- * or a non-numeric `--port` is a usage error, so on rejection (and on `--help`)
+ * command's action publishes the flags this invocation named; a non-loopback
+ * `--host` or a non-numeric `--port` is a usage error, so on rejection (and on `--help`)
  * nothing is provided.
  * @param ctx - plugin context carrying the command line.
  */
@@ -71,8 +77,8 @@ export function apply(ctx: Context): void {
   const program = webCommand()
   program.action(() => {
     const options = program.opts<WebOptions>()
-    if (options.host === '0.0.0.0') {
-      program.error('error: --host 0.0.0.0 is intentionally not supported yet for safety: it would expose remote code execution to the network; use 127.0.0.1 instead')
+    if (options.host !== undefined && options.host !== '127.0.0.1') {
+      program.error(`error: --host ${options.host} is not supported; use 127.0.0.1 and put a TLS reverse proxy in front for network access`)
     }
     if (options.port !== undefined && !/^\d+$/.test(options.port)) {
       program.error(`error: --port must be a number, got ${JSON.stringify(options.port)}`)
@@ -81,6 +87,10 @@ export function apply(ctx: Context): void {
       openBrowser: options.open,
       ...options.host !== undefined && { host: options.host },
       ...options.port !== undefined && { port: Number(options.port) },
+      ...options.proxyOrigin !== undefined && {
+        deploymentMode: 'proxy-fronted' as const,
+        publicOrigin: options.proxyOrigin,
+      },
       trustedHosts: options.trustedHost ?? [],
     } satisfies WebStartupValues)
   })

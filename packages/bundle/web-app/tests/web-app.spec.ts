@@ -69,11 +69,15 @@ function stageDist(): string {
 }
 
 /** A fake webServer capturing the fallback seat and index taps. */
-function fakeHttpServer(host: '127.0.0.1' | '0.0.0.0' = '127.0.0.1'): { server: WebServer; seat: () => unknown } {
+function fakeHttpServer(options: {
+  host?: '127.0.0.1'
+  publicOrigin?: string
+} = {}): { server: WebServer; seat: () => unknown } {
   let fallback: unknown
   const server = {
-    host,
+    host: options.host ?? '127.0.0.1',
     port: 4567,
+    publicOrigin: options.publicOrigin,
     registerFallback: (handler: unknown) => {
       fallback = handler
       return () => { fallback = undefined }
@@ -110,7 +114,7 @@ interface BashContribution {
 }
 
 describe('web-app runtime glue', () => {
-  it('mounts dist serving, prompt section, bash variables, and publishes the URL with the LAN snapshot', async () => {
+  it('mounts dist serving, prompt section, bash variables, and publishes the proxy URL', async () => {
     stageDist()
     const ctx = new Context()
     // Editor markers and a project .env SSH value do not establish a remote launch.
@@ -118,7 +122,7 @@ describe('web-app runtime glue', () => {
       { source: 'process', values: { VSCODE_IPC_HOOK_CLI: '/tmp/local-vscode-ipc' } },
       { source: 'project-env', path: '/work/.env', values: { SSH_CONNECTION: 'stale-project-value' } },
     ]))
-    const { server, seat } = fakeHttpServer('0.0.0.0')
+    const { server, seat } = fakeHttpServer({ publicOrigin: 'https://harness.example' })
     ctx.provide('webServer', server)
     provideConnection(ctx)
     const contributions: BashContribution[] = []
@@ -139,27 +143,24 @@ describe('web-app runtime glue', () => {
     await new Promise(resolve => setTimeout(resolve, 0))
 
     expect(seat()).toBeDefined() // frontend-static claimed the fallback
-    expect(ctx.get('webRuntime')).toEqual({
-      lanAddresses: ['192.168.1.5'],
-      trustedHosts: ['192.168.1.5', 'lab.internal'],
-    })
-    expect(log).toHaveBeenCalledWith('dsh web: http://127.0.0.1:4567/?token=test-token (LAN: http://192.168.1.5:4567/?token=test-token)')
+    expect(ctx.get('webRuntime')).toEqual({ trustedHosts: ['lab.internal'] })
+    expect(log).toHaveBeenCalledWith('dsh web: https://harness.example/?token=test-token')
     expect(log).toHaveBeenCalledWith('dsh web: opening the default browser; pass --no-open to disable')
-    expect(openBrowser).toHaveBeenCalledWith('http://127.0.0.1:4567/?token=test-token')
+    expect(openBrowser).toHaveBeenCalledWith('https://harness.example/?token=test-token')
     expect(lifecycle).toEqual([
-      'dsh web: http://127.0.0.1:4567/?token=test-token (LAN: http://192.168.1.5:4567/?token=test-token)',
+      'dsh web: https://harness.example/?token=test-token',
       'dsh web: opening the default browser; pass --no-open to disable',
-      'open:http://127.0.0.1:4567/?token=test-token',
+      'open:https://harness.example/?token=test-token',
     ])
     const assembly = await ctx.systemPrompt.assemble()
     expect(assembly.sections.find(entry => entry.name === 'harness:source')?.text).toContain('DeepSeek Harness implementation checkout')
     const section = assembly.sections.find(entry => entry.name === 'app:web-surface')
-    expect(section?.text).toContain('http://127.0.0.1:4567')
+    expect(section?.text).toContain('https://harness.example')
     // The single update contract: the receiver is always on; no-refresh
     // reloads additionally need the rebuild watcher.
     expect(section?.text).toContain('pnpm run dev:web')
     const webRuntime = contributions.find(contribution => contribution.name === 'web-runtime')
-    expect(webRuntime?.resolve()).toEqual({ DSH_WEB_URL: 'http://127.0.0.1:4567' })
+    expect(webRuntime?.resolve()).toEqual({ DSH_WEB_URL: 'https://harness.example' })
     await ctx.fiber.dispose()
   })
 
@@ -204,7 +205,7 @@ describe('web-app runtime glue', () => {
     await ctx.fiber.dispose()
   })
 
-  it('prints the loopback-only URL line when no LAN snapshot exists', async () => {
+  it('prints the loopback-only URL line without a proxy origin', async () => {
     stageDist()
     const ctx = new Context()
     ctx.provide('webServer', fakeHttpServer().server)

@@ -38,6 +38,9 @@ declare module '@deepseek-ai/cordis' {
 /** Route match kind: 'exact' matches the pathname verbatim; 'prefix' p matches p and p/<anything>. */
 export type WebRouteKind = 'exact' | 'prefix'
 
+/** Deployment posture for the browser carrier. */
+export type WebDeploymentMode = 'loopback-only' | 'proxy-fronted'
+
 /** One named route registration. */
 export interface WebRoute {
   kind: WebRouteKind
@@ -57,10 +60,14 @@ export interface WebUpgradeRoute {
 
 /** Web server listen and response-compression config. */
 export interface Config {
-  /** Listen host; the two supported values are loopback and all-interfaces. */
-  host: '127.0.0.1' | '0.0.0.0'
+  /** Listen host. The carrier is always bound to the loopback interface. */
+  host: '127.0.0.1'
   /** Listen port; zero requests an OS-assigned port. */
   port: number
+  /** Deployment posture. `proxy-fronted` requires an HTTPS reverse proxy. @default 'loopback-only' */
+  deploymentMode?: WebDeploymentMode
+  /** HTTPS origin served by the trusted reverse proxy; required in proxy-fronted mode. */
+  publicOrigin?: string
   /** Response compression for socket-backed HTTP requests. @default 'none' */
   compression?: 'none' | 'gzip'
   /** Gzip DEFLATE level from 0 through 9. @default 1 */
@@ -72,6 +79,44 @@ export interface Config {
 const DEFAULT_COMPRESSION = 'none' as const
 const DEFAULT_COMPRESSION_LEVEL = 1
 const DEFAULT_COMPRESSION_THRESHOLD_BYTES = 1024
+const DEFAULT_DEPLOYMENT_MODE = 'loopback-only' as const
+
+/** Normalize and validate the public origin used by a TLS reverse proxy. */
+export function normalizePublicOrigin(value: string): string {
+  let origin: URL
+  try {
+    origin = new URL(value)
+  } catch {
+    throw new Error('webserver: publicOrigin must be an absolute HTTPS origin')
+  }
+  if (origin.protocol !== 'https:' || origin.username !== '' || origin.password !== ''
+    || origin.pathname !== '/' || origin.search !== '' || origin.hash !== '') {
+    throw new Error('webserver: publicOrigin must be an absolute HTTPS origin')
+  }
+  return origin.origin
+}
+
+interface ResolvedDeployment {
+  readonly deploymentMode: WebDeploymentMode
+  readonly publicOrigin: string | undefined
+}
+
+function resolveDeployment(config: Config): ResolvedDeployment {
+  if (config.host !== '127.0.0.1') {
+    throw new Error('webserver: only 127.0.0.1 is supported; put a TLS reverse proxy in front for network access')
+  }
+  const deploymentMode = config.deploymentMode ?? DEFAULT_DEPLOYMENT_MODE
+  const publicOrigin = config.publicOrigin === undefined
+    ? undefined
+    : normalizePublicOrigin(config.publicOrigin)
+  if (deploymentMode === 'loopback-only' && publicOrigin !== undefined) {
+    throw new Error('webserver: publicOrigin is only valid with deploymentMode proxy-fronted')
+  }
+  if (deploymentMode === 'proxy-fronted' && publicOrigin === undefined) {
+    throw new Error('webserver: proxy-fronted deployment requires an HTTPS publicOrigin')
+  }
+  return { deploymentMode, publicOrigin }
+}
 
 interface ResolvedConfig extends Config {
   compression: 'none' | 'gzip'
@@ -123,8 +168,10 @@ function createGzipMiddleware(config: ResolvedConfig): NodeMiddleware {
  */
 export class WebServer extends Service {
   static Config: z<Config> = z.object({
-    host: z.union([z.const('127.0.0.1'), z.const('0.0.0.0')]).required(),
+    host: z.const('127.0.0.1').required(),
     port: z.natural().max(65535).required(),
+    deploymentMode: z.union([z.const('loopback-only'), z.const('proxy-fronted')]).default(DEFAULT_DEPLOYMENT_MODE),
+    publicOrigin: z.string(),
     compression: z.union([z.const('none'), z.const('gzip')]).default(DEFAULT_COMPRESSION),
     compressionLevel: z.number().step(1).min(0).max(9).default(DEFAULT_COMPRESSION_LEVEL),
     compressionThresholdBytes: z.natural().default(DEFAULT_COMPRESSION_THRESHOLD_BYTES),
@@ -139,9 +186,11 @@ export class WebServer extends Service {
   private server!: Server
   private listenedPort!: number
   private readonly gzip: NodeMiddleware | undefined
+  private readonly deployment: ResolvedDeployment
 
   constructor(ctx: Context, private config: Config) {
     super(ctx, 'webServer')
+    this.deployment = resolveDeployment(config)
     const resolved = config as ResolvedConfig
     this.gzip = resolved.compression === 'gzip' ? createGzipMiddleware(resolved) : undefined
   }
@@ -151,9 +200,19 @@ export class WebServer extends Service {
     return this.listenedPort
   }
 
-  /** The configured bind host (the loopback or all-interfaces literal). */
+  /** The configured bind host, always the loopback literal. */
   get host(): Config['host'] {
     return this.config.host
+  }
+
+  /** The configured deployment posture used by Connection request policy. */
+  get deploymentMode(): WebDeploymentMode {
+    return this.deployment.deploymentMode
+  }
+
+  /** The canonical HTTPS origin of the fronting proxy, when configured. */
+  get publicOrigin(): string | undefined {
+    return this.deployment.publicOrigin
   }
 
   /**

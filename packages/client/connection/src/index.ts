@@ -66,15 +66,16 @@ function assertImageBodyCapacity(ctx: Context, maxRequestBodyBytes: number): voi
 /** Services required before providing Connection. */
 export const inject = ['webServer', 'credentials']
 
-/** Plugin config: the deployment's non-loopback serving authorities. */
+/** Plugin config: additional authorities accepted by the Web trust fence. */
 export interface ConnectionConfig {
   /**
    * Authorities this deployment serves beyond loopback: exact `host:port`, or
    * port-less `host` matching any port. The /api trust fence refuses any
    * request whose Host is neither loopback nor listed here, so a
    * non-loopback (`0.0.0.0`) deployment must declare the names it is reached
-   * by; the Web runtime derives LAN IP literals from an active all-interface
-   * bind. An entry that is not a bare, canonical authority fails plugin load.
+   * by; a proxy-fronted Web runtime adds its configured public origin
+   * automatically. An entry that is not a bare, canonical authority fails
+   * plugin load.
    */
   trustedHosts?: string[]
   /** Absolute browser-session lifetime in days. Default: 30. */
@@ -105,10 +106,20 @@ export async function apply(ctx: Context, config?: ConnectionConfig): Promise<vo
   // silently authorizing its hostname prefix at request time.
   for (const entry of trustedHosts) assertTrustedAuthority(entry)
   assertImageBodyCapacity(ctx, maxRequestBodyBytes)
+  const deploymentMode = ctx.webServer.deploymentMode
+  const publicOrigin = ctx.webServer.publicOrigin
+  if (deploymentMode === 'proxy-fronted' && publicOrigin === undefined) {
+    throw new Error('client-connection: proxy-fronted WebServer must provide an HTTPS publicOrigin')
+  }
+  const proxyAuthority = publicOrigin === undefined ? undefined : new URL(publicOrigin).host
+  const effectiveTrustedHosts = proxyAuthority === undefined
+    ? trustedHosts
+    : [...trustedHosts, proxyAuthority]
   const connection = new HostConnectionService(
     ctx,
-    trustedHosts,
-    await BrowserAuth.create(ctx.root, ctx.credentials, cookieMaxAgeDays),
+    effectiveTrustedHosts,
+    await BrowserAuth.create(ctx.root, ctx.credentials, cookieMaxAgeDays, deploymentMode === 'proxy-fronted'),
+    publicOrigin,
   )
   const fetchHandler = connection.createSharedFetchHandler(API_PATH)
   const route: WebRoute = {

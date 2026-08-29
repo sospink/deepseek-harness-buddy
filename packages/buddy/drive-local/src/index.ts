@@ -64,11 +64,17 @@ const DEFAULT_LIMITS: DriveLimits = Object.freeze({
 export interface Config {
   /** Private provider-owned root; never a Workspace path. */
   root: string
+  /** Maximum size of one admitted file in bytes. */
   maxFileBytes?: number
+  /** Maximum aggregate size of one library in bytes. */
   maxLibraryBytes?: number
+  /** Maximum number of entries accepted from one DOCX archive. */
   maxDocxEntries?: number
+  /** Maximum expanded size of one DOCX archive in bytes. */
   maxDocxExpandedBytes?: number
+  /** Maximum allowed DOCX compression ratio. */
   maxDocxCompressionRatio?: number
+  /** Maximum number of audit events retained by the local provider. */
   maxAuditEvents?: number
 }
 
