@@ -12,6 +12,7 @@ import { Button, Input, IconSearchOutline16 } from '@deepseek-ai/dsh-client-ui-p
 import type { DriveOverlayProps } from './DriveOverlay.tsx'
 import {
   findPdfPage,
+  pdfCanvasContext,
   pdfCanvasSize,
   pdfDocumentOptions,
   pdfExternalLinks,
@@ -176,10 +177,7 @@ function PdfPageCanvas({ document, pageNumber, zoom, onFailure }: {
     void document.getPage(pageNumber).then(async (loadedPage) => {
       page = loadedPage
       if (disposed) return
-      const canvas = canvasRef.current
-      if (canvas === null) throw new Error('Canvas is unavailable.')
-      const context = canvas.getContext('2d', { alpha: false })
-      if (context === null) throw new Error('Canvas is unavailable.')
+      const { canvas, context } = pdfCanvasContext(canvasRef.current)
       const viewport = page.getViewport({ scale: 0.75 * zoom })
       const outputScale = Math.min(globalThis.devicePixelRatio || 1, 2)
       const size = pdfCanvasSize(viewport.width, viewport.height, outputScale)

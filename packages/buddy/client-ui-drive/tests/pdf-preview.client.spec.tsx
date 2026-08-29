@@ -5,6 +5,7 @@ import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import type { PDFDocumentLoadingTask, PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist'
 import {
   findPdfPage,
+  pdfCanvasContext,
   pdfCanvasSize,
   pdfDocumentOptions,
   pdfExternalLinks,
@@ -49,6 +50,13 @@ describe('PDF preview policy', () => {
       useWorkerFetch: false, useWasm: false, stopAtErrors: true,
     }))
     expect(pdfWorkerUrl()).toBe('/api/buddy-drive/assets/pdf.worker-6.2.108.mjs')
+  })
+
+  it('requires a mounted Canvas and a 2D context', () => {
+    expect(() => pdfCanvasContext(null)).toThrow('Canvas is unavailable.')
+    const canvas = document.createElement('canvas')
+    vi.mocked(HTMLCanvasElement.prototype.getContext).mockReturnValueOnce({} as CanvasRenderingContext2D)
+    expect(pdfCanvasContext(canvas)).toEqual({ canvas, context: expect.any(Object) })
   })
 
   it('bounds the backing canvas before allocation', () => {

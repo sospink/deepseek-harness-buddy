@@ -13,6 +13,18 @@ export const PDF_MAX_IMAGE_PIXELS = 16_000_000
 export const PDF_MAX_CANVAS_BYTES = 64 * 1024 * 1024
 
 
+
+/** Require the mounted Canvas and its non-alpha 2D context. */
+export function pdfCanvasContext(canvas: HTMLCanvasElement | null): {
+  readonly canvas: HTMLCanvasElement
+  readonly context: CanvasRenderingContext2D
+} {
+  if (canvas === null) throw new Error('Canvas is unavailable.')
+  const context = canvas.getContext('2d', { alpha: false })
+  if (context === null) throw new Error('Canvas is unavailable.')
+  return { canvas, context }
+}
+
 /** Compute a bounded canvas backing store before allocating browser pixels. */
 export function pdfCanvasSize(width: number, height: number, outputScale: number): { width: number; height: number } {
   const canvasWidth = Math.max(1, Math.floor(width * outputScale))
