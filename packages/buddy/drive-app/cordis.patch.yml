@@ -1,0 +1,18 @@
+# Buddy Drive application layer. Apply after @deepseek-ai/dsh-web-app.
+- insert:
+    - id: buddy-drive-local
+      name: '@sospink/dsh-buddy-drive-local'
+      config:
+        root: !!js dshHomePath('buddy-drive')
+        maxFileBytes: 52428800
+        maxLibraryBytes: 2147483648
+        maxDocxEntries: 2000
+        maxDocxExpandedBytes: 262144000
+        maxDocxCompressionRatio: 100
+        maxAuditEvents: 100000
+
+    - id: buddy-api-drive
+      name: '@sospink/dsh-buddy-api-drive'
+
+    - id: buddy-client-ui-drive
+      name: '@sospink/dsh-buddy-client-ui-drive'

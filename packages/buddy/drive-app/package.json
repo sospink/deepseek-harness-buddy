@@ -1,0 +1,52 @@
+{
+  "name": "@sospink/dsh-buddy-drive-app",
+  "description": "Optional Web profile bundle mounting the complete Buddy Drive stack",
+  "version": "0.1.2-alpha.1",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sospink/deepseek-harness-buddy.git",
+    "directory": "packages/buddy/drive-app"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./invariant": {
+      "types": "./lib/types/invariant.d.ts",
+      "default": "./lib/invariant.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "files": [
+    "lib/index.js",
+    "lib/invariant.js",
+    "cordis.patch.yml",
+    "lib/types/**/*.d.ts"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@sospink/dsh-buddy-api-drive": "workspace:^",
+    "@sospink/dsh-buddy-client-ui-drive": "workspace:^",
+    "@sospink/dsh-buddy-drive-local": "workspace:^"
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-invariants": "workspace:^"
+  },
+  "devDependencies": {
+    "@deepseek-ai/cordis": "workspace:^",
+    "@deepseek-ai/dsh-invariants": "workspace:^",
+    "@deepseek-ai/dsh-app-boot": "workspace:^"
+  }
+}

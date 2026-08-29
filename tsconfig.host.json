@@ -329,6 +329,7 @@
     { "path": "./apps/cli" },
     { "path": "./packages/buddy/drive" },
     { "path": "./packages/buddy/drive-local" },
-    { "path": "./packages/buddy/api-drive" }
+    { "path": "./packages/buddy/api-drive" },
+    { "path": "./packages/buddy/drive-app" }
   ]
 }

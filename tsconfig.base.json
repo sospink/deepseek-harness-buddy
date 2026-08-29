@@ -239,6 +239,12 @@
       "@sospink/dsh-buddy-api-drive": ["./packages/buddy/api-drive/src"],
       "@sospink/dsh-buddy-api-drive/invariant": ["./packages/buddy/api-drive/src/invariant.ts"],
       "@sospink/dsh-buddy-api-drive/types": ["./packages/buddy/api-drive/src/types.ts"],
+      "@sospink/dsh-buddy-api-drive/paths": ["./packages/buddy/api-drive/src/paths.ts"],
+      "@sospink/dsh-buddy-client-ui-drive": ["./packages/buddy/client-ui-drive/src"],
+      "@sospink/dsh-buddy-client-ui-drive/invariant": ["./packages/buddy/client-ui-drive/src/invariant.ts"],
+      "@sospink/dsh-buddy-client-ui-drive/client": ["./packages/buddy/client-ui-drive/src/client/index.ts"],
+      "@sospink/dsh-buddy-drive-app": ["./packages/buddy/drive-app/src"],
+      "@sospink/dsh-buddy-drive-app/invariant": ["./packages/buddy/drive-app/src/invariant.ts"],
       // BEGIN generated package aliases — pnpm run gen-tsconfig-paths
       "@deepseek-ai/dsh-acp": ["./packages/acp/acp/src"],
       "@deepseek-ai/dsh-acp/invariant": ["./packages/acp/acp/src/invariant.ts"],

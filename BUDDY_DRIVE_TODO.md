@@ -2,7 +2,7 @@
 
 > 基线日期：2026-08-29
 > 当前上游提交：`cd5ef8148158c3a752a658978873241fdf8e2bbc`（`dsh-v0.1.2-alpha.1`）
-> 开发分支：`feature/buddy-drive-core`
+> 开发分支：`feature/buddy-drive-web`
 > 架构提案：`.agents/notes/proposed/feature/2026-08-29-safety-agent-drive-library.zh.md`
 
 ## 状态定义
@@ -19,13 +19,13 @@
 
 | ID | 原始需求 | 实现模块 | 用户入口 | 后端/持久化 | 验收证据 | 状态 |
 |---|---|---|---|---|---|---|
-| R1 | 将三角协作改为单独云盘模式 | Buddy Drive Bundle、独立 Overlay | 侧栏“资料云盘” | `ctx.drive` | Drive 模式无成员表、任务板、邮箱和通信入口 | 进行中 |
+| R1 | 将三角协作改为单独云盘模式 | Buddy Drive Bundle、独立 Overlay | 侧栏“资料云盘” | `ctx.drive` | 真实 Bundle 与浏览器入口已验收，未挂载成员表、任务板、邮箱或通信入口 | 已验收 |
 | R2 | 定位安全 Agent | Agent Preset、只读 Drive Tools | 新建定位安全 Agent 会话 | Session Log、Tool Pipeline | Agent 只读取显式选择或工具请求的文件版本，并返回来源 | 未开始 |
-| R3 | 上传角色分工文档 | Drive Core、Upload API、Drive UI | 云盘上传与分类 | Blob Store、`buddy_drive` Domain | 上传后重启仍存在，可标记为“角色分工” | 进行中 |
+| R3 | 上传角色分工文档 | Drive Core、Upload API、Drive UI | 云盘上传与分类 | Blob Store、`buddy_drive` Domain | Markdown 角色分工样本已从浏览器上传，Host 重启后文件夹、文件和分类仍存在 | 已验收 |
 | R4 | 支持 Markdown | Admission、Markdown Preview | 文件预览面板 | 原文件 Blob | `.md/.markdown` 签名与 UTF-8 校验、源码/渲染预览 | 进行中 |
 | R5 | 支持 PDF | Admission、PDF.js Preview | 文件预览面板 | Range Content Route | PDF 签名校验、分页/缩放/Range 读取 | 进行中 |
 | R6 | 支持 DOCX | Admission、DOCX Preview | 文件预览面板 | OOXML Blob、Preview Worker | OOXML 结构/ZIP Bomb 校验、隔离在线预览 | 进行中 |
-| R7 | 沟通功能暂不做 | Bundle Composition | 无入口 | 不挂载 Team/Mailbox | Profile 和 UI 中不存在沟通能力 | 未开始 |
+| R7 | 沟通功能暂不做 | Bundle Composition | 无入口 | 不挂载 Team/Mailbox | Buddy Drive Bundle 仅组合 Drive Local、Drive API 与 Drive UI，浏览器无沟通入口 | 已验收 |
 | R8 | 探索或开发 WorkBuddy 类资料库插件 | 插件评估、Drive Seam | 不适用 | 不适用 | 评估 `dsh-files`、`dsh-file-explorer`、`dsh-univer-office`、MinerU 并记录取舍 | 已实现 |
 | R9 | 后续可持续同步官方 Harness | Fork-owned Packages、窄 Bundle Patch | 不适用 | Git `upstream` | 自有实现限制在 `packages/buddy` 与明确集成点，上游包不被散改 | 进行中 |
 
@@ -111,19 +111,32 @@
 - 内容路由为认证 `GET|HEAD /api/buddy-drive/content/<versionId>`，支持完整读取、开放/闭合/后缀单 Range、`416` 完整大小标记和防御性响应头。
 - Host/API 源码严格覆盖率：Statements `255/255`、Branches `139/139`、Functions `70/70`、Lines `218/218`，全部 `100%`；6 个 Test Files、36 个 Tests 全部通过。
 
-- [ ] 新建 `@sospink/dsh-buddy-client-ui-drive`。
-- [ ] 在 `sidebar.footer.action` 注册“资料云盘”。
-- [ ] 在 `shell.overlay` 注册独立云盘页面。
-- [ ] 实现文件夹树、文件表格、分类、上传队列、进度、取消、重试、下载、删除和恢复。
-- [ ] 实现重连后的状态恢复和错误态。
-- [ ] 完成键盘导航、焦点恢复、窄窗口和中英文文案。
+- [x] 新建 `@sospink/dsh-buddy-client-ui-drive`。
+- [x] 在 `sidebar.footer.action` 注册“资料云盘”。
+- [x] 在 `shell.overlay` 注册独立云盘页面。
+- [x] 实现文件夹导航、当前目录文件列表与搜索、分类、原始文件上传、下载、软删除和恢复。
+- [ ] 增加多文件上传队列、可视进度、用户取消和失败重试；当前第一版为单文件原始 Body 上传。
+- [x] 实现 Snapshot Feed 重连、状态替换、失败回滚和手动刷新错误态。
+- [x] 完成原生文件输入、关闭后焦点恢复和中英文文案。
+- [ ] 完成全量键盘导航与窄窗口真实浏览器验收。
+- [x] 新建 `@sospink/dsh-buddy-drive-app`，以可安装 Bundle 组合 Local、API 与 Client UI。
+
+### 阶段 2B Client UI/Bundle 证据（2026-08-29）
+
+- `@sospink/dsh-buddy-client-ui-drive` 通过 `ctx.remote.$mount(driveRemote)` 动态挂载 Drive Remote，并在挂载后通过 `ctx.get('remote.drive')` 获取动态服务，真实浏览器未再出现静态 Inject 守卫错误。
+- Client UI 源码严格覆盖率：Statements `203/203`、Branches `106/106`、Functions `88/88`、Lines `162/162`，全部 `100%`；4 个 Test Files、25 个 Tests 全部通过。
+- `@sospink/dsh-buddy-drive-app` 的 Bundle Manifest、Patch 行顺序、配置、依赖映射、Host Marker 与 Invariant 共 3 个 Tests 全部通过。
+- Host 与 Client TypeScript Project References、完整 `pnpm run build`、Client Bundle Purity、Workspace Constraints、Package Invariants、README Model Experience/Known Limitations、Package Paths 与 Markdown Links 门禁全部通过。
+- 隔离 Profile 的真实浏览器路径已验证：打开独立资料云盘、创建“角色资料”文件夹、上传 UTF-8 Markdown、搜索、修改分类、完整下载、单 Range `206`、软删除、显示已删除、恢复；浏览器控制台无 Buddy 插件加载错误。
+- Host 重启后，“角色资料”文件夹、Markdown 文件和更新后的“安全协议”分类仍存在，证明元数据与 Blob 持久化链路成立。
+- 在线预览仍明确显示为下一阶段能力；本阶段未伪装 Markdown、PDF 或 DOCX 预览已完成。
 
 ### 阶段 2 退出条件
 
-- [ ] 用户无需进入对话即可完成资料管理。
-- [ ] 浏览器刷新和 Host 重启后，列表、文件夹、分类和版本一致。
-- [ ] 上传中断不会产生可见的半成品文件。
-- [ ] 浏览器 UI Snapshot 和真实 Loader 组合测试通过。
+- [x] 用户无需进入对话即可完成第一版资料管理。
+- [x] 浏览器刷新和 Host 重启后，列表、文件夹、分类和当前版本一致。
+- [x] 上传失败或中断不会发布可见的半成品文件；原子提交和失败回滚已有聚焦测试。
+- [x] Client DOM 交互测试、真实浏览器截图和真实 Loader/Bundle 组合测试通过。
 
 ## 阶段 3：Markdown、PDF、DOCX 在线预览
 

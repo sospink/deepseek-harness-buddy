@@ -7,10 +7,9 @@ import type {} from '@deepseek-ai/dsh-client-connection'
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import { DriveHttpError, readBoundedBody } from './body.ts'
 import { driveVersionView } from './feed.ts'
+import { DRIVE_CONTENT_PATH, DRIVE_UPLOAD_PATH } from './paths.ts'
 import type { DriveFileKind, DriveHttpFailure, DriveUploadValue } from './types.ts'
 
-export const DRIVE_UPLOAD_PATH = '/api/buddy-drive/upload'
-export const DRIVE_CONTENT_PATH = '/api/buddy-drive/content'
 const DOCX_MEDIA = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 
 function json(response: ServerResponse, status: number, value: unknown): void {

@@ -18,6 +18,8 @@ The `buddy/` group contains private packages owned by the `sospink/deepseek-harn
 | [`drive/`](drive/README.md) | Provider-neutral library, folder, file, version, audit, and content-read contract | `ctx.drive` |
 | [`drive-local/`](drive-local/README.md) | Local atomic metadata and content-addressed blob provider | registers on `ctx.drive` |
 | [`api-drive/`](api-drive/README.md) | Generated Remote metadata commands plus authenticated upload/content routes | `ctx.buddyDriveController`, `ctx.remote.drive` |
+| [`client-ui-drive/`](client-ui-drive/README.md) | Standalone sidebar/overlay Drive workspace and reconnecting browser state | `ctx.buddyDriveUi` |
+| [`drive-app/`](drive-app/README.md) | Optional Web Bundle mounting the complete Drive stack | patch layer |
 
 ## Related documentation
 

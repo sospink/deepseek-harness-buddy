@@ -4,9 +4,8 @@ import type { DriveFile, DriveVersion } from '@sospink/dsh-buddy-drive'
 import {
   createDriveContentRoute,
   createDriveUploadRoute,
-  DRIVE_CONTENT_PATH,
-  DRIVE_UPLOAD_PATH,
 } from '../src/http.ts'
+import { DRIVE_CONTENT_PATH, DRIVE_UPLOAD_PATH } from '../src/paths.ts'
 import type { DriveHarness } from './helpers.ts'
 import { driveHarness, request, ResponseCapture } from './helpers.ts'
 

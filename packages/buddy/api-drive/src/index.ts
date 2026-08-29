@@ -22,7 +22,7 @@ import type {
 } from './types.ts'
 
 export type * from './types.ts'
-export { DRIVE_CONTENT_PATH, DRIVE_UPLOAD_PATH } from './http.ts'
+export { DRIVE_CONTENT_PATH, DRIVE_UPLOAD_PATH } from './paths.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
