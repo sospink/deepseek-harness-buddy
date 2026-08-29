@@ -17,7 +17,9 @@ Mount it beside the stock Web Client modules after API Gateway, Connection, Loca
 
 The sidebar action opens the Drive and restores focus when the Drive closes. The application workspace contains folder navigation, search and upload controls, a file list, and file details/actions. Users can create folders, upload Markdown/PDF/DOCX documents, select an upload classification, search the current folder, show deleted files, update classification, download originals, soft-delete, and restore.
 
-Markdown files have a real rendered/source preview backed by the immutable content route and Harness `MarkdownText`. The browser retains at most 2 MiB, cancels stale reads when selection changes, and escapes parsed image markers before rendering so document-authored HTTP(S) images cannot issue requests. Raw HTML remains literal under the Harness renderer. PDF and DOCX details continue to state explicitly that their preview slices are pending.
+Markdown files have a real rendered/source preview backed by the immutable content route and Harness `MarkdownText`. The browser retains at most 2 MiB, cancels stale reads when selection changes, and escapes parsed image markers before rendering so document-authored HTTP(S) images cannot issue requests. Raw HTML remains literal under the Harness renderer.
+
+PDF files use a real PDF.js Canvas viewer backed by the immutable Range route, a pinned same-origin Worker, and authenticated packed CMaps. The viewer keeps one page resident, supports previous/next navigation, 50%–200% zoom, and explicit text search across at most 500 pages. Annotation rendering and scripting layers never mount. Document/page JavaScript actions are detected only to display a blocked warning; absolute HTTP(S) annotations become separate explicit-click links, while dangerous protocols remain absent. DOCX details continue to state explicitly that their preview slice is pending.
 
 ## Understand the implementation
 
@@ -29,6 +31,9 @@ Markdown files have a real rendered/source preview backed by the immutable conte
 | [`src/client/DriveOverlay.tsx`](src/client/DriveOverlay.tsx) | Three-column file-management workspace and format-specific preview seat |
 | [`src/client/MarkdownPreview.tsx`](src/client/MarkdownPreview.tsx) | Markdown rendered/source UI, cancellation, retry, and Harness `MarkdownText` composition |
 | [`src/client/markdown-preview.ts`](src/client/markdown-preview.ts) | Bounded UTF-8 loading and parsed image-marker deactivation |
+| [`src/client/PdfPreview.tsx`](src/client/PdfPreview.tsx) | Single-page Canvas viewer, navigation, zoom, search, script warning, and explicit links |
+| [`src/client/pdf-preview.ts`](src/client/pdf-preview.ts) | PDF budgets, Range options, text search, Canvas sizing, and annotation URL policy |
+| [`src/client/pdf-runtime.ts`](src/client/pdf-runtime.ts) | Lazy PDF.js runtime boundary |
 | [`src/client/locales.ts`](src/client/locales.ts) | Typed Chinese and English product copy |
 
 ## Further Exploration
@@ -55,7 +60,10 @@ Independent of model requests; browser file management never alters a request pr
 
 ## Known Limitations and Deferred Work
 
-- **PDF and DOCX remain explicit placeholders** — Markdown preview is implemented; PDF.js and isolated DOCX rendering remain later slices, and originals stay downloadable.
+- **DOCX remains an explicit placeholder** — Markdown and PDF preview are implemented; isolated DOCX rendering remains a later slice, and originals stay downloadable.
+- **PDF search is page-level** — one search checks at most 500 pages and navigates to the first matching page; it does not yet paint match highlights or expose a text layer.
+- **PDF page virtualization is single-resident** — only the current Canvas page is retained. Thumbnail strips, continuous scrolling, printing, forms, attachments, outlines, and internal destinations remain deferred.
+- **PDF client bundle cost** — PDF.js is inlined into the one Loader-owned `client.js` to avoid unsupported dynamic chunks; the uncompressed Buddy Client artifact is currently about 1.38 MiB.
 - **Markdown preview budget** — the browser renders at most 2 MiB of one immutable Markdown version. Larger documents remain downloadable instead of being partially rendered.
 - **Remote Markdown images are inactive** — parsed inline/reference images render as inert Markdown text; there is no per-document image allowlist yet.
 - **Current-folder search only** — the search field filters the selected folder in memory; indexed cross-folder and content search are later work.

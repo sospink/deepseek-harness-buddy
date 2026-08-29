@@ -9,11 +9,11 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`@sospink/dsh-buddy-api-drive` is the Host browser adapter for `ctx.drive`. It exposes metadata commands and a reconnect-safe full-snapshot stream through generated Typert Remote namespace `drive`, then registers authenticated binary routes for raw uploads and immutable content reads. The package owns browser transport and failure mapping only; the Drive provider remains the authority for admission, metadata, blobs, quotas, audit, and recovery.
+`@sospink/dsh-buddy-api-drive` is the Host browser adapter for `ctx.drive`. It exposes metadata commands and a reconnect-safe full-snapshot stream through generated Typert Remote namespace `drive`, then registers authenticated binary routes for raw uploads, immutable content reads, and pinned PDF.js assets. The package owns browser transport and failure mapping only; the Drive provider remains the authority for admission, metadata, blobs, quotas, audit, and recovery.
 
 ## Use this package
 
-Mount it after Typert, the Drive provider, WebServer, and the Host Connection service. The Connection service supplies the same Host/Origin DNS-rebinding fence and persistent browser-session authentication used by `/api`; the two WebServer routes call `ctx.connection.requestRejection()` before reading or serving bytes.
+Mount it after Typert, the Drive provider, WebServer, and the Host Connection service. The Connection service supplies the same Host/Origin DNS-rebinding fence and persistent browser-session authentication used by `/api`; every WebServer route calls `ctx.connection.requestRejection()` before reading or serving bytes.
 
 ### Remote metadata methods
 
@@ -27,6 +27,10 @@ The generated `ctx.remote.drive` namespace provides `baseline`, `createFolder`, 
 
 `GET|HEAD /api/buddy-drive/content/<versionId>` returns one verified immutable version. It supports one standard byte range (`start-end`, `start-`, or suffix), returns `416` with `Content-Range: bytes */<size>` for invalid ranges, and emits `Accept-Ranges`, a digest ETag, `nosniff`, private/no-store caching, inline UTF-8 disposition, and a sandboxing Content Security Policy.
 
+### PDF.js asset routes
+
+`GET|HEAD /api/buddy-drive/assets/pdf.worker-6.2.108.mjs` serves the pinned PDF.js Worker from the installed `pdfjs-dist` package. `GET|HEAD /api/buddy-drive/assets/cmaps/<name>.bcmap` serves only filenames enumerated from that package's packed CMap directory. Both surfaces are authenticated, same-origin, immutable, and `nosniff`; unknown files, nested paths, traversal forms, and unsupported methods are rejected. No PDF runtime or CMap is fetched from a CDN.
+
 ## Understand the implementation
 
 | File | Role |
@@ -34,7 +38,9 @@ The generated `ctx.remote.drive` namespace provides `baseline`, `createFolder`, 
 | [`src/index.ts`](src/index.ts) | Typert Remote owner and binary-route registration lifecycle |
 | [`src/commands.ts`](src/commands.ts) | Unary command projection and stable `TypertRemoteFailure` mapping |
 | [`src/feed.ts`](src/feed.ts) | Complete baseline traversal and reconnect snapshot generations |
-| [`src/http.ts`](src/http.ts) | Authenticated upload/content handlers, query validation, ranges, and defensive headers |
+| [`src/http.ts`](src/http.ts) | Authenticated upload/content/PDF-asset handlers, query validation, ranges, and defensive headers |
+| [`src/pdf-assets.ts`](src/pdf-assets.ts) | Pinned Worker bytes and allowlisted packed CMap lookup/cache |
+| [`src/paths.ts`](src/paths.ts) | Browser-safe public HTTP route constants |
 | [`src/body.ts`](src/body.ts) | Exact bounded raw request-body intake |
 | [`src/types.ts`](src/types.ts) | Browser-safe Remote and HTTP response vocabulary |
 
@@ -66,6 +72,7 @@ Independent of model requests: Remote calls and browser downloads do not alter a
 - **Full snapshots after every mutation** — this is intentionally simple and reconnect-safe for the first local library; large multi-user libraries need revisioned deltas or server-side paging.
 - **Raw uploads are buffered by the WebServer route** — the route enforces the Drive file cap but does not yet stream directly into a provider transaction; stage 2 retains the 50 MiB default.
 - **No multi-range response** — one byte range is supported for PDF and ordinary browser reads; multipart ranges reject with `416`.
+- **Pinned PDF.js asset family** — Worker and CMap paths are coupled to `pdfjs-dist@6.2.108`; dependency upgrades must update the versioned Worker path and rerun browser fixtures.
 - **Local browser authentication only** — Connection authentication protects the local Web application; enterprise identity and per-file authorization remain stage 5 work.
 
 ### Dev Note

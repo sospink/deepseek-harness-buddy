@@ -7,7 +7,8 @@ import type {} from '@deepseek-ai/dsh-client-connection'
 import type { WebRoute } from '@deepseek-ai/dsh-host-webserver'
 import { DriveHttpError, readBoundedBody } from './body.ts'
 import { driveVersionView } from './feed.ts'
-import { DRIVE_CONTENT_PATH, DRIVE_UPLOAD_PATH } from './paths.ts'
+import { DRIVE_CONTENT_PATH, DRIVE_PDF_CMAP_PATH, DRIVE_PDF_WORKER_PATH, DRIVE_UPLOAD_PATH } from './paths.ts'
+import { PDF_WORKER_SOURCE, readPdfCMap } from './pdf-assets.ts'
 import type { DriveFileKind, DriveHttpFailure, DriveUploadValue } from './types.ts'
 
 const DOCX_MEDIA = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
@@ -154,6 +155,68 @@ export function parseRange(value: string | undefined, size: number): ByteRange |
 
 function contentDisposition(name: string): string {
   return `inline; filename*=UTF-8''${encodeURIComponent(name)}`
+}
+
+
+/** Create the authenticated packed PDF.js CMap prefix route. */
+export function createDrivePdfCMapRoute(ctx: Context): WebRoute {
+  return {
+    kind: 'prefix',
+    path: DRIVE_PDF_CMAP_PATH,
+    handler: (request, response) => {
+      try {
+        authenticate(ctx, request)
+        if (request.method !== 'GET' && request.method !== 'HEAD') {
+          response.setHeader('allow', 'GET, HEAD')
+          throw new DriveHttpError(405, 'method-not-allowed', 'Method not allowed.')
+        }
+        const pathname = new URL(request.url ?? DRIVE_PDF_CMAP_PATH, 'http://dsh.internal').pathname
+        const suffix = pathname.slice(DRIVE_PDF_CMAP_PATH.length)
+        if (!/^\/[A-Za-z0-9_.-]+\.bcmap$/u.test(suffix)) {
+          throw new DriveHttpError(404, 'asset-not-found', 'PDF asset not found.')
+        }
+        const content = readPdfCMap(suffix.slice(1))
+        if (content === undefined) throw new DriveHttpError(404, 'asset-not-found', 'PDF asset not found.')
+        response.writeHead(200, {
+          'content-type': 'application/octet-stream',
+          'content-length': String(content.byteLength),
+          'cache-control': 'private, max-age=31536000, immutable',
+          'cross-origin-resource-policy': 'same-origin',
+          'x-content-type-options': 'nosniff',
+        })
+        response.end(request.method === 'HEAD' ? undefined : content)
+      } catch (error) {
+        fail(response, driveHttpError(error))
+      }
+    },
+  }
+}
+
+/** Create the authenticated, same-origin PDF.js worker route. */
+export function createDrivePdfWorkerRoute(ctx: Context): WebRoute {
+  return {
+    kind: 'exact',
+    path: DRIVE_PDF_WORKER_PATH,
+    handler: (request, response) => {
+      try {
+        authenticate(ctx, request)
+        if (request.method !== 'GET' && request.method !== 'HEAD') {
+          response.setHeader('allow', 'GET, HEAD')
+          throw new DriveHttpError(405, 'method-not-allowed', 'Method not allowed.')
+        }
+        response.writeHead(200, {
+          'content-type': 'text/javascript; charset=utf-8',
+          'content-length': String(PDF_WORKER_SOURCE.byteLength),
+          'cache-control': 'private, max-age=31536000, immutable',
+          'cross-origin-resource-policy': 'same-origin',
+          'x-content-type-options': 'nosniff',
+        })
+        response.end(request.method === 'HEAD' ? undefined : PDF_WORKER_SOURCE)
+      } catch (error) {
+        fail(response, driveHttpError(error))
+      }
+    },
+  }
 }
 
 /** Create the authenticated version-content prefix route. */

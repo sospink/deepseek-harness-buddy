@@ -9,11 +9,11 @@ kind: "package-reference"
 
 ## 摘要
 
-`@sospink/dsh-buddy-api-drive` 是 `ctx.drive` 的 Host 浏览器 Adapter。它通过生成的 Typert Remote `drive` Namespace 暴露元数据命令和可重连完整快照流，并注册认证二进制路由，处理原始上传与不可变内容读取。本包只拥有浏览器传输和失败映射；Drive Provider 仍然是准入、元数据、Blob、配额、审计和恢复的权威。
+`@sospink/dsh-buddy-api-drive` 是 `ctx.drive` 的 Host 浏览器 Adapter。它通过生成的 Typert Remote `drive` Namespace 暴露元数据命令和可重连完整快照流，并注册认证二进制路由，处理原始上传、不可变内容读取和固定版本 PDF.js 资源。本包只拥有浏览器传输和失败映射；Drive Provider 仍然是准入、元数据、Blob、配额、审计和恢复的权威。
 
 ## 使用本包
 
-在 Typert、Drive Provider、WebServer 和 Host Connection Service 之后挂载。Connection Service 提供 `/api` 使用的同一套 Host/Origin DNS Rebinding 防护和持久浏览器 Session 认证；两个 WebServer Route 在读取或返回字节前调用 `ctx.connection.requestRejection()`。
+在 Typert、Drive Provider、WebServer 和 Host Connection Service 之后挂载。Connection Service 提供 `/api` 使用的同一套 Host/Origin DNS Rebinding 防护和持久浏览器 Session 认证；所有 WebServer Route 都会在读取或返回字节前调用 `ctx.connection.requestRejection()`。
 
 ### Remote 元数据方法
 
@@ -27,6 +27,10 @@ kind: "package-reference"
 
 `GET|HEAD /api/buddy-drive/content/<versionId>` 返回一个经过校验的不可变版本。它支持一个标准字节范围（`start-end`、`start-` 或后缀），非法 Range 返回 `416` 和 `Content-Range: bytes */<size>`，并发送 `Accept-Ranges`、摘要 ETag、`nosniff`、private/no-store 缓存、UTF-8 Inline Disposition 和 Sandbox Content Security Policy。
 
+### PDF.js 资源路由
+
+`GET|HEAD /api/buddy-drive/assets/pdf.worker-6.2.108.mjs` 从已安装的 `pdfjs-dist` 包提供固定版本 PDF.js Worker。`GET|HEAD /api/buddy-drive/assets/cmaps/<name>.bcmap` 只提供该包 Packed CMap 目录中枚举到的文件名。两个 Surface 都要求认证、保持同源、使用 Immutable 缓存并设置 `nosniff`；未知文件、嵌套路径、Traversal 形式和不支持的方法都会被拒绝。PDF Runtime 和 CMap 均不从 CDN 获取。
+
 ## 实现说明
 
 | 文件 | 职责 |
@@ -34,7 +38,9 @@ kind: "package-reference"
 | [`src/index.ts`](src/index.ts) | Typert Remote Owner 和二进制路由注册生命周期 |
 | [`src/commands.ts`](src/commands.ts) | Unary Command 投影和稳定 `TypertRemoteFailure` 映射 |
 | [`src/feed.ts`](src/feed.ts) | 完整 Baseline 遍历和可重连 Snapshot Generation |
-| [`src/http.ts`](src/http.ts) | 认证上传/内容 Handler、Query 校验、Range 和防御响应头 |
+| [`src/http.ts`](src/http.ts) | 认证上传/内容/PDF 资源 Handler、Query 校验、Range 和防御响应头 |
+| [`src/pdf-assets.ts`](src/pdf-assets.ts) | 固定 Worker 字节和白名单 Packed CMap 查找/缓存 |
+| [`src/paths.ts`](src/paths.ts) | 浏览器安全的公开 HTTP 路由常量 |
 | [`src/body.ts`](src/body.ts) | 精确有界原始 Request Body Intake |
 | [`src/types.ts`](src/types.ts) | 浏览器安全的 Remote 与 HTTP Response 词汇 |
 
@@ -66,6 +72,7 @@ kind: "package-reference"
 - **每次修改发送完整 Snapshot**——第一版本地资料库有意优先简单和重连安全；大型多用户资料库需要 Revision Delta 或 Server Paging。
 - **原始上传由 WebServer Route 缓冲**——路由执行 Drive 文件上限，但尚未直接流入 Provider Transaction；阶段 2 保留默认 50 MiB 上限。
 - **不支持 Multi-range Response**——PDF 和普通浏览器读取支持一个字节范围；Multipart Range 返回 `416`。
+- **固定 PDF.js 资源家族**——Worker 和 CMap 路径与 `pdfjs-dist@6.2.108` 耦合；依赖升级时必须更新带版本的 Worker Path，并重跑浏览器 Fixture。
 - **仅本地浏览器认证**——Connection Authentication 保护本地 Web 应用；企业身份与逐文件授权属于阶段 5。
 
 ### 开发备注

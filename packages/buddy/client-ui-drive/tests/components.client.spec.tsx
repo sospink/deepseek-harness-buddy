@@ -1,5 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
+const pdfRuntime = vi.hoisted(() => ({ load: vi.fn(() => new Promise(() => undefined)) }))
+vi.mock('../src/client/pdf-runtime.ts', () => ({ loadPdfRuntime: pdfRuntime.load }))
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { Context } from '@deepseek-ai/cordis'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
@@ -119,6 +121,8 @@ describe('DriveOverlay', () => {
     fireEvent.click(screen.getByRole('button', { name: '显示已删除文件' }))
     fireEvent.click(screen.getByText('角色资料'))
     expect(screen.getByText('旧协议.pdf')).not.toBeNull()
+    fireEvent.click(screen.getByText('旧协议.pdf'))
+    expect(screen.getByLabelText('PDF 预览')).not.toBeNull()
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(b.value.source.getSnapshot().open).toBe(false)
   })

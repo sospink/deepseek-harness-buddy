@@ -4,7 +4,7 @@ import { Context } from '@deepseek-ai/cordis'
 import { Remote, TypertRemoteService } from '@deepseek-ai/dsh-typert-protocol'
 import { DriveCommands } from './commands.ts'
 import { DriveFeed } from './feed.ts'
-import { createDriveContentRoute, createDriveUploadRoute } from './http.ts'
+import { createDriveContentRoute, createDrivePdfCMapRoute, createDrivePdfWorkerRoute, createDriveUploadRoute } from './http.ts'
 import type {
   DriveAuditValue,
   DriveBaseline,
@@ -22,7 +22,7 @@ import type {
 } from './types.ts'
 
 export type * from './types.ts'
-export { DRIVE_CONTENT_PATH, DRIVE_UPLOAD_PATH } from './paths.ts'
+export { DRIVE_CONTENT_PATH, DRIVE_PDF_CMAP_PATH, DRIVE_PDF_WORKER_PATH, DRIVE_UPLOAD_PATH } from './paths.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -43,6 +43,8 @@ export class BuddyDriveController extends TypertRemoteService {
     this.feed = new DriveFeed(ctx)
     ctx.effect(() => ctx.webServer.register(createDriveUploadRoute(ctx)), 'buddy-api-drive: upload route')
     ctx.effect(() => ctx.webServer.register(createDriveContentRoute(ctx)), 'buddy-api-drive: content route')
+    ctx.effect(() => ctx.webServer.register(createDrivePdfWorkerRoute(ctx)), 'buddy-api-drive: PDF worker route')
+    ctx.effect(() => ctx.webServer.register(createDrivePdfCMapRoute(ctx)), 'buddy-api-drive: PDF CMap route')
   }
 
   @Remote('baseline')

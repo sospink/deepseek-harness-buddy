@@ -272,3 +272,87 @@ describe('Buddy Drive content route', () => {
     routeContext.drive.getFile = originalGetFile
   })
 })
+
+describe('PDF worker route', () => {
+  it('serves the pinned same-origin worker for GET and HEAD', async () => {
+    const value = await harness()
+    const { createDrivePdfWorkerRoute } = await import('../src/http.ts')
+    const { DRIVE_PDF_WORKER_PATH } = await import('../src/paths.ts')
+    const route = createDrivePdfWorkerRoute(value.ctx)
+    expect(route.path).toBe(DRIVE_PDF_WORKER_PATH)
+    const get = new ResponseCapture()
+    await route.handler(request({ method: 'GET', url: DRIVE_PDF_WORKER_PATH }), get.asServerResponse())
+    expect(get.status).toBe(200)
+    expect(get.getHeader('content-type')).toBe('text/javascript; charset=utf-8')
+    expect(get.getHeader('cross-origin-resource-policy')).toBe('same-origin')
+    expect(get.getHeader('cache-control')).toContain('immutable')
+    expect(get.body().byteLength).toBeGreaterThan(100_000)
+    expect(get.body().toString('utf8', 0, 80)).toContain('@licstart')
+
+    const head = new ResponseCapture()
+    await route.handler(request({ method: 'HEAD', url: DRIVE_PDF_WORKER_PATH }), head.asServerResponse())
+    expect(head.status).toBe(200)
+    expect(head.body()).toHaveLength(0)
+    expect(Number(head.getHeader('content-length'))).toBe(get.body().byteLength)
+  })
+
+  it('authenticates and restricts worker methods', async () => {
+    const { createDrivePdfWorkerRoute } = await import('../src/http.ts')
+    const denied = await harness(403)
+    const forbidden = new ResponseCapture()
+    await createDrivePdfWorkerRoute(denied.ctx).handler(request(), forbidden.asServerResponse())
+    expect(forbidden.status).toBe(403)
+
+    const value = await harness()
+    const method = new ResponseCapture()
+    await createDrivePdfWorkerRoute(value.ctx).handler(request({ method: 'POST' }), method.asServerResponse())
+    expect(method.status).toBe(405)
+    expect(method.getHeader('allow')).toBe('GET, HEAD')
+  })
+})
+
+describe('PDF CMap route', () => {
+  it('serves only pinned packed CMaps for GET and HEAD', async () => {
+    const value = await harness()
+    const { createDrivePdfCMapRoute } = await import('../src/http.ts')
+    const { DRIVE_PDF_CMAP_PATH } = await import('../src/paths.ts')
+    const route = createDrivePdfCMapRoute(value.ctx)
+    const noUrlRequest = request({ method: 'GET' })
+    Object.defineProperty(noUrlRequest, 'url', { value: undefined })
+    const defaultUrl = new ResponseCapture()
+    await route.handler(noUrlRequest, defaultUrl.asServerResponse())
+    expect(defaultUrl.status).toBe(404)
+    const get = new ResponseCapture()
+    await route.handler(request({ method: 'GET', url: `${DRIVE_PDF_CMAP_PATH}/Adobe-GB1-UCS2.bcmap` }), get.asServerResponse())
+    expect(get.status).toBe(200)
+    expect(get.getHeader('content-type')).toBe('application/octet-stream')
+    expect(get.getHeader('cross-origin-resource-policy')).toBe('same-origin')
+    expect(get.body().byteLength).toBeGreaterThan(1000)
+
+    const head = new ResponseCapture()
+    await route.handler(request({ method: 'HEAD', url: `${DRIVE_PDF_CMAP_PATH}/Adobe-GB1-UCS2.bcmap` }), head.asServerResponse())
+    expect(head.status).toBe(200)
+    expect(head.body()).toHaveLength(0)
+    expect(Number(head.getHeader('content-length'))).toBe(get.body().byteLength)
+  })
+
+  it('rejects unknown names, path traversal, methods, and unauthenticated reads', async () => {
+    const { createDrivePdfCMapRoute } = await import('../src/http.ts')
+    const { DRIVE_PDF_CMAP_PATH } = await import('../src/paths.ts')
+    const value = await harness()
+    for (const suffix of ['/unknown.bcmap', '/../package.json', '/nested/Adobe-GB1-UCS2.bcmap', '/Adobe-GB1-UCS2.txt']) {
+      const response = new ResponseCapture()
+      await createDrivePdfCMapRoute(value.ctx).handler(request({ url: `${DRIVE_PDF_CMAP_PATH}${suffix}` }), response.asServerResponse())
+      expect(response.status).toBe(404)
+    }
+    const method = new ResponseCapture()
+    await createDrivePdfCMapRoute(value.ctx).handler(request({ method: 'POST' }), method.asServerResponse())
+    expect(method.status).toBe(405)
+    expect(method.getHeader('allow')).toBe('GET, HEAD')
+
+    const denied = await harness(401)
+    const unauthorized = new ResponseCapture()
+    await createDrivePdfCMapRoute(denied.ctx).handler(request(), unauthorized.asServerResponse())
+    expect(unauthorized.status).toBe(401)
+  })
+})

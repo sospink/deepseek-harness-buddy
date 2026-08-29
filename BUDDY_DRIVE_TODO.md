@@ -23,7 +23,7 @@
 | R2 | 定位安全 Agent | Agent Preset、只读 Drive Tools | 新建定位安全 Agent 会话 | Session Log、Tool Pipeline | Agent 只读取显式选择或工具请求的文件版本，并返回来源 | 未开始 |
 | R3 | 上传角色分工文档 | Drive Core、Upload API、Drive UI | 云盘上传与分类 | Blob Store、`buddy_drive` Domain | Markdown 角色分工样本已从浏览器上传，Host 重启后文件夹、文件和分类仍存在 | 已验收 |
 | R4 | 支持 Markdown | Admission、Markdown Preview | 文件预览面板 | 原文件 Blob | Chrome 已验证真实源码/渲染预览、原始 HTML 字面化且远程图片不发起请求；Safari 尚待验收 | 已实现 |
-| R5 | 支持 PDF | Admission、PDF.js Preview | 文件预览面板 | Range Content Route | PDF 签名校验、分页/缩放/Range 读取 | 进行中 |
+| R5 | 支持 PDF | Admission、PDF.js Preview | 文件预览面板 | Range Content Route | Chrome 已验证中文双页 Canvas、搜索跳页、缩放、同源 Worker/CMap、3 个 `206` Range、脚本阻止和外链白名单；Safari 尚待验收 | 已实现 |
 | R6 | 支持 DOCX | Admission、DOCX Preview | 文件预览面板 | OOXML Blob、Preview Worker | OOXML 结构/ZIP Bomb 校验、隔离在线预览 | 进行中 |
 | R7 | 沟通功能暂不做 | Bundle Composition | 无入口 | 不挂载 Team/Mailbox | Buddy Drive Bundle 仅组合 Drive Local、Drive API 与 Drive UI，浏览器无沟通入口 | 已验收 |
 | R8 | 探索或开发 WorkBuddy 类资料库插件 | 插件评估、Drive Seam | 不适用 | 不适用 | 评估 `dsh-files`、`dsh-file-explorer`、`dsh-univer-office`、MinerU 并记录取舍 | 已实现 |
@@ -148,9 +148,18 @@
 - PDF 与 DOCX 仍显示诚实占位，不因 Markdown 切片完成而提前标记。
 - Chrome 真实浏览器恶意样本验证：DOM 中无文档 `<img>`/`<script>`，无 `example.com` 网络请求，页面状态未被脚本修改，控制台 `0 error`；Safari 证据仍待补充。
 
+### 阶段 3B PDF.js 预览实现（2026-08-29）
+
+- PDF.js `6.2.108` Runtime 延迟初始化，但通过 Buddy 包级 `codeSplitting: false` 内联进唯一 Loader-owned `client.js`；构建后无未托管 PDF Chunk。
+- Host 提供认证同源、固定版本 Worker exact route，以及只允许包内枚举 `.bcmap` 文件名的 CMap prefix route；不依赖 CDN。
+- PDF 内容使用现有不可变 Content Route：`disableStream: true`、Range enabled、64 KiB Chunk、首屏完成后忽略迟到 Progress，真实 662 KiB Fixture 观察到 3 个 `206`。
+- Viewer 采用单页驻留 Canvas，支持上一页/下一页、50%–200% 缩放、最多 500 页的可取消文本搜索，并设置 16M Image Pixel 与 64 MiB Canvas Backing Store 预算。
+- Canvas 使用 `AnnotationMode.DISABLE`，不挂载 Annotation/Scripting Layer；Document/Page JavaScript Action 只触发“已阻止”提示。Annotation 仅把绝对 HTTP(S) URL 投影为 `_blank` + `noopener noreferrer` 的显式链接。
+- Chrome 中文双页恶意 Fixture 已验证：Canvas 两页可读、搜索跳到第 2 页、125% 重绘、危险 `javascript:` 链接不显示、脚本未执行、控制台 `0 warning/0 error`。Safari 证据仍待补充。
+
 - [x] Markdown 使用 Harness `MarkdownText`，提供源码/预览切换并默认禁止远程图片。
-- [ ] PDF.js 支持分页、缩放、搜索、虚拟化和 Range Read。
-- [ ] 禁止 PDF 内嵌 JavaScript，外链必须显式点击。
+- [x] PDF.js 支持分页、缩放、搜索、单页虚拟化和 Range Read。
+- [x] 禁止 PDF 内嵌 JavaScript，外链必须显式点击。
 - [ ] DOCX 使用隔离 iframe/Document 和 `docx-preview`，关闭 AltChunk 和外部资源。
 - [ ] DOCX 解析运行于 Worker，具备超时和资源限制。
 - [ ] Mammoth 仅用于受限文本提取，输出必须清洗，不作为主视觉预览。
