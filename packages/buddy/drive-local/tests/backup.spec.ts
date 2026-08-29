@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { lstat, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { chmod, cp, lstat, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { join, relative } from 'node:path'
+import { basename, dirname, join } from 'node:path'
 import { Context } from '@deepseek-ai/cordis'
 import Storage from '@deepseek-ai/dsh-storage'
 import type { StorageBackend } from '@deepseek-ai/dsh-storage'
@@ -50,18 +50,29 @@ async function harness(options: HarnessOptions = {}) {
 async function backupFixture() {
   const source = await harness()
   const folder = await source.drive.createFolder({ libraryId: DriveLibraryId('default'), name: '资料' })
-  const file = await source.drive.importFile({
+  const input = {
     libraryId: DriveLibraryId('default'),
     parentId: folder.id,
     name: '规则.md',
-    kind: 'safety-protocol',
+    kind: 'safety-protocol' as const,
     data: new TextEncoder().encode('# 规则\n保持可恢复。'),
-  })
+    idempotencyKey: 'backup-fixture-import',
+  }
+  const file = await source.drive.importFile(input)
   const backupParent = await mkdtemp(join(tmpdir(), 'buddy-drive-backup-'))
   roots.push(backupParent)
   const backupPath = join(backupParent, 'snapshot')
   const summary = await source.drive.createBackup(backupPath)
-  return { source, folder, file, backupParent, backupPath, summary }
+  return { source, folder, file, input, backupParent, backupPath, summary }
+}
+
+async function backupVariant(
+  fixture: Awaited<ReturnType<typeof backupFixture>>,
+  name: string,
+): Promise<string> {
+  const variant = join(fixture.backupParent, name)
+  await cp(fixture.backupPath, variant, { recursive: true })
+  return variant
 }
 
 describe('LocalDriveStore backups and restores', () => {
@@ -92,6 +103,12 @@ describe('LocalDriveStore backups and restores', () => {
     expect(target.drive.listFiles(fixture.folder.id)).toHaveLength(1)
     expect(new TextDecoder().decode((await target.drive.readVersion(fixture.file.currentVersionId)).data))
       .toContain('保持可恢复')
+    const replay = await target.drive.importFile({
+      ...fixture.input,
+      mutation: { actor: 'agent', correlationId: 'replayed-after-restore' as never },
+    })
+    expect(replay).toEqual(fixture.file)
+    expect(target.drive.listFiles(fixture.folder.id)).toHaveLength(1)
     expect(target.drive.listAudit({ limit: 1 })[0]).toMatchObject({
       operation: 'library/restore', correlationId: 'restore-test', actor: 'agent',
     })
@@ -120,6 +137,26 @@ describe('LocalDriveStore backups and restores', () => {
     expect(restored.replaced).toBe(true)
     expect(target.drive.getFile(existing.id)).toBeUndefined()
     expect(target.drive.getFile(fixture.file.id)).toBeDefined()
+    await target.fiber.dispose()
+  })
+
+  it('backs up and restores an empty library without inventing content', async () => {
+    const source = await harness()
+    const backupParent = await mkdtemp(join(tmpdir(), 'buddy-drive-empty-backup-'))
+    roots.push(backupParent)
+    const backupPath = join(backupParent, 'empty')
+    const summary = await source.drive.createBackup(backupPath)
+    expect(summary.blobs).toEqual([])
+    expect(summary.folderCount).toBe(0)
+    expect(summary.fileCount).toBe(0)
+    await source.fiber.dispose()
+
+    const target = await harness()
+    const restored = await target.drive.restoreBackup({ source: backupPath })
+    expect(restored.replaced).toBe(false)
+    expect(target.drive.listFolders()).toEqual([])
+    expect(target.drive.listFiles()).toEqual([])
+    expect(target.drive.listAudit({ limit: 1 })[0]?.operation).toBe('library/restore')
     await target.fiber.dispose()
   })
 
@@ -195,12 +232,111 @@ describe('LocalDriveStore backups and restores', () => {
     await invalidBlob.fiber.dispose()
   })
 
+  it('rejects missing blobs, symlinked blobs, redundant objects, and redundant prefixes', async () => {
+    const fixture = await backupFixture()
+    await fixture.source.fiber.dispose()
+    const digest = fixture.summary.blobs[0]?.digest
+    if (digest === undefined) throw new Error('fixture did not produce a blob')
+    const object = blobPath(fixture.backupPath, digest)
+    const variants = [
+      ['missing', async (variant: string) => { await rm(blobPath(variant, digest)) }],
+      ['symlink', async (variant: string) => {
+        await rm(blobPath(variant, digest))
+        await symlink(fixture.backupPath, blobPath(variant, digest))
+      }],
+      ['redundant-object', async (variant: string) => {
+        await writeFile(join(variant, 'blobs', 'sha256', digest.slice(7, 9), '0'.repeat(64)), Buffer.from('extra'), { mode: 0o600 })
+      }],
+      ['redundant-prefix', async (variant: string) => {
+        const usedPrefix = digest.slice(7, 9)
+        const prefix = usedPrefix === '00' ? '01' : '00'
+        await mkdir(join(variant, 'blobs', 'sha256', prefix), { mode: 0o700 })
+      }],
+    ] as const
+    for (const [name, mutate] of variants) {
+      const variant = await backupVariant(fixture, name)
+      await mutate(variant)
+      const result = await harness()
+      await expect(result.drive.inspectBackup(variant)).rejects.toMatchObject({ code: 'BACKUP_INVALID' })
+      await result.fiber.dispose()
+    }
+    await expect(lstat(object)).resolves.toBeDefined()
+  })
+
+  it('rejects manifest version changes, path traversal, and extra top-level entries', async () => {
+    const fixture = await backupFixture()
+    await fixture.source.fiber.dispose()
+    const original = JSON.parse(await readFile(join(fixture.backupPath, 'manifest.json'), 'utf8')) as Record<string, unknown>
+    const variants = [
+      ['version', { ...original, version: 2 }],
+      ['path-traversal', { ...original, metadata: { ...(original.metadata as Record<string, unknown>), path: '../metadata.json' } }],
+    ] as const
+    for (const [name, manifest] of variants) {
+      const variant = await backupVariant(fixture, name)
+      await writeFile(join(variant, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`, { mode: 0o600 })
+      const result = await harness()
+      await expect(result.drive.inspectBackup(variant)).rejects.toMatchObject({ code: 'BACKUP_INVALID' })
+      await result.fiber.dispose()
+    }
+    const extra = await backupVariant(fixture, 'extra-top-level')
+    await writeFile(join(extra, 'unexpected'), Buffer.from('unexpected'), { mode: 0o600 })
+    const result = await harness()
+    await expect(result.drive.inspectBackup(extra)).rejects.toMatchObject({ code: 'BACKUP_INVALID' })
+    await result.fiber.dispose()
+  })
+
+  it('rejects nested backup destinations and does not replace a target on invalid restore', async () => {
+    const fixture = await backupFixture()
+    await expect(fixture.source.drive.createBackup(join(fixture.source.root, 'nested-backup')))
+      .rejects.toMatchObject({ code: 'BACKUP_INVALID' })
+    await fixture.source.fiber.dispose()
+
+    const target = await harness()
+    const existing = await target.drive.importFile({
+      libraryId: DriveLibraryId('default'), name: 'existing.md', kind: 'general', data: new TextEncoder().encode('# existing'),
+    })
+    const broken = await backupVariant(fixture, 'broken-for-restore')
+    await rm(join(broken, 'metadata.json'))
+    await expect(target.drive.restoreBackup({ source: broken, replace: true }))
+      .rejects.toMatchObject({ code: 'BACKUP_INVALID' })
+    expect(target.drive.getFile(existing.id)).toEqual(existing)
+    await target.fiber.dispose()
+  })
+
+  it('preserves the order of multiple missing destination path segments', async () => {
+    const source = await harness()
+    const sibling = join(dirname(source.root), `${basename(source.root)}-sibling`)
+    roots.push(sibling)
+    const destination = join(sibling, basename(source.root))
+    const summary = await source.drive.createBackup(destination)
+    expect(summary.path).toBe(destination)
+    await source.fiber.dispose()
+  })
+
+  it('rejects unsafe permissions and a symlink used as the backup root', async () => {
+    const fixture = await backupFixture()
+    await fixture.source.fiber.dispose()
+
+    const permissions = await backupVariant(fixture, 'unsafe-permissions')
+    await chmod(join(permissions, 'metadata.json'), 0o644)
+    const permissionCheck = await harness()
+    await expect(permissionCheck.drive.inspectBackup(permissions))
+      .rejects.toMatchObject({ code: 'BACKUP_INVALID' })
+    await permissionCheck.fiber.dispose()
+
+    const link = join(fixture.backupParent, 'backup-link')
+    await symlink(fixture.backupPath, link)
+    const linkCheck = await harness()
+    await expect(linkCheck.drive.inspectBackup(link))
+      .rejects.toMatchObject({ code: 'BACKUP_INVALID' })
+    await linkCheck.fiber.dispose()
+  })
+
   it('rejects a destination that is the same physical directory through a macOS alias', async () => {
     if (process.platform !== 'darwin') return
     const fixture = await backupFixture()
-    const privatePath = `/private${fixture.backupParent}`
-    const aliasPath = `/tmp${relative('/private', privatePath)}`
-    await expect(fixture.source.drive.createBackup(join(aliasPath, 'source-alias')))
+    const aliasPath = `/private${fixture.source.root}`
+    await expect(fixture.source.drive.createBackup(join(aliasPath, 'nested', 'deeper', 'source-alias')))
       .rejects.toMatchObject({ code: 'BACKUP_INVALID' })
   })
 })

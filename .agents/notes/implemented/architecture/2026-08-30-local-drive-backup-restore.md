@@ -1,6 +1,6 @@
 # Agent Note: local Drive backup and restore
 
-Status: proposed
+Status: implemented
 
 English | [中文](2026-08-30-local-drive-backup-restore.zh.md)
 
@@ -10,7 +10,7 @@ The Buddy Drive currently persists metadata and source blobs on one local Host, 
 
 The current product is a single-library local deployment. It does not yet have enterprise identity, tenant ownership, remote object storage, encryption-key management, or an external backup scheduler. The next stage therefore needs a local, explicit maintenance capability with a narrow promise: a complete backup can be independently checked and restored atomically into another local Drive root.
 
-## Proposal
+## Decision
 
 The local provider writes a versioned backup directory containing `manifest.json`, `metadata.json`, and the referenced content-addressed objects under `blobs/sha256/<prefix>/<digest>`. The manifest records the format version, library id, creation time, exact metadata digest and byte count, every unique blob digest and byte count, and aggregate counts. The metadata file preserves the complete `buddy_drive` state, including local idempotency audit fields; the manifest digest covers the exact serialized bytes.
 
@@ -32,19 +32,14 @@ The stage defines retention as explicit preservation: all immutable versions rem
 
 **Add automatic version pruning now.** Rejected: no retention period, legal hold, recovery point objective, or approval owner has been supplied, so deleting immutable versions would be an unsupported data-loss policy.
 
-## Acceptance criteria
+## Verification
 
-- A generated backup contains a versioned manifest, exact metadata digest, and one verified object for every referenced unique blob.
-- A fresh local provider can validate and restore the backup with file, version, audit, and idempotency relations intact.
-- Missing, corrupt, modified, symlinked, path-traversal, version-mismatched, and redundant backup entries fail before target metadata changes.
-- Export never overwrites an existing destination or writes below the Drive root.
-- Restore refuses a non-empty target by default; explicit replacement commits only after complete validation.
-- A failed restore leaves the previous target metadata and visible content unchanged.
+The Local Provider tests create backups with content-addressed blobs, independently inspect them, restore them into a fresh provider, and verify file, version, audit, and idempotency relations across restart. They reject missing or corrupt content, metadata tampering, path traversal, symlinks, unsafe permissions, redundant entries, physical path aliases, and nested destinations. Failure-injection tests verify that target metadata remains authoritative when validation or commit fails. TypeScript, focused lint, translation pairing, and formatting checks are run for the changed surface.
+
+## Consequences
+
 - The local provider retains all immutable versions and does not claim encrypted, off-site, enterprise, or multi-tenant backup.
-
-## Risks
-
-- The backup directory is a local maintenance artifact, not encrypted storage or an off-site disaster-recovery system. Operators must protect its directory and host volume.
-- A source directory changed by another process during restore is outside the single-process provider authority; maintenance tooling must use a quiescent source.
-- Existing old orphan blobs may remain after an explicit replacement if post-commit cleanup encounters an unexpected filesystem entry; startup reconciliation remains the recovery owner.
-- Enterprise retention, encryption, identity, tenant isolation, scheduling, and remote object storage remain separate stages and require external deployment inputs.
+- Backup and restore remain explicit local maintenance operations; browser input cannot authorize arbitrary host filesystem paths.
+- A backup source must be quiescent while it is being restored because changes made by another process are outside the single-process provider authority.
+- Existing orphan blobs can remain temporarily if post-commit cleanup encounters an unexpected filesystem entry; startup reconciliation remains the recovery owner.
+- Retention periods, legal holds, recovery point objectives, approval ownership, encryption, identity, tenant isolation, scheduling, and remote object storage remain separate work and require external deployment inputs.

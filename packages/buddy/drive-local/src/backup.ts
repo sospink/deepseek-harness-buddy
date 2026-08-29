@@ -135,7 +135,7 @@ async function canonicalPath(path: string): Promise<string> {
   while (true) {
     try {
       const parent = await realpath(cursor)
-      return join(parent, ...missing.reverse())
+      return join(parent, ...missing)
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
         throw backupInvalid('Backup path cannot be resolved safely.', error)
