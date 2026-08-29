@@ -75,7 +75,8 @@ describe('DriveTrigger', () => {
 })
 
 describe('DriveOverlay', () => {
-  it('renders the three-column workspace, searches, selects, classifies, downloads, and deletes', async () => {
+  it('renders the three-column workspace, searches, selects, previews, classifies, downloads, and deletes', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('# 定位安全 Agent'))
     const b = client()
     b.value.open()
     const update = vi.spyOn(b.value, 'updateMetadata').mockResolvedValue()
@@ -89,7 +90,7 @@ describe('DriveOverlay', () => {
     expect(screen.getByText('当前目录还没有文件')).not.toBeNull()
     fireEvent.change(screen.getByPlaceholderText('搜索文件'), { target: { value: '' } })
     fireEvent.click(screen.getByText('角色分工.md'))
-    expect(screen.getByText('在线预览将在下一阶段启用。当前可下载原始文件。')).not.toBeNull()
+    expect(await screen.findByRole('heading', { name: '定位安全 Agent' })).not.toBeNull()
     const selects = screen.getAllByRole('combobox')
     fireEvent.change(selects.at(-1)!, { target: { value: 'reference' } })
     fireEvent.click(screen.getByRole('button', { name: '保存分类' }))
@@ -147,6 +148,7 @@ describe('DriveOverlay', () => {
     fireEvent.click(screen.getByRole('button', { name: '显示已删除文件' }))
     fireEvent.click(screen.getByText('说明.docx'))
     expect(screen.getAllByText('DOCX')).toHaveLength(2)
+    expect(screen.getByText('该格式的在线预览将在后续切片启用。当前可下载原始文件。')).not.toBeNull()
     expect(screen.getByText('—')).not.toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '恢复' }))
     await waitFor(() => { expect(restore).toHaveBeenCalledWith(docx.id) })

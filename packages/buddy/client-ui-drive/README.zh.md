@@ -15,9 +15,9 @@ kind: "package-reference"
 
 在 API Gateway、Connection、Locale、Layout、Sidebar 和 UI Renderer 之后，与原生 Web Client Module 一起挂载。Client Module 自行挂载 `@sospink/dsh-buddy-api-drive/remote`，因此分支无需修改上游 `api-remotes` Assembly。
 
-侧栏操作会打开云盘，并在关闭时恢复焦点。应用工作区包含文件夹导航、搜索和上传控制、文件列表以及文件详情/操作。用户可以创建文件夹，上传 Markdown/PDF/DOCX，选择上传分类，搜索当前文件夹，显示已删除文件，更新分类，下载原件，软删除和恢复。
+侧栏操作会打开云盘，并在关闭时恢复焦点。应用工作区包含文件夹导航、搜索和上传控件、文件列表以及文件详情/操作。用户可以创建文件夹、上传 Markdown/PDF/DOCX 文档、选择上传分类、搜索当前文件夹、显示已删除文件、更新分类、下载原文件、软删除和恢复。
 
-详情栏会明确提示在线预览属于下一阶段。它不会渲染假预览，也不会声称文件已经完成转换。
+Markdown 文件已经具备真实的渲染/源码预览，内容来自不可变 Content Route，并复用 Harness `MarkdownText`。浏览器最多保留 2 MiB；文件选择变化时取消旧读取；进入渲染器前会转义已解析的图片标记，避免文档内 HTTP(S) 图片发起请求。原始 HTML 在 Harness 渲染器中保持字面文本。PDF 与 DOCX 详情仍明确显示对应预览切片尚未实现。
 
 ## 实现说明
 
@@ -26,7 +26,9 @@ kind: "package-reference"
 | [`src/client/service.ts`](src/client/service.ts) | Remote Mount Consumer、重连 Snapshot Model、上传和元数据操作、焦点恢复、内容 URL |
 | [`src/client/index.ts`](src/client/index.ts) | Client Module 生命周期、Remote Contribution Mount、字典与 Slot 注册 |
 | [`src/client/DriveTrigger.tsx`](src/client/DriveTrigger.tsx) | 宽侧栏/轨道入口 |
-| [`src/client/DriveOverlay.tsx`](src/client/DriveOverlay.tsx) | 三栏资料管理工作区和明确的待预览详情区 |
+| [`src/client/DriveOverlay.tsx`](src/client/DriveOverlay.tsx) | 三栏文件管理工作区与按格式分派的预览位置 |
+| [`src/client/MarkdownPreview.tsx`](src/client/MarkdownPreview.tsx) | Markdown 渲染/源码 UI、取消、重试以及 Harness `MarkdownText` 组合 |
+| [`src/client/markdown-preview.ts`](src/client/markdown-preview.ts) | 有界 UTF-8 读取和基于解析结果的图片标记去激活 |
 | [`src/client/locales.ts`](src/client/locales.ts) | 类型化中英文产品文案 |
 
 ## 进一步阅读
@@ -53,15 +55,17 @@ kind: "package-reference"
 
 ## 已知限制与延期工作
 
-- **预览占位明确可见**——本版本尚未实现 Markdown/PDF/DOCX 在线渲染；用户可以下载原文件。
-- **只搜索当前文件夹**——搜索框在内存中过滤选中目录；跨目录和内容索引搜索属于后续工作。
-- **多文件顺序上传**——选择的文件逐个上传，以保持顺序和错误语义简单；带有界并发的进度队列后续完善。
-- **窄屏隐藏详情栏**——低于 900px 时隐藏详情列；专用移动端文件/详情导航仍延期。
+- **PDF 与 DOCX 仍是明确占位**：Markdown 预览已经实现；PDF.js 与隔离 DOCX 渲染仍属于后续切片，原文件始终可下载。
+- **Markdown 预览预算**：浏览器最多渲染一个不可变 Markdown 版本的 2 MiB 内容。更大的文档仍可下载，不进行不完整渲染。
+- **远程 Markdown 图片不激活**：已解析的行内/引用图片会显示为惰性 Markdown 文本；当前尚无按文档配置的图片白名单。
+- **只搜索当前文件夹**：搜索框在内存中过滤选中目录；跨目录和内容索引搜索属于后续工作。
+- **多文件顺序上传**：选择的文件逐个上传，以保持顺序和错误语义简单；带有界并发的进度队列后续完善。
+- **窄屏隐藏详情栏**：低于 900px 时隐藏详情列；专用移动端文件/详情导航仍延期。
 
 ### 开发备注
 
 <details><summary>维护者工作上下文——点击展开</summary>
 
-预览实现应放在文件媒体 Renderer 后面，不要把格式条件扩散到导航和列表组件。
+预览实现应放在按文件媒体类型划分的 Renderer 后方，不要在导航和列表组件中散布格式条件分支。格式 Renderer 在进入详情区前必须拥有完整的字节/时间预算、取消机制和外部资源策略。
 
 </details>

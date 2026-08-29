@@ -4,7 +4,6 @@ import {
   Button,
   IconArchiveOutline20,
   IconCloseOutline16,
-  IconDataOutline16,
   IconDownloadOutline16,
   IconFolderClose16,
   IconProjectAddOutline16,
@@ -19,6 +18,7 @@ import type {
 } from '@sospink/dsh-buddy-api-drive/types'
 import type { BuddyDriveClient } from './service.ts'
 import type { DriveUiInjected } from './DriveTrigger.tsx'
+import { MarkdownPreview } from './MarkdownPreview.tsx'
 import css from './DriveOverlay.module.css'
 
 export type DriveOverlayProps = PropsRuntime<'shell.overlay'>
@@ -229,7 +229,9 @@ function FileDetails({ client, file, run, t }: {
   useEffect(() => { setKind(file.kind) }, [file.id, file.kind])
   return (
     <div className={css.detailBody}>
-      <div className={css.previewPlaceholder}><IconDataOutline16 size={28} /><span>{t('previewPending')}</span></div>
+      {file.mediaType === 'text/markdown'
+        ? <MarkdownPreview url={client.contentUrl(file)} t={t} />
+        : <div className={css.previewPlaceholder}><span>{t('previewPending')}</span></div>}
       <h2>{file.name}</h2>
       <dl>
         <div><dt>{t('fileType')}</dt><dd>{mediaLabel(file.mediaType)}</dd></div>

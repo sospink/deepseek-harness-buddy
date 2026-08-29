@@ -22,7 +22,7 @@
 | R1 | 将三角协作改为单独云盘模式 | Buddy Drive Bundle、独立 Overlay | 侧栏“资料云盘” | `ctx.drive` | 真实 Bundle 与浏览器入口已验收，未挂载成员表、任务板、邮箱或通信入口 | 已验收 |
 | R2 | 定位安全 Agent | Agent Preset、只读 Drive Tools | 新建定位安全 Agent 会话 | Session Log、Tool Pipeline | Agent 只读取显式选择或工具请求的文件版本，并返回来源 | 未开始 |
 | R3 | 上传角色分工文档 | Drive Core、Upload API、Drive UI | 云盘上传与分类 | Blob Store、`buddy_drive` Domain | Markdown 角色分工样本已从浏览器上传，Host 重启后文件夹、文件和分类仍存在 | 已验收 |
-| R4 | 支持 Markdown | Admission、Markdown Preview | 文件预览面板 | 原文件 Blob | `.md/.markdown` 签名与 UTF-8 校验、源码/渲染预览 | 进行中 |
+| R4 | 支持 Markdown | Admission、Markdown Preview | 文件预览面板 | 原文件 Blob | Chrome 已验证真实源码/渲染预览、原始 HTML 字面化且远程图片不发起请求；Safari 尚待验收 | 已实现 |
 | R5 | 支持 PDF | Admission、PDF.js Preview | 文件预览面板 | Range Content Route | PDF 签名校验、分页/缩放/Range 读取 | 进行中 |
 | R6 | 支持 DOCX | Admission、DOCX Preview | 文件预览面板 | OOXML Blob、Preview Worker | OOXML 结构/ZIP Bomb 校验、隔离在线预览 | 进行中 |
 | R7 | 沟通功能暂不做 | Bundle Composition | 无入口 | 不挂载 Team/Mailbox | Buddy Drive Bundle 仅组合 Drive Local、Drive API 与 Drive UI，浏览器无沟通入口 | 已验收 |
@@ -140,7 +140,15 @@
 
 ## 阶段 3：Markdown、PDF、DOCX 在线预览
 
-- [ ] Markdown 使用 Harness `MarkdownText`，提供源码/预览切换并默认禁止远程图片。
+### 阶段 3A Markdown 预览实现（2026-08-29）
+
+- 不可变 Content Route 读取具备 2 MiB 完整结果预算、UTF-8 Fatal Decode、超限取消、文件切换取消和失败重试。
+- 图片策略在进入 Harness `MarkdownText` 前基于 GFM/Math Parse Tree 转义 Image/ImageReference 起始标记；代码围栏和行内代码中的图片字面量保持不变。
+- 渲染模式不产生文档作者控制的 `<img>`；Harness 继续负责原始 HTML 字面化、危险协议拒绝和安全外链属性。
+- PDF 与 DOCX 仍显示诚实占位，不因 Markdown 切片完成而提前标记。
+- Chrome 真实浏览器恶意样本验证：DOM 中无文档 `<img>`/`<script>`，无 `example.com` 网络请求，页面状态未被脚本修改，控制台 `0 error`；Safari 证据仍待补充。
+
+- [x] Markdown 使用 Harness `MarkdownText`，提供源码/预览切换并默认禁止远程图片。
 - [ ] PDF.js 支持分页、缩放、搜索、虚拟化和 Range Read。
 - [ ] 禁止 PDF 内嵌 JavaScript，外链必须显式点击。
 - [ ] DOCX 使用隔离 iframe/Document 和 `docx-preview`，关闭 AltChunk 和外部资源。

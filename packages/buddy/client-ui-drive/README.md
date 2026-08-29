@@ -17,7 +17,7 @@ Mount it beside the stock Web Client modules after API Gateway, Connection, Loca
 
 The sidebar action opens the Drive and restores focus when the Drive closes. The application workspace contains folder navigation, search and upload controls, a file list, and file details/actions. Users can create folders, upload Markdown/PDF/DOCX documents, select an upload classification, search the current folder, show deleted files, update classification, download originals, soft-delete, and restore.
 
-The details column deliberately states that online preview is pending until the viewer phase. It never renders a fake preview or claims that file content has been converted.
+Markdown files have a real rendered/source preview backed by the immutable content route and Harness `MarkdownText`. The browser retains at most 2 MiB, cancels stale reads when selection changes, and escapes parsed image markers before rendering so document-authored HTTP(S) images cannot issue requests. Raw HTML remains literal under the Harness renderer. PDF and DOCX details continue to state explicitly that their preview slices are pending.
 
 ## Understand the implementation
 
@@ -26,7 +26,9 @@ The details column deliberately states that online preview is pending until the 
 | [`src/client/service.ts`](src/client/service.ts) | Remote mount consumer, reconnect snapshot model, upload and metadata actions, focus restoration, content URLs |
 | [`src/client/index.ts`](src/client/index.ts) | Client module lifecycle, Remote contribution mount, dictionaries, and Slot registrations |
 | [`src/client/DriveTrigger.tsx`](src/client/DriveTrigger.tsx) | Wide/rail sidebar entry |
-| [`src/client/DriveOverlay.tsx`](src/client/DriveOverlay.tsx) | Three-column file-management workspace and explicit preview-pending detail area |
+| [`src/client/DriveOverlay.tsx`](src/client/DriveOverlay.tsx) | Three-column file-management workspace and format-specific preview seat |
+| [`src/client/MarkdownPreview.tsx`](src/client/MarkdownPreview.tsx) | Markdown rendered/source UI, cancellation, retry, and Harness `MarkdownText` composition |
+| [`src/client/markdown-preview.ts`](src/client/markdown-preview.ts) | Bounded UTF-8 loading and parsed image-marker deactivation |
 | [`src/client/locales.ts`](src/client/locales.ts) | Typed Chinese and English product copy |
 
 ## Further Exploration
@@ -53,7 +55,9 @@ Independent of model requests; browser file management never alters a request pr
 
 ## Known Limitations and Deferred Work
 
-- **Preview placeholder is explicit** — online Markdown/PDF/DOCX rendering is not implemented in this package version; the original file can be downloaded.
+- **PDF and DOCX remain explicit placeholders** — Markdown preview is implemented; PDF.js and isolated DOCX rendering remain later slices, and originals stay downloadable.
+- **Markdown preview budget** — the browser renders at most 2 MiB of one immutable Markdown version. Larger documents remain downloadable instead of being partially rendered.
+- **Remote Markdown images are inactive** — parsed inline/reference images render as inert Markdown text; there is no per-document image allowlist yet.
 - **Current-folder search only** — the search field filters the selected folder in memory; indexed cross-folder and content search are later work.
 - **Sequential multi-file upload** — selected files upload one at a time to keep ordering and error behavior simple; bounded parallel progress arrives with the upload queue refinement.
 - **Narrow layouts hide details** — below 900px the details column is hidden; a dedicated mobile file/details navigation remains deferred.
@@ -62,6 +66,6 @@ Independent of model requests; browser file management never alters a request pr
 
 <details><summary>Working context for maintainers — click to expand</summary>
 
-Keep preview implementations behind file-media renderers rather than adding format conditionals throughout the navigation and list components.
+Keep preview implementations behind file-media renderers rather than adding format conditionals throughout the navigation and list components. A format renderer must own its complete byte/time budget, cancellation, and external-resource policy before it enters the detail seat.
 
 </details>

@@ -86,3 +86,15 @@ dd { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
 
 .uploadButton:hover { background: var(--dsw-alias-button-primary-hover); }
 .uploadDisabled { opacity: 0.55; cursor: default; }
+
+.preview { min-height: 240px; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--dsw-alias-border-l2); border-radius: 14px; background: var(--dsw-alias-background-container-primary); }
+.previewToolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px; border-bottom: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-caption); font-size: 11px; }
+.previewToolbar > div { display: flex; gap: 2px; padding: 2px; border-radius: 8px; background: var(--dsw-alias-background-container-secondary); }
+.previewToolbar button { border: 0; border-radius: 6px; padding: 4px 8px; background: transparent; color: var(--dsw-alias-label-secondary); cursor: pointer; }
+.previewToolbar .previewModeActive { background: var(--dsw-alias-background-container-primary); color: var(--dsw-alias-label-primary); }
+.previewViewport { min-height: 210px; max-height: 330px; overflow: auto; padding: 14px; }
+.previewStatus { min-height: 180px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--dsw-alias-label-secondary); text-align: center; }
+.previewStatus small { max-width: 100%; overflow-wrap: anywhere; color: var(--dsw-alias-label-caption); }
+.previewSource { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font: var(--dsw-font-markdown-code-block-small); color: var(--dsw-alias-label-primary); }
+.previewMarkdown { color: var(--dsw-alias-label-primary); font-size: 13px; }
+.previewMarkdown img { display: none; }
