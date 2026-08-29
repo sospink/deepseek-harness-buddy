@@ -4,9 +4,12 @@ import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/re
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import { MarkdownPreview } from '../src/client/MarkdownPreview.tsx'
 import {
+  boundedMarkdownRenderSource,
   deactivateMarkdownImages,
   loadMarkdownSource,
   MARKDOWN_PREVIEW_MAX_BYTES,
+  MARKDOWN_RENDER_MAX_BYTES,
+  MARKDOWN_RENDER_MAX_LINES,
 } from '../src/client/markdown-preview.ts'
 import { zh } from '../src/client/locales.ts'
 
@@ -23,6 +26,23 @@ function streamResponse(chunks: readonly Uint8Array[], headers?: HeadersInit): R
     },
   }), headers === undefined ? {} : { headers })
 }
+
+
+describe('boundedMarkdownRenderSource', () => {
+  it('keeps a short document and pins the independent rich-render budgets', () => {
+    expect(boundedMarkdownRenderSource('# short')).toEqual({ source: '# short', truncated: false })
+    expect(MARKDOWN_RENDER_MAX_BYTES).toBe(256 * 1024)
+    expect(MARKDOWN_RENDER_MAX_LINES).toBe(4_000)
+  })
+
+  it('cuts only complete UTF-8 characters and separately bounds source lines', () => {
+    expect(boundedMarkdownRenderSource('甲乙丙', 4, 10)).toEqual({ source: '甲', truncated: true })
+    expect(boundedMarkdownRenderSource('甲', 0, 10)).toEqual({ source: '', truncated: true })
+    expect(boundedMarkdownRenderSource('one\ntwo\nthree', 100, 2)).toEqual({ source: 'one\ntwo', truncated: true })
+    expect(boundedMarkdownRenderSource('one\ntwo', 100, 2)).toEqual({ source: 'one\ntwo', truncated: false })
+  })
+
+})
 
 describe('loadMarkdownSource', () => {
   it('loads a bounded UTF-8 stream and accepts an exact declared limit', async () => {
@@ -136,6 +156,17 @@ describe('MarkdownPreview', () => {
     expect(view.container.querySelector('pre')?.textContent).toBe(source)
     fireEvent.click(screen.getByRole('button', { name: '预览' }))
     expect(screen.getByText('远程图片已阻止')).not.toBeNull()
+  })
+
+
+  it('bounds rich rendering while preserving the complete source view', async () => {
+    const source = `${'# long\n'}${'line\n'.repeat(4_100)}END_OF_COMPLETE_SOURCE`
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(source))
+    const view = render(<MarkdownPreview url="/content/long" t={t} />)
+    expect(await screen.findByText(/富文本预览已按长文档预算截断/)).not.toBeNull()
+    expect(view.container.textContent).not.toContain('END_OF_COMPLETE_SOURCE')
+    fireEvent.click(screen.getByRole('button', { name: '源码' }))
+    expect(view.container.querySelector('pre')?.textContent).toBe(source)
   })
 
   it('reports a failed request and retries the same immutable URL', async () => {

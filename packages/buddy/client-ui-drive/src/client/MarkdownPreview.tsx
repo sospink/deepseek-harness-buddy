@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Button, MarkdownText } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { DriveOverlayProps } from './DriveOverlay.tsx'
-import { deactivateMarkdownImages, loadMarkdownSource } from './markdown-preview.ts'
+import { boundedMarkdownRenderSource, deactivateMarkdownImages, loadMarkdownSource } from './markdown-preview.ts'
 import css from './DriveOverlay.module.css'
 
 type PreviewState =
@@ -16,6 +16,9 @@ export function MarkdownPreview({ url, t }: { url: string; t: DriveOverlayProps[
   const [mode, setMode] = useState<'rendered' | 'source'>('rendered')
   const [revision, setRevision] = useState(0)
   const [preview, setPreview] = useState<PreviewState>({ state: 'loading' })
+  const rendered = useMemo(() => preview.state === 'ready'
+    ? boundedMarkdownRenderSource(preview.source)
+    : { source: '', truncated: false }, [preview])
   const labels = useMemo(() => ({
     code: { copyLabel: t('preview.copy'), copiedLabel: t('preview.copied') },
     footnotes: t('preview.footnotes'),
@@ -46,7 +49,7 @@ export function MarkdownPreview({ url, t }: { url: string; t: DriveOverlayProps[
             {t('preview.source')}
           </button>
         </div>
-        <span>{t('preview.imagesBlocked')}</span>
+        <span>{t('preview.imagesBlocked')}{rendered.truncated ? ` · ${t('preview.renderLimited')}` : ''}</span>
       </div>
       <div className={css.previewViewport}>
         {preview.state === 'loading' && <div className={css.previewStatus}>{t('preview.loading')}</div>}
@@ -59,7 +62,7 @@ export function MarkdownPreview({ url, t }: { url: string; t: DriveOverlayProps[
         )}
         {preview.state === 'ready' && mode === 'source' && <pre className={css.previewSource}>{preview.source}</pre>}
         {preview.state === 'ready' && mode === 'rendered' && (
-          <div className={css.previewMarkdown}><MarkdownText text={deactivateMarkdownImages(preview.source)} labels={labels} /></div>
+          <div className={css.previewMarkdown}><MarkdownText text={deactivateMarkdownImages(rendered.source)} labels={labels} /></div>
         )}
       </div>
     </section>

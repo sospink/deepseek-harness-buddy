@@ -29,11 +29,11 @@ kind: "package-bundle"
 }
 ```
 
-本层使用阶段一默认限制：单文件 50 MiB、保留逻辑字节 2 GiB、DOCX 条目/解压/压缩比限制和 100,000 条审计。部署策略不同时，在更后的 Profile Patch 覆盖 `buddy-drive-local` Row。
+本层使用阶段一默认限制：单文件 50 MiB、保留逻辑字节 2 GiB、DOCX 条目/解压/压缩比限制和 100,000 条审计。部署策略不同时，在更后的 Profile Patch 覆盖 `buddy-drive-local` Row。本层还会完整重述 `agent-presets` 的 `default: standard`、`includeShippedRoot: true` 和 `includeUserRoot: true`，并增加 fork 自有的只读 System Preset Root，因此官方和用户 Preset 仍然可用。
 
 ## 实现说明
 
-本包包含一个 `cordis.patch.yml` 和一个 Marker Loader Plugin。Patch 插入 `buddy-drive-local`、`buddy-api-drive` 和 `buddy-client-ui-drive` 三个 Row。Cordis Injection 会让它们等待前置原生层提供的 Storage Domain、WebServer、Connection、Typert、Remote、Locale 和 Slot Service。
+本包包含一个 `cordis.patch.yml` 和一个 Marker Loader Plugin。Patch 插入三个 Drive Row，并替换完整的 `agent-presets` 配置以加入 Tool 包的 `presets/` 目录。Preset Root 通过 `@sospink/dsh-buddy-drive-app/package.json` 及其包内依赖解析，因此无论 pnpm 嵌套还是提升 `tool-drive` 都可工作。Cordis Injection 会让 Drive Row 等待前置原生层提供的 Storage Domain、WebServer、Connection、Typert、Remote、Locale 和 Slot Service。
 
 ## 进一步阅读
 
@@ -46,7 +46,7 @@ kind: "package-bundle"
 
 #### 模型看到什么
 
-`@sospink/dsh-buddy-drive-app` Bundle 不直接向模型提供内容。它挂载文档存储和浏览器 Surface；当前被挂载 Package 不注册模型 Tool 或 Prompt。
+本 Bundle 增加一个可选的定位安全 Agent Preset。普通/默认 Session 仍使用 `standard`；只有显式选择 `positioning-safety` 的 Session 才会获得固定的不可信证据 Persona 和三个只读 Drive Tool。
 
 #### Token 影响
 
@@ -54,13 +54,13 @@ kind: "package-bundle"
 
 #### KV Cache 影响
 
-与模型请求独立；后续 Drive Tool Consumer 对请求影响负责。
+普通 Preset 保持不变。定位安全 Agent 使用稳定的 Complete Persona；显式 Drive Result 追加在可缓存前缀之后，并随文件版本变化。
 
 ## 已知限制与延期工作
 
 - **本地 Provider Bundle**——本层选择本地磁盘 Provider；远程对象存储部署需要不同 Bundle 或后续 Row 覆盖。
 - **尚不是上游内置 Profile Template**——在 Buddy 产品 Profile 和品牌通过验收前，本 Bundle 有意保持可选。
-- **预览与 Agent Tool 属于后续阶段**——本层目前挂载资料管理；文档 Viewer 和只读模型 Tool 在后续变更交付。
+- **预览与 Agent Tool 是独立边界**——本层只负责组合；浏览器 Viewer 的安全/性能预算由 Client UI 包负责，只读模型工具与来源/回放边界由 Tool Drive 包负责。
 
 ### 开发备注
 

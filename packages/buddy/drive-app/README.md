@@ -60,7 +60,7 @@ Ordinary presets are unchanged. The Positioning Safety Agent has a stable comple
 
 - **Local-provider bundle** — this layer selects the local disk provider; remote object-storage deployments need a different bundle or a later row override.
 - **Not a shipped upstream profile template** — the Bundle is intentionally optional until the Buddy product profile and branding are accepted.
-- **Preview and Agent tools are separate phases** — this layer currently mounts file management; document viewers and read-only model tools land in later changes.
+- **Preview and Agent tools are separate boundaries** — this layer only composes them; browser viewer safety/performance budgets belong to Client UI, while read-only model tools and provenance/replay belong to Tool Drive.
 
 ### Dev Note
 

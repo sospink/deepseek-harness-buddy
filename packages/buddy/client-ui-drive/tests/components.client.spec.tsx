@@ -79,6 +79,64 @@ describe('DriveTrigger', () => {
   })
 })
 
+describe('DriveOverlay keyboard boundary', () => {
+  it('focuses upload, invokes the hidden input, and wraps first/last focus', async () => {
+    const b = client()
+    b.value.open()
+    render(<DriveOverlay {...overlayProps(b.value)} />)
+    const dialog = screen.getByRole('dialog', { name: '资料云盘' })
+    const upload = screen.getByRole('button', { name: '上传文件' })
+    const input = document.querySelector('input[type="file"]') as HTMLInputElement
+    const openPicker = vi.spyOn(input, 'click')
+    await waitFor(() => { expect(document.activeElement).toBe(upload) })
+    fireEvent.click(upload)
+    expect(openPicker).toHaveBeenCalledOnce()
+    const focusable = [...dialog.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), a[href], input:not([disabled]):not([tabindex="-1"]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    )]
+    const second = focusable[1]
+    const last = focusable.at(-1)
+    if (second === undefined || last === undefined) throw new Error('dialog focus roster is incomplete')
+
+    upload.focus()
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(document.activeElement).toBe(upload)
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(last)
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(document.activeElement).toBe(upload)
+    second.focus()
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(second)
+    fireEvent.keyDown(document, { key: 'Enter' })
+    expect(b.value.source.getSnapshot().open).toBe(true)
+  })
+
+  it('recovers focus entering from outside in both directions and closes on Escape', () => {
+    const b = client()
+    b.value.open()
+    render(<DriveOverlay {...overlayProps(b.value)} />)
+    const dialog = screen.getByRole('dialog', { name: '资料云盘' })
+    const focusable = [...dialog.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), a[href], input:not([disabled]):not([tabindex="-1"]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+    )]
+    const first = focusable[0]
+    const last = focusable.at(-1)
+    if (first === undefined || last === undefined) throw new Error('dialog focus roster is empty')
+    const outside = document.createElement('button')
+    document.body.append(outside)
+    outside.focus()
+    fireEvent.keyDown(document, { key: 'Tab' })
+    expect(document.activeElement).toBe(first)
+    outside.focus()
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    expect(document.activeElement).toBe(last)
+    outside.remove()
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(b.value.source.getSnapshot().open).toBe(false)
+  })
+})
+
 describe('DriveOverlay', () => {
   it('renders the three-column workspace, searches, selects, previews, classifies, downloads, and deletes', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('# 定位安全 Agent'))
@@ -126,7 +184,7 @@ describe('DriveOverlay', () => {
     expect(screen.getByText('旧协议.pdf')).not.toBeNull()
     fireEvent.click(screen.getByText('旧协议.pdf'))
     expect(screen.getByLabelText('PDF 预览')).not.toBeNull()
-    fireEvent.keyDown(document, { key: 'Escape' })
+    fireEvent.keyDown(screen.getByRole('dialog', { name: '资料云盘' }), { key: 'Escape' })
     expect(b.value.source.getSnapshot().open).toBe(false)
   })
 

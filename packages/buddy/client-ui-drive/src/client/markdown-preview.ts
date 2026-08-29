@@ -7,8 +7,44 @@ import { mathFromMarkdown } from 'mdast-util-math'
 import { gfm } from 'micromark-extension-gfm'
 import { math } from 'micromark-extension-math'
 
-/** Largest Markdown source the browser preview will retain and render. */
+/** Largest Markdown source the browser preview will retain for source mode. */
 export const MARKDOWN_PREVIEW_MAX_BYTES = 2 * 1024 * 1024
+/** Largest UTF-8 prefix admitted to rich Markdown parsing and DOM rendering. */
+export const MARKDOWN_RENDER_MAX_BYTES = 256 * 1024
+/** Largest number of source lines admitted to rich Markdown rendering. */
+export const MARKDOWN_RENDER_MAX_LINES = 4_000
+
+export interface BoundedMarkdownRender {
+  readonly source: string
+  readonly truncated: boolean
+}
+
+/** Bound rich rendering separately from the larger, single-text-node source view. */
+export function boundedMarkdownRenderSource(
+  source: string,
+  maxBytes = MARKDOWN_RENDER_MAX_BYTES,
+  maxLines = MARKDOWN_RENDER_MAX_LINES,
+): BoundedMarkdownRender {
+  const encoded = new TextEncoder().encode(source)
+  let rendered = source
+  let truncated = false
+  if (encoded.byteLength > maxBytes) {
+    let end = maxBytes
+    while (end > 0 && ((encoded[end] as number) >>> 6) === 0b10) end -= 1
+    rendered = new TextDecoder('utf-8', { fatal: true }).decode(encoded.subarray(0, end))
+    truncated = true
+  }
+  let lines = 1
+  for (let index = 0; index < rendered.length; index += 1) {
+    if (rendered.charCodeAt(index) !== 10) continue
+    lines += 1
+    if (lines <= maxLines) continue
+    rendered = rendered.slice(0, index)
+    truncated = true
+    break
+  }
+  return { source: rendered, truncated }
+}
 
 function contentLength(response: Response): number | undefined {
   const raw = response.headers.get('content-length')

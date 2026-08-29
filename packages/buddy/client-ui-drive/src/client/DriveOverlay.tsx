@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import clsx from 'clsx'
 import {
   Button,
@@ -21,6 +21,7 @@ import type { DriveUiInjected } from './DriveTrigger.tsx'
 import { MarkdownPreview } from './MarkdownPreview.tsx'
 import { PdfPreview } from './PdfPreview.tsx'
 import { DocxPreview } from './DocxPreview.tsx'
+import { PreviewBoundary } from './PreviewBoundary.tsx'
 import css from './DriveOverlay.module.css'
 
 export type DriveOverlayProps = PropsRuntime<'shell.overlay'>
@@ -60,15 +61,40 @@ export function DriveOverlay({ client, t }: DriveOverlayProps) {
   const [folderName, setFolderName] = useState('')
   const [uploadKind, setUploadKind] = useState<DriveFileKind>('general')
   const [error, setError] = useState<string | undefined>(undefined)
+  const dialogRef = useRef<HTMLElement>(null)
+  const uploadInputRef = useRef<HTMLInputElement>(null)
+  const uploadButtonRef = useRef<HTMLButtonElement>(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!snapshot.open) return
-    const escape = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') client.close()
+    const dialog = dialogRef.current as HTMLElement
+    const uploadButton = uploadButtonRef.current as HTMLButtonElement
+    uploadButton.focus()
+    const keyboard = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') { client.close(); return }
+      if (event.key !== 'Tab') return
+      const focusable = [...dialog.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), a[href], input:not([disabled]):not([tabindex="-1"]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      )]
+      // The mounted dialog always owns at least the upload and close buttons.
+      const first = focusable[0] as HTMLElement
+      const last = focusable.at(-1) as HTMLElement
+      const active = document.activeElement
+      if (!dialog.contains(active)) {
+        event.preventDefault()
+        ;(event.shiftKey ? last : first).focus()
+      } else if (event.shiftKey && active === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && active === last) {
+        event.preventDefault()
+        first.focus()
+      }
     }
-    document.addEventListener('keydown', escape)
-    return () => { document.removeEventListener('keydown', escape) }
+    document.addEventListener('keydown', keyboard)
+    return () => { document.removeEventListener('keydown', keyboard) }
   }, [client, snapshot.open])
+
 
   const data = snapshot.data
   const folderMap = useMemo(() => new Map(data?.folders.map(folder => [folder.id, folder]) ?? []), [data?.folders])
@@ -91,37 +117,45 @@ export function DriveOverlay({ client, t }: DriveOverlayProps) {
   }
 
   return (
-    <section className={css.overlay} role="dialog" aria-modal="true" aria-label={t('title')}>
+    <section ref={dialogRef} className={css.overlay} role="dialog" aria-modal="true" aria-label={t('title')}>
       <header className={css.header}>
         <div>
           <h1>{t('title')}</h1>
           <p>{t('subtitle')}</p>
         </div>
         <div className={css.headerActions}>
-          <label className={clsx(css.uploadButton, snapshot.uploading && css.uploadDisabled)}>
+          <button
+            ref={uploadButtonRef}
+            type="button"
+            className={clsx(css.uploadButton, snapshot.uploading && css.uploadDisabled)}
+            disabled={snapshot.uploading}
+            onClick={() => { uploadInputRef.current?.click() }}
+          >
             <IconProjectAddOutline16 size={16} />
             <span>{snapshot.uploading ? t('uploading') : t('upload')}</span>
-            <input
-              className={css.hiddenInput}
-              type="file"
-              multiple
-              disabled={snapshot.uploading}
-              aria-label={snapshot.uploading ? t('uploading') : t('upload')}
-              accept=".md,.markdown,.pdf,.docx"
-              onChange={(event) => {
-                const list = [...(event.currentTarget.files ?? [])]
-                event.currentTarget.value = ''
-                void run(async () => {
-                  for (const file of list) {
-                    await client.upload({
-                      file, kind: uploadKind,
-                      ...(folderId === undefined ? {} : { parentId: folderId }),
-                    })
-                  }
-                })
-              }}
-            />
-          </label>
+          </button>
+          <input
+            ref={uploadInputRef}
+            className={css.hiddenInput}
+            type="file"
+            multiple
+            tabIndex={-1}
+            disabled={snapshot.uploading}
+            aria-label={snapshot.uploading ? t('uploading') : t('upload')}
+            accept=".md,.markdown,.pdf,.docx"
+            onChange={(event) => {
+              const list = [...(event.currentTarget.files ?? [])]
+              event.currentTarget.value = ''
+              void run(async () => {
+                for (const file of list) {
+                  await client.upload({
+                    file, kind: uploadKind,
+                    ...(folderId === undefined ? {} : { parentId: folderId }),
+                  })
+                }
+              })
+            }}
+          />
           <button type="button" className={css.close} aria-label={t('close')} onClick={() => { client.close() }}>
             <IconCloseOutline16 size={16} />
           </button>
@@ -231,11 +265,13 @@ function FileDetails({ client, file, run, t }: {
   useEffect(() => { setKind(file.kind) }, [file.id, file.kind])
   return (
     <div className={css.detailBody}>
-      {file.mediaType === 'text/markdown'
-        ? <MarkdownPreview url={client.contentUrl(file)} t={t} />
-        : file.mediaType === 'application/pdf'
-          ? <PdfPreview url={client.contentUrl(file)} t={t} />
-          : <DocxPreview url={client.contentUrl(file)} t={t} />}
+      <PreviewBoundary resetKey={file.currentVersionId} t={t}>
+        {file.mediaType === 'text/markdown'
+          ? <MarkdownPreview url={client.contentUrl(file)} t={t} />
+          : file.mediaType === 'application/pdf'
+            ? <PdfPreview url={client.contentUrl(file)} t={t} />
+            : <DocxPreview url={client.contentUrl(file)} t={t} />}
+      </PreviewBoundary>
       <h2>{file.name}</h2>
       <dl>
         <div><dt>{t('fileType')}</dt><dd>{mediaLabel(file.mediaType)}</dd></div>

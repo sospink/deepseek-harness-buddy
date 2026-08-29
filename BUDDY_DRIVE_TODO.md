@@ -2,7 +2,7 @@
 
 > 基线日期：2026-08-29
 > 当前上游提交：`cd5ef8148158c3a752a658978873241fdf8e2bbc`（`dsh-v0.1.2-alpha.1`）
-> 开发分支：`feature/buddy-safety-agent`
+> 开发分支：`feature/buddy-preview-acceptance`
 > 架构提案：`.agents/notes/proposed/feature/2026-08-29-safety-agent-drive-library.zh.md`
 
 ## 状态定义
@@ -118,18 +118,18 @@
 - [ ] 增加多文件上传队列、可视进度、用户取消和失败重试；当前第一版为单文件原始 Body 上传。
 - [x] 实现 Snapshot Feed 重连、状态替换、失败回滚和手动刷新错误态。
 - [x] 完成原生文件输入、关闭后焦点恢复和中英文文案。
-- [ ] 完成全量键盘导航与窄窗口真实浏览器验收。
+- [x] 完成 Modal 初始焦点、正向/反向 Tab 边界和 390 px 窄窗口真实浏览器验收。
 - [x] 新建 `@sospink/dsh-buddy-drive-app`，以可安装 Bundle 组合 Local、API 与 Client UI。
 
 ### 阶段 2B Client UI/Bundle 证据（2026-08-29）
 
 - `@sospink/dsh-buddy-client-ui-drive` 通过 `ctx.remote.$mount(driveRemote)` 动态挂载 Drive Remote，并在挂载后通过 `ctx.get('remote.drive')` 获取动态服务，真实浏览器未再出现静态 Inject 守卫错误。
-- Client UI 源码严格覆盖率：Statements `203/203`、Branches `106/106`、Functions `88/88`、Lines `162/162`，全部 `100%`；4 个 Test Files、25 个 Tests 全部通过。
+- Client UI 源码严格覆盖率：Statements `662/662`、Branches `429/429`、Functions `194/194`、Lines `533/533`，全部 `100%`；12 个 Test Files、79 个 Tests 全部通过。
 - `@sospink/dsh-buddy-drive-app` 的 Bundle Manifest、Patch 行顺序、配置、依赖映射、Host Marker 与 Invariant 共 3 个 Tests 全部通过。
 - Host 与 Client TypeScript Project References、完整 `pnpm run build`、Client Bundle Purity、Workspace Constraints、Package Invariants、README Model Experience/Known Limitations、Package Paths 与 Markdown Links 门禁全部通过。
 - 隔离 Profile 的真实浏览器路径已验证：打开独立资料云盘、创建“角色资料”文件夹、上传 UTF-8 Markdown、搜索、修改分类、完整下载、单 Range `206`、软删除、显示已删除、恢复；浏览器控制台无 Buddy 插件加载错误。
 - Host 重启后，“角色资料”文件夹、Markdown 文件和更新后的“安全协议”分类仍存在，证明元数据与 Blob 持久化链路成立。
-- 在线预览仍明确显示为下一阶段能力；本阶段未伪装 Markdown、PDF 或 DOCX 预览已完成。
+- Phase 2 当时只交付资料管理；Phase 3 随后以独立变更加入 Markdown/PDF/DOCX 预览，避免把后续能力倒算为 Phase 2 完成证据。
 
 ### 阶段 2 退出条件
 
@@ -173,13 +173,22 @@
 - [x] DOCX 使用 opaque-origin sandbox iframe 和 `docx-preview`，关闭 AltChunk 和外部资源。
 - [x] DOCX OOXML 安全预检运行于 Worker，视觉解析在 opaque iframe 中运行；两侧均具备超时和资源限制。
 - [x] Mammoth 仅用于 Phase 4 一次性 Node Worker 的有界 Raw Text 提取，输出做文本规范化，不作为主视觉预览。
-- [ ] 预览失败不能影响原始 Blob 下载和其他文件预览。
+- [x] Preview Error Boundary 将意外 Renderer 崩溃限制在预览区域；元数据/原文件下载继续存在，切换其他文件可正常预览。
+
+### 阶段 3D 跨浏览器、故障隔离与长文档证据（2026-08-29）
+
+- 新增 Preview Error Boundary；聚焦组件测试证明 Markdown Renderer 崩溃后文件名、分类和原文件下载仍存在，切换 PDF 后正常预览恢复。
+- Markdown 仍保留 2 MiB 完整源码预算，但富文本独立限制为 256 KiB/4,000 行；10,004 行 Fixture 的末尾只在源码模式出现，富文本 DOM 为有界前缀。
+- DOCX 分页 Holder 增加 `content-visibility:auto`、layout/paint/style containment 和 816×1056 intrinsic size；ResizeObserver 通过一帧合并调度，消除 WebKit undelivered-notification 错误。
+- 真实隔离 Profile 在 Chromium 149 与 Playwright WebKit 26.5 使用同一批中英文 Markdown/PDF/DOCX、恶意样本和长文档：初始焦点、双向 Tab 边界、390 px 无横向溢出、详情/预览/下载可达；无外部请求、Console Problem 或 Page Error。
+- 长文档最终测量：Markdown Chromium/WebKit 222/405 ms；100 页 PDF 120/145 ms，搜索第 100 页 32/86 ms且始终一个 Canvas；40 页 DOCX 129/164 ms、40 Section/40 Holder并可滚至末端。数值是本机验收证据，不是跨硬件 SLA。
+- 原生 Safari 26.3.1 `safaridriver` 返回 “You must enable Allow remote automation”；未得到原生 Safari Session 前，阶段 3 的 Chrome+Safari 双浏览器退出条件保持未完成。
 
 ### 阶段 3 退出条件
 
-- [ ] 中英文 Markdown、PDF、DOCX 代表样本在 Chrome 与 Safari 在线预览。
-- [ ] 恶意 HTML、Markdown、PDF 和 DOCX 外部关系测试不会执行脚本或静默访问外网。
-- [ ] 长文档的内存、首屏时间和滚动行为满足已记录预算。
+- [ ] 中英文 Markdown、PDF、DOCX 代表样本在 Chrome 与 Safari 在线预览。Chromium 与 Playwright WebKit 26.5 已通过；原生 Safari 26.3.1 因未启用“允许远程自动化”而拒绝 `safaridriver` Session，尚不能把 WebKit 结果冒充原生 Safari。
+- [x] 恶意 HTML/Markdown/PDF/DOCX 策略与代表样本不会执行脚本或静默访问外网；Chromium/WebKit 真实 Profile 观察到 0 个外部请求、0 console warning/error、0 page error；含 `TargetMode="External"` 的 DOCX 通过真实上传路由返回 `400 INVALID_DOCUMENT`，且未发布文件元数据。
+- [x] 长文档满足已记录预算：10,004 行/772 KiB Markdown 富文本限制 256 KiB/4,000 行且源码完整；100 页 PDF 首屏单 Canvas；40 页 DOCX 使用 40 个 `content-visibility:auto` Holder。Chromium/WebKit 首屏分别为 222/405 ms（Markdown）、120/145 ms（PDF）、129/164 ms（DOCX），均可滚至末端。
 
 ## 阶段 4：定位安全 Agent 与只读资料能力
 
@@ -222,15 +231,15 @@
 
 ## 当前开发批次
 
-本批次只认定以下 Phase 4 交付范围，未完成项不得提前标记为阶段完成：
+本批次只认定以下 Phase 2/3 验收收口范围，未完成项不得提前标记为阶段完成：
 
-1. 新增只读 `drive_list`、`drive_search`、`drive_read`，并强制按 File ID 与 Version ID 精确读取。
-2. 新增“定位安全 Agent” Preset，以 Agent Scope 默认拒绝非 Drive 工具，且不挂载 Shell、Workspace、Web、Team 或通信能力。
-3. 为 Markdown、PDF、DOCX 提供有界文本提取，限制源文件、输出、堆内存、执行时间和结果窗口。
-4. 证明资料正文不会自动注入首次模型请求，显式读取结果可通过普通 `tool/result` 精确持久化和回放。
-5. 将 Preset 组合进 Buddy Drive Bundle，同时保留官方预设和用户预设根，并以测试、真实 Profile 与浏览器证据验收。
+1. 让资料云盘 Modal 具备初始焦点、正向/反向 Tab 边界，并在 390 px 视口保留文件列表、预览/详情和下载。
+2. 为预览 Renderer 增加故障隔离，证明单个预览崩溃不影响元数据、原文件下载和其他文件。
+3. 分离 Markdown 完整源码预算与富文本渲染预算，并为 DOCX 长分页增加浏览器延迟布局。
+4. 使用同一隔离 Profile 在 Chromium、Playwright WebKit 和可用时的原生 Safari 验证中英文代表样本、恶意内容、长文档和网络边界。
+5. 修正文档语义漂移，记录可复现证据、环境限制和未完成项。
 
-Phase 3 的 Safari 兼容性、恶意样本跨浏览器复验和长文档性能预算不属于本批次已完成范围，仍保持未完成状态。
+原生 Safari 26.3.1 尚因本机未启用“允许远程自动化”而未完成；多文件上传队列和 Phase 5 部署加固也不属于已完成范围。
 
 ## 决策与遗留风险
 

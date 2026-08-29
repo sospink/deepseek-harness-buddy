@@ -17,9 +17,11 @@ Mount it beside the stock Web Client modules after API Gateway, Connection, Loca
 
 The sidebar action opens the Drive and restores focus when the Drive closes. The application workspace contains folder navigation, search and upload controls, a file list, and file details/actions. Users can create folders, upload Markdown/PDF/DOCX documents, select an upload classification, search the current folder, show deleted files, update classification, download originals, soft-delete, and restore.
 
-Markdown files have a real rendered/source preview backed by the immutable content route and Harness `MarkdownText`. The browser retains at most 2 MiB, cancels stale reads when selection changes, and escapes parsed image markers before rendering so document-authored HTTP(S) images cannot issue requests. Raw HTML remains literal under the Harness renderer.
+Markdown files have a real rendered/source preview backed by the immutable content route and Harness `MarkdownText`. Source mode retains at most 2 MiB; rich rendering independently admits at most a 256 KiB/4,000-line UTF-8 prefix so long documents cannot create an unbounded Markdown AST/DOM. The browser cancels stale reads when selection changes and escapes parsed image markers before rendering so document-authored HTTP(S) images cannot issue requests. Raw HTML remains literal under the Harness renderer.
 
 PDF files use a real PDF.js Canvas viewer backed by the immutable Range route, a pinned same-origin Worker, and authenticated packed CMaps. The viewer keeps one page resident, supports previous/next navigation, 50%–200% zoom, and explicit text search across at most 500 pages. Annotation rendering and scripting layers never mount. Document/page JavaScript actions are detected only to display a blocked warning; absolute HTTP(S) annotations become separate explicit-click links, while dangerous protocols remain absent. DOCX files use a two-boundary preview. A dedicated Worker rechecks the OOXML ZIP with a 20 MiB encoded budget, 1,000-entry cap, 64 MiB expanded budget, 100:1 ratio cap, and a 10-second timeout. Only the transferred safe buffer reaches a `sandbox="allow-scripts"` iframe without `allow-same-origin`; its CSP disables network, forms, objects, child frames, and navigation. Pinned `docx-preview` renders there with `renderAltChunks:false` and base64 resources, the iframe sanitizes active elements/attributes, auto-fits fixed Word pages to the details width, and sends only boot/ready/failure plus page count to the parent.
+
+The standalone workspace uses a native file input and returns focus to its opener when closed. The modal focuses the upload action, contains forward/reverse Tab traversal, and keeps folders, files, preview/details, and original download reachable at a 390 px viewport without horizontal overflow.
 
 ## Understand the implementation
 
@@ -66,13 +68,14 @@ Independent of model requests; browser file management never alters a request pr
 - **DOCX has no parent-visible text/search surface** — the opaque iframe deliberately withholds Word DOM and text from the parent. Semantic extraction/search remains deferred and must use a separately bounded, sanitized Worker pipeline.
 - **DOCX preview budget is stricter than storage admission** — the browser caps encoded DOCX at 20 MiB and expanded content at 64 MiB even though Host storage accepts larger files; oversized originals remain downloadable.
 - **PDF search is page-level** — one search checks at most 500 pages and navigates to the first matching page; it does not yet paint match highlights or expose a text layer.
+- **Native Safari automation remains an environment gate** — Chromium and Playwright WebKit 26.5 pass the shared preview acceptance suite. Safari 26.3.1 still needs “Allow remote automation” enabled before `safaridriver` can supply native-Safari evidence.
 - **PDF page virtualization is single-resident** — only the current Canvas page is retained. Thumbnail strips, continuous scrolling, printing, forms, attachments, outlines, and internal destinations remain deferred.
-- **PDF client bundle cost** — PDF.js is inlined into the one Loader-owned `client.js` to avoid unsupported dynamic chunks; the uncompressed Buddy Client artifact is currently about 1.38 MiB.
-- **Markdown preview budget** — the browser renders at most 2 MiB of one immutable Markdown version. Larger documents remain downloadable instead of being partially rendered.
+- **PDF client bundle cost** — PDF.js is inlined into the one Loader-owned `client.js` to avoid unsupported dynamic chunks; the uncompressed Buddy Client artifact is currently about 1.40 MB.
+- **Markdown preview budget** — source mode retains at most 2 MiB of one immutable version, while rich rendering uses only a 256 KiB/4,000-line prefix and reports truncation. Larger originals remain downloadable.
 - **Remote Markdown images are inactive** — parsed inline/reference images render as inert Markdown text; there is no per-document image allowlist yet.
 - **Current-folder search only** — the search field filters the selected folder in memory; indexed cross-folder and content search are later work.
 - **Sequential multi-file upload** — selected files upload one at a time to keep ordering and error behavior simple; bounded parallel progress arrives with the upload queue refinement.
-- **Narrow layouts hide details** — below 900px the details column is hidden; a dedicated mobile file/details navigation remains deferred.
+- **Narrow screens use stacked navigation** — below 900px folders, file list, and details stack vertically. A dedicated route/history model for mobile file/details navigation remains deferred.
 
 ### Dev Note
 
