@@ -1004,6 +1004,43 @@ importers:
         specifier: ^15.0.0
         version: 15.0.0
 
+  packages/buddy/api-drive:
+    dependencies:
+      zod:
+        specifier: ^4.4.3
+        version: 4.4.3
+    devDependencies:
+      '@deepseek-ai/cordis':
+        specifier: workspace:^
+        version: link:../../../vendor/cordis
+      '@deepseek-ai/dsh-client-connection':
+        specifier: workspace:^
+        version: link:../../client/connection
+      '@deepseek-ai/dsh-host-webserver':
+        specifier: workspace:^
+        version: link:../../host/webserver
+      '@deepseek-ai/dsh-invariants':
+        specifier: workspace:^
+        version: link:../../runtime-diagnostics/invariants
+      '@deepseek-ai/dsh-storage':
+        specifier: workspace:^
+        version: link:../../storage/storage
+      '@deepseek-ai/dsh-storage-domain':
+        specifier: workspace:^
+        version: link:../../storage/storage-domain
+      '@deepseek-ai/dsh-typert-protocol':
+        specifier: workspace:^
+        version: link:../../typert/protocol
+      '@sospink/dsh-buddy-drive':
+        specifier: workspace:^
+        version: link:../drive
+      '@sospink/dsh-buddy-drive-local':
+        specifier: workspace:^
+        version: link:../drive-local
+      fflate:
+        specifier: ^0.8.3
+        version: 0.8.3
+
   packages/buddy/drive:
     devDependencies:
       '@deepseek-ai/cordis':

@@ -17,6 +17,7 @@ kind: "package-group"
 |---|---|---|
 | [`drive/`](drive/README.zh.md) | 提供方无关的资料库、文件夹、文件、版本、审计和内容读取契约 | `ctx.drive` |
 | [`drive-local/`](drive-local/README.zh.md) | 本地原子元数据和内容寻址 Blob Provider | 注册到 `ctx.drive` |
+| [`api-drive/`](api-drive/README.zh.md) | 生成式 Remote 元数据命令和认证上传/内容路由 | `ctx.buddyDriveController`、`ctx.remote.drive` |
 
 ## 相关文档
 

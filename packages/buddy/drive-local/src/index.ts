@@ -574,6 +574,7 @@ export class LocalDriveStore extends DriveStore {
     validateDriveState(state, this.limits)
     await (this.global as DomainGlobal<DriveState>).set(state)
     this.state = state
+    this.ctx.emit('drive/changed')
   }
 
   private enqueue<T>(operation: () => Promise<T>): Promise<T> {

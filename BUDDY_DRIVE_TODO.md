@@ -100,10 +100,17 @@
 
 ## 阶段 2：API、独立 UI 和上传体验
 
-- [ ] 新建 `@sospink/dsh-buddy-api-drive`，元数据命令使用 Typert Remote。
-- [ ] 上传使用同源 HTTP 流，不在 JSON 中 Base64 编码。
-- [ ] 内容路由只接受不透明 Version ID，并支持 `GET`、`HEAD` 和 Range。
-- [ ] 路由执行 Host/Origin、方法、大小、取消和响应头检查。
+- [x] 新建 `@sospink/dsh-buddy-api-drive`，元数据命令使用 Typert Remote。
+- [x] 上传使用同源 HTTP 流，不在 JSON 中 Base64 编码。
+- [x] 内容路由只接受不透明 Version ID，并支持 `GET`、`HEAD` 和 Range。
+- [x] 路由执行 Host/Origin、方法、大小、取消和响应头检查。
+### 阶段 2A Host/API 证据（2026-08-29）
+
+- `@sospink/dsh-buddy-api-drive` 已实现 Typert Remote 的完整元数据命令和可重连 Snapshot Feed。
+- 上传路由为认证 `POST /api/buddy-drive/upload` 原始二进制 Body；新文件与追加版本参数互斥，不接受文件系统路径或 Base64 JSON。
+- 内容路由为认证 `GET|HEAD /api/buddy-drive/content/<versionId>`，支持完整读取、开放/闭合/后缀单 Range、`416` 完整大小标记和防御性响应头。
+- Host/API 源码严格覆盖率：Statements `255/255`、Branches `139/139`、Functions `70/70`、Lines `218/218`，全部 `100%`；6 个 Test Files、36 个 Tests 全部通过。
+
 - [ ] 新建 `@sospink/dsh-buddy-client-ui-drive`。
 - [ ] 在 `sidebar.footer.action` 注册“资料云盘”。
 - [ ] 在 `shell.overlay` 注册独立云盘页面。

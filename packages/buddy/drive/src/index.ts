@@ -89,6 +89,10 @@ declare module '@deepseek-ai/cordis' {
   interface Context {
     drive: DriveStore
   }
+  interface Events {
+    /** One accepted drive mutation became durable and visible through ctx.drive. */
+    'drive/changed'(): void
+  }
 }
 
 /** Provider-neutral document library service. Implementations own media and durable metadata together. */
