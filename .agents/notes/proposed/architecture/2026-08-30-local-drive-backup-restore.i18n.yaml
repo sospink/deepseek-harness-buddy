@@ -1,0 +1,5 @@
+# Bilingual-pair consistency record (docs/i18n/README.md): update after both
+# sides are edited with:
+#   pnpm run verify-translation-pairing --write .agents/notes/proposed/architecture/2026-08-30-local-drive-backup-restore.md
+2026-08-30-local-drive-backup-restore.md: pending
+2026-08-30-local-drive-backup-restore.zh.md: pending

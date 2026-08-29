@@ -41,6 +41,7 @@ export type DriveVersionSource = 'upload' | 'agent-publication'
 /** Durable operation vocabulary for the mutation audit. */
 export type DriveAuditOperation =
   | 'library/create'
+  | 'library/restore'
   | 'folder/create'
   | 'folder/rename'
   | 'folder/move'

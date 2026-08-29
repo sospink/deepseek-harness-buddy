@@ -44,7 +44,7 @@ const preview = z.union([
 ])
 const source = z.union([z.literal('upload'), z.literal('agent-publication')])
 const operation = z.union([
-  z.literal('library/create'), z.literal('folder/create'), z.literal('folder/rename'),
+  z.literal('library/create'), z.literal('library/restore'), z.literal('folder/create'), z.literal('folder/rename'),
   z.literal('folder/move'), z.literal('file/import'), z.literal('file/version'),
   z.literal('file/rename'), z.literal('file/move'), z.literal('file/metadata'),
   z.literal('file/delete'), z.literal('file/restore'),

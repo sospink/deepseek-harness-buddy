@@ -44,12 +44,23 @@ import type {
 } from '@sospink/dsh-buddy-drive'
 import type { DomainGlobal } from '@deepseek-ai/dsh-storage-domain'
 import { admitDriveDocument, normalizeDriveName, normalizeDriveTags } from './admission.ts'
+import {
+  createDriveBackup,
+  inspectDriveBackup,
+  isEmptyDriveState,
+  restoreDriveBackupContent,
+  restoredSummary,
+  stateAfterDriveBackupRestore,
+} from './backup.ts'
+import type { DriveBackupSummary, DriveRestoreSummary, RestoreDriveBackupInput } from './backup.ts'
 import { digestBytes, publishBlob, readBlob, reconcileBlobs } from './blob.ts'
 import { compareDriveNamed, compareDriveVersions } from './ordering.ts'
 import { driveDomainSpec } from './spec.ts'
 import type { LocalDriveAuditEvent } from './spec.ts'
 import { validateDriveState } from './state.ts'
 import type { DriveState } from './spec.ts'
+
+export type { DriveBackupBlob, DriveBackupSummary, DriveRestoreSummary, RestoreDriveBackupInput } from './backup.ts'
 
 const DEFAULT_LIMITS: DriveLimits = Object.freeze({
   maxFileBytes: 50 * 1024 * 1024,
@@ -547,6 +558,33 @@ export class LocalDriveStore extends DriveStore {
     const version = this.requireVersion(versionId)
     const data = await readBlob(this.root, version.digest, version.bytes, signal)
     return Object.freeze({ version: versionSnapshot(version), data })
+  }
+
+  /** Create an immutable, owner-only backup outside the provider root. */
+  createBackup(destination: string): Promise<DriveBackupSummary> {
+    return this.enqueue(() => createDriveBackup(this.root, this.requireState(), this.limits, destination))
+  }
+
+  /** Verify a backup without changing the provider or its metadata. */
+  async inspectBackup(source: string): Promise<DriveBackupSummary> {
+    return (await inspectDriveBackup(source, this.limits)).summary
+  }
+
+  /** Restore a verified backup, optionally replacing a non-empty library. */
+  restoreBackup(input: RestoreDriveBackupInput): Promise<DriveRestoreSummary> {
+    return this.enqueue(async () => {
+      const mutation = mutationContext(input.mutation)
+      const backup = await inspectDriveBackup(input.source, this.limits)
+      this.requireLibrary(backup.state.library.id)
+      const replaced = !isEmptyDriveState(this.requireState())
+      if (replaced && input.replace !== true) {
+        throw new DriveError('RESTORE_TARGET_NOT_EMPTY', 'Drive restore requires explicit replacement of a non-empty library.')
+      }
+      const restored = stateAfterDriveBackupRestore(backup.state, this.limits, mutation)
+      await restoreDriveBackupContent(backup, this.root)
+      await this.commit(restored)
+      return restoredSummary(backup.summary, replaced)
+    })
   }
 
   private requireState(): DriveState {

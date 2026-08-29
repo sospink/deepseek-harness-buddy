@@ -21,6 +21,9 @@ export type DriveErrorCode =
   | 'BLOB_MISSING'
   | 'BLOB_CORRUPT'
   | 'STORAGE_INCONSISTENT'
+  | 'BACKUP_INVALID'
+  | 'BACKUP_EXISTS'
+  | 'RESTORE_TARGET_NOT_EMPTY'
 
 /** Typed drive error; callers branch on {@link code}, never message text. */
 export class DriveError extends Error {

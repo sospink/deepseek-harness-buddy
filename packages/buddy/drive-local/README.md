@@ -33,6 +33,14 @@ Every mutation is serialized. The provider copies caller bytes, validates and pu
 
 Blob publication writes and synchronizes an owner-only temporary inode, hard-links it into the final digest path without replacing an existing entry, removes the temporary name, and synchronizes the containing directory. Existing objects must be regular non-symlink files whose length and digest match.
 
+### Local backup and restore
+
+The provider exposes explicit maintenance methods on `LocalDriveStore`: `createBackup(destination)`, `inspectBackup(source)`, and `restoreBackup({ source, replace?, mutation? })`. These methods are intentionally not browser routes and must be called by a trusted local operator. A backup is a new owner-only directory containing `manifest.json`, canonical `metadata.json`, and every referenced Blob under `blobs/sha256/<prefix>/<digest>`.
+
+`createBackup` writes to a temporary sibling, verifies the complete package, and publishes it with an exclusive directory rename; it never overwrites an existing destination. `inspectBackup` is read-only and verifies format/version, canonical JSON, metadata relations, configured limits, exact directory entries, permissions, and every Blob digest and byte count. `restoreBackup` rejects a non-empty library unless `replace: true`; after validation it publishes missing objects and commits the backup metadata plus one `library/restore` audit event in a single Storage Domain write. A failed metadata write leaves the previous metadata authoritative, and the next normal startup reconciliation removes any newly unreachable Blob.
+
+The backup is a local snapshot, not encrypted or remote disaster recovery. It does not provide identity, sharing, tenant isolation, antivirus/CDR, retention scheduling, or automatic historical-version deletion. Retention and hard-delete policy remain deferred until the deployment contract is supplied.
+
 ## Understand the implementation
 
 | File | Role |
@@ -41,6 +49,7 @@ Blob publication writes and synchronizes an owner-only temporary inode, hard-lin
 | [`src/spec.ts`](src/spec.ts) | Zod durable state and `buddy_drive` Domain declaration |
 | [`src/admission.ts`](src/admission.ts) | Name/tag normalization and Markdown/PDF/DOCX authoritative admission |
 | [`src/blob.ts`](src/blob.ts) | Private content-addressed publication, reads, verification, startup reconciliation, and injectable filesystem failure boundary |
+| [`src/backup.ts`](src/backup.ts) | Versioned local backup format, integrity verification, exclusive creation, restore staging, and restore audit construction |
 | [`src/state.ts`](src/state.ts) | Cordis-free complete metadata-relation validation used at startup and every commit |
 | [`src/ordering.ts`](src/ordering.ts) | Stable name/id and timestamp/id projection ordering |
 | [`src/invariant.ts`](src/invariant.ts) | Package invariant ownership; complete-state validation is enforced by the provider |
