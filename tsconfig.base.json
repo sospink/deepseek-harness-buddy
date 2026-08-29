@@ -231,6 +231,11 @@
       "@deepseek-ai/dsh-experimental-inspector": ["./packages/experimental/inspector/src"],
       "@deepseek-ai/dsh-experimental-inspector/client": ["./packages/experimental/inspector/src/client/index.ts"],
       "@deepseek-ai/dsh-util-crypto": ["./packages/util/crypto/src"],
+      "@sospink/dsh-buddy-drive": ["./packages/buddy/drive/src"],
+      "@sospink/dsh-buddy-drive/invariant": ["./packages/buddy/drive/src/invariant.ts"],
+      "@sospink/dsh-buddy-drive/types": ["./packages/buddy/drive/src/types.ts"],
+      "@sospink/dsh-buddy-drive-local": ["./packages/buddy/drive-local/src"],
+      "@sospink/dsh-buddy-drive-local/invariant": ["./packages/buddy/drive-local/src/invariant.ts"],
       // BEGIN generated package aliases — pnpm run gen-tsconfig-paths
       "@deepseek-ai/dsh-acp": ["./packages/acp/acp/src"],
       "@deepseek-ai/dsh-acp/invariant": ["./packages/acp/acp/src/invariant.ts"],

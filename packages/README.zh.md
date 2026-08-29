@@ -9,7 +9,7 @@ kind: "package-group"
 
 ## 概述
 
-harness 由 `packages/` 下的 npm 包组装而成，按能力系列分组：会话与 agent 循环、面向模型的工具、shell 与文件系统执行、Web 访问、subagent 等等。把本页当作顶层地图使用：先找到拥有某能力的组，再打开其 README 查看包列表。每个包都以 `@deepseek-ai/dsh-*` 为作用域、只属于一个组；每个组的 README 都是该能力系列的权威包映射。
+harness 由 `packages/` 下的 npm 包组装而成，按能力系列分组：会话与 agent 循环、面向模型的工具、shell 与文件系统执行、Web 访问、subagent 等等。把本页当作顶层地图使用：先找到拥有某能力的组，再打开其 README 查看包列表。上游包使用 `@deepseek-ai/dsh-*` 作用域，分支自有 Buddy 包使用 `@sospink/dsh-buddy-*`；每个包只属于一个组；每个组的 README 都是该能力系列的权威包映射。
 
 ## 目录
 
@@ -50,6 +50,7 @@ harness 由 `packages/` 下的 npm 包组装而成，按能力系列分组：会
 | [`subagent/`](subagent/README.zh.md) | subagent 能力系列：提供方注册表约定和面向模型的委托工具 |
 | [`jobs/`](jobs/README.zh.md) | 通用后台任务运行时和面向模型的作业控制工具 |
 | [`experimental/`](experimental/README.zh.md) | 私有原型与内部专用插件 |
+| [`buddy/`](buddy/README.zh.md) | 分支私有 Buddy 产品能力，第一项为独立资料云盘 |
 | [`workflow/`](workflow/README.zh.md) | 工作流 seam、worker 线程引擎、面向模型的 `workflow`/`ralph` 工具 |
 | [`webhook/`](webhook/README.zh.md) | 已验证外部事件、受信规则与即发即弃 Workspace Session |
 | [`web/`](web/README.zh.md) | Web 能力系列：seam、搜索/获取提供方、面向模型的 Web 工具 |
@@ -84,7 +85,7 @@ harness 由 `packages/` 下的 npm 包组装而成，按能力系列分组：会
 <a id="release-expectations"></a>
 ## 发布预期
 
-大多数组是产品——稳定 API。例外：`e2b/` 是 POC，`experimental/` 不发布，`examples/`、`test-support/`、`runtime-diagnostics/` 与 `util/` 是兼容性预期较低的支持组。
+大多数组是产品——稳定 API。例外：`e2b/` 是 POC，`experimental/` 与分支自有 `buddy/` 不发布，`examples/`、`test-support/`、`runtime-diagnostics/` 与 `util/` 是兼容性预期较低的支持组。
 
 -----
 

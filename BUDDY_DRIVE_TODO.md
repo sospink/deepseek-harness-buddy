@@ -19,12 +19,12 @@
 
 | ID | 原始需求 | 实现模块 | 用户入口 | 后端/持久化 | 验收证据 | 状态 |
 |---|---|---|---|---|---|---|
-| R1 | 将三角协作改为单独云盘模式 | Buddy Drive Bundle、独立 Overlay | 侧栏“资料云盘” | `ctx.drive` | Drive 模式无成员表、任务板、邮箱和通信入口 | 未开始 |
+| R1 | 将三角协作改为单独云盘模式 | Buddy Drive Bundle、独立 Overlay | 侧栏“资料云盘” | `ctx.drive` | Drive 模式无成员表、任务板、邮箱和通信入口 | 进行中 |
 | R2 | 定位安全 Agent | Agent Preset、只读 Drive Tools | 新建定位安全 Agent 会话 | Session Log、Tool Pipeline | Agent 只读取显式选择或工具请求的文件版本，并返回来源 | 未开始 |
 | R3 | 上传角色分工文档 | Drive Core、Upload API、Drive UI | 云盘上传与分类 | Blob Store、`buddy_drive` Domain | 上传后重启仍存在，可标记为“角色分工” | 进行中 |
 | R4 | 支持 Markdown | Admission、Markdown Preview | 文件预览面板 | 原文件 Blob | `.md/.markdown` 签名与 UTF-8 校验、源码/渲染预览 | 进行中 |
-| R5 | 支持 PDF | Admission、PDF.js Preview | 文件预览面板 | Range Content Route | PDF 签名校验、分页/缩放/Range 读取 | 未开始 |
-| R6 | 支持 DOCX | Admission、DOCX Preview | 文件预览面板 | OOXML Blob、Preview Worker | OOXML 结构/ZIP Bomb 校验、隔离在线预览 | 未开始 |
+| R5 | 支持 PDF | Admission、PDF.js Preview | 文件预览面板 | Range Content Route | PDF 签名校验、分页/缩放/Range 读取 | 进行中 |
+| R6 | 支持 DOCX | Admission、DOCX Preview | 文件预览面板 | OOXML Blob、Preview Worker | OOXML 结构/ZIP Bomb 校验、隔离在线预览 | 进行中 |
 | R7 | 沟通功能暂不做 | Bundle Composition | 无入口 | 不挂载 Team/Mailbox | Profile 和 UI 中不存在沟通能力 | 未开始 |
 | R8 | 探索或开发 WorkBuddy 类资料库插件 | 插件评估、Drive Seam | 不适用 | 不适用 | 评估 `dsh-files`、`dsh-file-explorer`、`dsh-univer-office`、MinerU 并记录取舍 | 已实现 |
 | R9 | 后续可持续同步官方 Harness | Fork-owned Packages、窄 Bundle Patch | 不适用 | Git `upstream` | 自有实现限制在 `packages/buddy` 与明确集成点，上游包不被散改 | 进行中 |
@@ -50,41 +50,53 @@
 
 ### Service Definition
 
-- [ ] 新建 `@sospink/dsh-buddy-drive`。
-- [ ] 定义 Library、Folder、File、Version、Audit 的品牌化 ID 和不可变快照。
-- [ ] 定义 `ctx.drive` 的 Provider 无关接口。
-- [ ] 定义错误码、上传限制、分类、媒体类型和预览状态。
-- [ ] 定义读取、创建文件夹、导入文件、重命名、移动、软删除、恢复和版本列表操作。
+- [x] 新建 `@sospink/dsh-buddy-drive`。
+- [x] 定义 Library、Folder、File、Version、Audit 的品牌化 ID 和不可变快照。
+- [x] 定义 `ctx.drive` 的 Provider 无关接口。
+- [x] 定义错误码、上传限制、分类、媒体类型和预览状态。
+- [x] 定义读取、创建文件夹、导入文件、重命名、移动、软删除、恢复和版本列表操作。
 
 ### Local Provider
 
-- [ ] 新建 `@sospink/dsh-buddy-drive-local`。
-- [ ] 使用 `buddy_drive` Storage Domain 保存元数据。
-- [ ] 在 `$DSH_HOME/buddy-drive/blobs/sha256` 保存内容寻址 Blob。
-- [ ] 实现临时写入、摘要校验、文件 `fsync`、原子发布和目录 `fsync`。
-- [ ] 实现 Markdown/PDF/DOCX 主机侧准入校验。
-- [ ] 实现名称规范化、单文件配额、资料库配额和并发操作串行化。
-- [ ] 实现软删除、恢复和无引用 Blob 垃圾回收接口。
-- [ ] 实现启动一致性检查：元数据引用的 Blob 必须存在且摘要一致。
-- [ ] 实现中断上传残留临时文件清理。
-- [ ] 每个修改生成不可变审计记录。
+- [x] 新建 `@sospink/dsh-buddy-drive-local`。
+- [x] 使用 `buddy_drive` Storage Domain 保存元数据。
+- [x] 在 `$DSH_HOME/buddy-drive/blobs/sha256` 保存内容寻址 Blob。
+- [x] 实现临时写入、摘要校验、文件 `fsync`、原子发布和目录 `fsync`。
+- [x] 实现 Markdown/PDF/DOCX 主机侧准入校验。
+- [x] 实现名称规范化、单文件配额、资料库配额和并发操作串行化。
+- [x] 实现软删除、恢复和无引用 Blob 垃圾回收接口。
+- [x] 实现启动一致性检查：元数据引用的 Blob 必须存在且摘要一致。
+- [x] 实现中断上传残留临时文件清理。
+- [x] 每个修改生成不可变审计记录。
 
 ### 阶段 1 测试
 
-- [ ] ID、Schema、名称、媒体类型和分类单元测试。
-- [ ] Markdown/PDF/DOCX 合法样本准入测试。
-- [ ] 扩展名欺骗、双扩展名、NUL、未知 ZIP、宏格式和非法 UTF-8 拒绝测试。
-- [ ] DOCX ZIP 条目数、解压大小和压缩比限制测试。
-- [ ] 路径穿越、符号链接和预置目标攻击测试。
-- [ ] 重复 Blob、重复名称、并发导入和配额测试。
-- [ ] Storage 写失败、Blob 写失败、元数据提交失败和重启恢复测试。
-- [ ] HMR/插件卸载后 Service 和 Domain 释放测试。
+- [x] ID、Schema、名称、媒体类型和分类单元测试。
+- [x] Markdown/PDF/DOCX 合法样本准入测试。
+- [x] 扩展名欺骗、双扩展名、NUL、未知 ZIP、宏格式和非法 UTF-8 拒绝测试。
+- [x] DOCX ZIP 条目数、解压大小和压缩比限制测试。
+- [x] 路径穿越、符号链接和预置目标攻击测试。
+- [x] 重复 Blob、重复名称、并发导入和配额测试。
+- [x] Storage 写失败、Blob 写失败、元数据提交失败和重启恢复测试。
+- [x] HMR/插件卸载后 Service 和 Domain 释放测试。
 
 ### 阶段 1 退出条件
 
-- [ ] 通过真实 Cordis 组合完成“创建文件夹 → 上传 Markdown → 列表 → 读取 → 删除 → 恢复 → 重启仍存在”。
-- [ ] 原始文件不能通过 Workspace、Shell 或用户路径参数绕过 Drive API 访问。
-- [ ] 聚焦测试、TypeScript、Lint、Package Constraints、Invariant 和文档 Gate 全部通过。
+- [x] 通过真实 Cordis 组合完成“创建文件夹 → 上传 Markdown → 列表 → 读取 → 删除 → 恢复 → 重启仍存在”。
+- [x] 原始文件不能通过 Workspace、Shell 或用户路径参数绕过 Drive API 访问。
+- [x] 聚焦测试、TypeScript、Lint、Package Constraints、Invariant 和文档 Gate 全部通过。
+
+## 阶段 1 验收证据（2026-08-29）
+
+- Buddy 源码严格覆盖率：Statements `555/555`、Branches `346/346`、Functions `129/129`、Lines `496/496`，全部 `100%`。
+- 聚焦测试：9 个 Test Files、69 个 Tests 全部通过，包含真实 `cordis.yml` Loader 组合。
+- 全仓库 Host TypeScript 与 tsdown Build：`pnpm run build:lib:host` 通过。
+- 全仓库 Client TypeScript 与 tsdown Build：`pnpm run build:lib:client` 通过。
+- Built Import Smoke：`DriveStore`、`LocalDriveStore` 和两个 Invariant Companion 可由 plain Node 导入。
+- Built Invariant Gate：249 个编译后 Package Companion 全部通过 plain-Node Loader 检查。
+- 两个 Buddy Package 的 `publint`：All good，无打包警告。
+- 定向 OXLint、Workspace Constraints、Project Reference Faces、Package Invariants、Package README Model Experience、Known Limitations、Package Paths、Translation Pairing 和 Markdown Links 全部通过。
+- 安全证据覆盖：运行时枚举绕过、扩展名/MIME 欺骗、二进制伪装、DOCX 宏/AltChunk/外部关系/ZIP Bomb、路径与符号链接、权限、磁盘 IO 故障、并发发布、元数据写失败、孤儿回收、Blob 缺失/损坏、重启和完整状态关系损坏。
 
 ## 阶段 2：API、独立 UI 和上传体验
 

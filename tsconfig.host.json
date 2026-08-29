@@ -326,6 +326,8 @@
     { "path": "./packages/lsp/lsp" },
     { "path": "./packages/lsp/lsp-stdio" },
     { "path": "./packages/lsp/tool-lsp" },
-    { "path": "./apps/cli" }
+    { "path": "./apps/cli" },
+    { "path": "./packages/buddy/drive" },
+    { "path": "./packages/buddy/drive-local" }
   ]
 }

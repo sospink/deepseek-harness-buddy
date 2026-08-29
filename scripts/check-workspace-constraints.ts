@@ -50,10 +50,16 @@ const repositoryUrl = 'git+https://github.com/deepseek-harness/deepseek-harness.
 const publishedRepositoryUrl = 'git+https://github.com/deepseek-ai/deepseek-harness.git'
 /** Private packages that participate in workspace checks but not releases. */
 const experimentalPackageDirectory = /^packages\/experimental\/[^/]+$/
+/** Fork-owned private packages developed independently from the upstream release family. */
+const buddyPackageDirectory = /^packages\/buddy\/[^/]+$/
+/** npm namespace reserved for fork-owned Buddy packages. */
+const buddyPackageNamePrefix = '@sospink/dsh-buddy-'
+/** Source repository required by fork-owned package manifests. */
+const buddyRepositoryUrl = 'git+https://github.com/sospink/deepseek-harness-buddy.git'
 /** npm namespace reserved for private experimental packages. */
 const experimentalPackageNamePrefix = '@deepseek-ai/dsh-experimental-'
 /** Directories whose packages this repository publishes: one release member each. */
-const releaseMemberDirectory = /^(?:packages\/(?!experimental\/)[^/]+\/[^/]+|apps\/[^/]+|vendor\/[^/]+)$/
+const releaseMemberDirectory = /^(?:packages\/(?!(?:experimental|buddy)\/)[^/]+\/[^/]+|apps\/[^/]+|vendor\/[^/]+)$/
 const localArtifactDirs = new Set(['node_modules'])
 const appPackageFiles: Readonly<Record<string, readonly string[]>> = {
   '@deepseek-ai/dsh': ['lib/*.js'],
@@ -268,13 +274,34 @@ export function checkExperimentalManifest({ dir, manifest }: WorkspaceManifest):
   return errors
 }
 
+/** Fork-owned Buddy manifest requirements, separate from the upstream release family. */
+export function checkBuddyManifest({ dir, manifest }: WorkspaceManifest): string[] {
+  if (!buddyPackageDirectory.test(dir)) return []
+  const label = manifest.name ?? dir
+  const errors: string[] = []
+  if (manifest.name?.startsWith(buddyPackageNamePrefix) !== true) {
+    errors.push(`${label}: Buddy package name must start with ${JSON.stringify(buddyPackageNamePrefix)}`)
+  }
+  if (manifest.private !== true) errors.push(`${label}: Buddy package must set "private": true`)
+  if (manifest.publishConfig !== undefined) errors.push(`${label}: Buddy package must omit publishConfig`)
+  if (manifest.repository?.type !== 'git'
+    || manifest.repository.url !== buddyRepositoryUrl
+    || manifest.repository.directory !== dir) {
+    errors.push(`${label}: Buddy package repository must use ${buddyRepositoryUrl} with directory ${dir}`)
+  }
+  return errors
+}
+
 /**
  * Check one workspace manifest against publication and dsh-package policy.
  * @param workspace - package directory and parsed manifest.
  * @returns path-qualified policy violations.
  */
 export function checkWorkspaceManifest({ dir, manifest }: WorkspaceManifest): string[] {
-  const errors = checkExperimentalManifest({ dir, manifest })
+  const errors = [
+    ...checkExperimentalManifest({ dir, manifest }),
+    ...checkBuddyManifest({ dir, manifest }),
+  ]
   const label = manifest.name ?? dir
   const isLandlockPackageDir = dir.startsWith('native/landlock-run/packages/')
   const isPublicLandlockPackage = isLandlockPackageDir
@@ -316,7 +343,7 @@ export function checkWorkspaceManifest({ dir, manifest }: WorkspaceManifest): st
       || manifest.repository.directory !== dir) {
       errors.push(`${label}: release member repository must use ${publishedRepositoryUrl} with directory ${dir}`)
     }
-  } else if (!experimentalPackageDirectory.test(dir) && manifest.private !== true) {
+  } else if (!experimentalPackageDirectory.test(dir) && !buddyPackageDirectory.test(dir) && manifest.private !== true) {
     errors.push(`${label}: package.json must set "private": true`)
   }
 

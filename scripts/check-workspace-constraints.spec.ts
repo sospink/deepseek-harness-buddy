@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from 'vitest'
 import {
+  checkBuddyManifest,
   checkExperimentalDependencyIsolation,
   checkExperimentalManifest,
   expectedDshPackageFiles,
@@ -12,6 +13,44 @@ const experimental: WorkspaceManifest = {
   dir: 'packages/experimental/prototype',
   manifest: { name: '@deepseek-ai/dsh-experimental-prototype', private: true },
 }
+
+
+const buddy: WorkspaceManifest = {
+  dir: 'packages/buddy/drive',
+  manifest: {
+    name: '@sospink/dsh-buddy-drive',
+    private: true,
+    repository: {
+      type: 'git',
+      url: 'git+https://github.com/sospink/deepseek-harness-buddy.git',
+      directory: 'packages/buddy/drive',
+    },
+  },
+}
+
+describe('Buddy workspace constraints', () => {
+  it('accepts a private fork-owned package in the sospink namespace', () => {
+    expect(checkBuddyManifest(buddy)).toEqual([])
+  })
+
+  it('rejects namespace, publication, privacy, and repository drift', () => {
+    expect(checkBuddyManifest({
+      ...buddy,
+      manifest: {
+        ...buddy.manifest,
+        name: '@deepseek-ai/dsh-buddy-drive',
+        private: false,
+        publishConfig: { access: 'public' },
+        repository: { type: 'git', url: 'git+https://example.invalid/repo.git', directory: 'wrong' },
+      },
+    })).toEqual([
+      '@deepseek-ai/dsh-buddy-drive: Buddy package name must start with "@sospink/dsh-buddy-"',
+      '@deepseek-ai/dsh-buddy-drive: Buddy package must set "private": true',
+      '@deepseek-ai/dsh-buddy-drive: Buddy package must omit publishConfig',
+      '@deepseek-ai/dsh-buddy-drive: Buddy package repository must use git+https://github.com/sospink/deepseek-harness-buddy.git with directory packages/buddy/drive',
+    ])
+  })
+})
 
 describe('experimental workspace constraints', () => {
   it('requires the experimental package-name prefix', () => {
