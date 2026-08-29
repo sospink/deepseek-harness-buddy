@@ -17,8 +17,11 @@ import { BuddyDriveClient, createBuddyDriveStream } from './service.ts'
 
 export { DriveOverlay } from './DriveOverlay.tsx'
 export { DriveTrigger } from './DriveTrigger.tsx'
+export { UploadQueue } from './UploadQueue.tsx'
 export { BuddyDriveClient, createBuddyDriveStream } from './service.ts'
-export type { BuddyDriveSnapshot, BuddyDriveSource, UploadDriveFileInput } from './service.ts'
+export type { BuddyDriveSnapshot, BuddyDriveSource, DriveUploadItem, DriveUploadStatus } from './service.ts'
+export { DRIVE_UPLOAD_QUEUE_CONCURRENCY, DRIVE_UPLOAD_QUEUE_MAX_ITEMS, startDriveUpload } from './upload.ts'
+export type { UploadDriveFileInput, UploadProgress, UploadTransportInput, UploadRequest, UploadTransport } from './upload.ts'
 export type { BuddyDriveKey } from './locales.ts'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {

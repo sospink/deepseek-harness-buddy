@@ -29,7 +29,7 @@ export function MarkdownPreview({ url, t }: { url: string; t: DriveOverlayProps[
     setPreview({ state: 'loading' })
     void loadMarkdownSource(url, controller.signal).then(
       (source) => { setPreview({ state: 'ready', source }) },
-      (error) => {
+      (error: unknown) => {
         if (!controller.signal.aborted) {
           setPreview({ state: 'failed', message: error instanceof Error ? error.message : String(error) })
         }

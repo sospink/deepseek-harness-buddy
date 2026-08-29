@@ -9,7 +9,7 @@ kind: "package-reference"
 
 ## 摘要
 
-`@sospink/dsh-buddy-drive-local` 在单个 Host 上实现 `ctx.drive`。它通过 `buddy_drive` Storage Domain Global 一次提交完整元数据关系，并把不可变源文件保存到私有 SHA-256 对象树。它在 Host 侧准入 Markdown、PDF 和 DOCX，执行配额、同级名称和文件夹树不变量，记录修改审计，在启动时校验所有被引用 Blob，并删除临时或无引用的 Provider 自有对象。
+`@sospink/dsh-buddy-drive-local` 在单个 Host 上实现 `ctx.drive`。它通过 `buddy_drive` Storage Domain Global 一次提交完整元数据关系，并把不可变源文件保存到私有 SHA-256 对象树。它在 Host 侧准入 Markdown、PDF 和 DOCX，执行配额、同级名称和文件夹树不变量，记录修改审计，按幂等 Key 持久化重放新文件导入，在启动时校验所有被引用 Blob，并删除临时或无引用的 Provider 自有对象。
 
 ## 使用本包
 
@@ -29,7 +29,7 @@ kind: "package-reference"
 
 ### 提交与恢复
 
-所有修改串行执行。Provider 复制调用方字节，校验并发布私有内容寻址对象，然后一次提交完整元数据状态。元数据写入失败时，旧内存状态和旧持久化状态仍然权威；可能留下不可达对象，并在下次启动时删除。启动遇到被引用 Blob 缺失、损坏、符号链接、名称异常或权限异常时直接拒绝，不能把损坏误判为空云盘。
+所有修改串行执行。Provider 复制调用方字节，校验并发布私有内容寻址对象，然后一次提交完整元数据状态。带幂等 Key 的新文件导入会把 Key 和规范请求摘要写入本地审计元数据；相同 Key 和摘要返回原文件，不再发布第二个文件，摘要不一致则明确报告冲突。元数据写入失败时，旧内存状态和旧持久化状态仍然权威；可能留下不可达对象，并在下次启动时删除。启动遇到被引用 Blob 缺失、损坏、符号链接、名称异常或权限异常时直接拒绝，不能把损坏误判为空云盘。
 
 Blob 发布先写入并同步 Owner-only 临时 Inode，再使用硬链接把它独占发布到最终摘要路径，不替换已有条目，随后移除临时名称并同步所在目录。已有对象必须是非符号链接普通文件，且长度和摘要一致。
 
@@ -37,7 +37,7 @@ Blob 发布先写入并同步 Owner-only 临时 Inode，再使用硬链接把它
 
 | 文件 | 职责 |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Service 生命周期、元数据操作、原子状态提交、配额、审计和图校验 |
+| [`src/index.ts`](src/index.ts) | Service 生命周期、元数据操作、原子状态提交、配额、审计、幂等导入和图校验 |
 | [`src/spec.ts`](src/spec.ts) | Zod 持久化状态和 `buddy_drive` Domain 声明 |
 | [`src/admission.ts`](src/admission.ts) | 名称/标签规范化及 Markdown/PDF/DOCX 权威准入 |
 | [`src/blob.ts`](src/blob.ts) | 私有内容寻址发布、读取、校验、启动协调和可注入文件系统故障边界 |

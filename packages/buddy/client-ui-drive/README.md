@@ -1,5 +1,5 @@
 ---
-description: "Standalone Buddy Drive browser workspace: generated Remote mounting, reconnecting state, uploads, sidebar entry, file management, and details surface."
+description: "Standalone Buddy Drive browser workspace: generated Remote mounting, reconnecting state, bounded upload queue, sidebar entry, file management, and details surface."
 kind: "package-reference"
 ---
 
@@ -15,7 +15,9 @@ English | [中文](README.zh.md)
 
 Mount it beside the stock Web Client modules after API Gateway, Connection, Locale, Layout, Sidebar, and UI Renderer. Its Client module mounts `@sospink/dsh-buddy-api-drive/remote` itself, so the fork does not modify the upstream `api-remotes` assembly.
 
-The sidebar action opens the Drive and restores focus when the Drive closes. The application workspace contains folder navigation, search and upload controls, a file list, and file details/actions. Users can create folders, upload Markdown/PDF/DOCX documents, select an upload classification, search the current folder, show deleted files, update classification, download originals, soft-delete, and restore.
+The sidebar action opens the Drive and restores focus when the Drive closes. The application workspace contains folder navigation, search and upload controls, a file list, and file details/actions. Users can create folders, select an upload classification, add up to 100 Markdown/PDF/DOCX files to a bounded queue, observe per-file and aggregate progress, cancel queued or active work, retry failed/cancelled work, clear completed/cancelled rows, search the current folder, show deleted files, update classification, download originals, soft-delete, and restore. At most two files upload concurrently; one failure does not stop later queue items.
+
+Each queue item owns one stable upload id for its lifetime. The Client sends it as `X-Buddy-Drive-Upload-Id`, so a retry after a transport abort can replay a Host commit without creating a duplicate file. A successful Host `201` remains successful even when the follow-up metadata refresh fails; the refresh error is reported separately.
 
 Markdown files have a real rendered/source preview backed by the immutable content route and Harness `MarkdownText`. Source mode retains at most 2 MiB; rich rendering independently admits at most a 256 KiB/4,000-line UTF-8 prefix so long documents cannot create an unbounded Markdown AST/DOM. The browser cancels stale reads when selection changes and escapes parsed image markers before rendering so document-authored HTTP(S) images cannot issue requests. Raw HTML remains literal under the Harness renderer.
 
@@ -28,6 +30,8 @@ The standalone workspace uses a native file input and returns focus to its opene
 | File | Role |
 |---|---|
 | [`src/client/service.ts`](src/client/service.ts) | Remote mount consumer, reconnect snapshot model, upload and metadata actions, focus restoration, content URLs |
+| [`src/client/upload.ts`](src/client/upload.ts) | Same-origin XHR upload transport, bounded progress, timeout, and cancellation |
+| [`src/client/UploadQueue.tsx`](src/client/UploadQueue.tsx) | Bounded queue projection, progress summary, cancellation, retry, and cleanup controls |
 | [`src/client/index.ts`](src/client/index.ts) | Client module lifecycle, Remote contribution mount, dictionaries, and Slot registrations |
 | [`src/client/DriveTrigger.tsx`](src/client/DriveTrigger.tsx) | Wide/rail sidebar entry |
 | [`src/client/DriveOverlay.tsx`](src/client/DriveOverlay.tsx) | Three-column file-management workspace and format-specific preview seat |
@@ -74,7 +78,7 @@ Independent of model requests; browser file management never alters a request pr
 - **Markdown preview budget** — source mode retains at most 2 MiB of one immutable version, while rich rendering uses only a 256 KiB/4,000-line prefix and reports truncation. Larger originals remain downloadable.
 - **Remote Markdown images are inactive** — parsed inline/reference images render as inert Markdown text; there is no per-document image allowlist yet.
 - **Current-folder search only** — the search field filters the selected folder in memory; indexed cross-folder and content search are later work.
-- **Sequential multi-file upload** — selected files upload one at a time to keep ordering and error behavior simple; bounded parallel progress arrives with the upload queue refinement.
+- **Bounded upload queue** — the browser retains at most 100 rows and sends at most two requests concurrently. Queue state is intentionally ephemeral; a page reload does not resume in-flight files, while Host idempotency prevents a retry from duplicating a commit that already reached the server.
 - **Narrow screens use stacked navigation** — below 900px folders, file list, and details stack vertically. A dedicated route/history model for mobile file/details navigation remains deferred.
 
 ### Dev Note

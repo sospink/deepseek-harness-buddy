@@ -40,6 +40,7 @@ function validState(): DriveState {
     audit: [{
       id: DriveAuditId('audit'), correlationId: DriveCorrelationId('correlation'), actor: 'human',
       operation: 'file/import', targetType: 'file', targetId: fileId, createdAt: now, versionId,
+      idempotencyKey: 'upload-state', requestDigest: `sha256:${'b'.repeat(64)}`,
     }],
   }
 }
@@ -107,6 +108,24 @@ describe('validateDriveState', () => {
         ...state.versions[0]!, id: DriveVersionId('other-version'), fileId: otherFileId,
       })
       state.files[0] = { ...state.files[0]!, currentVersionId: DriveVersionId('other-version') }
+    })
+  })
+
+  it('rejects incomplete, misplaced, duplicate, and orphaned import idempotency metadata', () => {
+    expectInconsistent((state) => {
+      const { requestDigest: _requestDigest, ...event } = state.audit[0]!
+      state.audit[0] = event
+    })
+    expectInconsistent((state) => {
+      const { idempotencyKey: _idempotencyKey, ...event } = state.audit[0]!
+      state.audit[0] = event
+    })
+    expectInconsistent((state) => { state.audit[0] = { ...state.audit[0]!, operation: 'file/metadata' } })
+    expectInconsistent((state) => { state.audit[0] = { ...state.audit[0]!, targetType: 'folder' } })
+    expectInconsistent((state) => { state.audit[0] = { ...state.audit[0]!, targetId: 'missing' } })
+    expectInconsistent((state) => { state.audit[0] = { ...state.audit[0]!, versionId: DriveVersionId('missing') } })
+    expectInconsistent((state) => {
+      state.audit.push({ ...state.audit[0]!, id: DriveAuditId('audit-2') })
     })
   })
 

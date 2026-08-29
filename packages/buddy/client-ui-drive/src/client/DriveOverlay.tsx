@@ -22,6 +22,7 @@ import { MarkdownPreview } from './MarkdownPreview.tsx'
 import { PdfPreview } from './PdfPreview.tsx'
 import { DocxPreview } from './DocxPreview.tsx'
 import { PreviewBoundary } from './PreviewBoundary.tsx'
+import { UploadQueue } from './UploadQueue.tsx'
 import css from './DriveOverlay.module.css'
 
 export type DriveOverlayProps = PropsRuntime<'shell.overlay'>
@@ -127,12 +128,12 @@ export function DriveOverlay({ client, t }: DriveOverlayProps) {
           <button
             ref={uploadButtonRef}
             type="button"
-            className={clsx(css.uploadButton, snapshot.uploading && css.uploadDisabled)}
-            disabled={snapshot.uploading}
+            className={css.uploadButton}
             onClick={() => { uploadInputRef.current?.click() }}
           >
             <IconProjectAddOutline16 size={16} />
-            <span>{snapshot.uploading ? t('uploading') : t('upload')}</span>
+            <span>{t('upload')}</span>
+            {snapshot.uploading && <span className={css.uploadBadge} aria-hidden="true">{snapshot.uploadQueue.filter(item => item.status === 'uploading').length}</span>}
           </button>
           <input
             ref={uploadInputRef}
@@ -140,19 +141,18 @@ export function DriveOverlay({ client, t }: DriveOverlayProps) {
             type="file"
             multiple
             tabIndex={-1}
-            disabled={snapshot.uploading}
-            aria-label={snapshot.uploading ? t('uploading') : t('upload')}
+            aria-label={t('upload')}
             accept=".md,.markdown,.pdf,.docx"
             onChange={(event) => {
               const list = [...(event.currentTarget.files ?? [])]
               event.currentTarget.value = ''
-              void run(async () => {
-                for (const file of list) {
-                  await client.upload({
-                    file, kind: uploadKind,
-                    ...(folderId === undefined ? {} : { parentId: folderId }),
-                  })
-                }
+              void run(() => {
+                client.enqueueUploads(list.map(file => ({
+                  file,
+                  kind: uploadKind,
+                  ...(folderId === undefined ? {} : { parentId: folderId }),
+                })))
+                return Promise.resolve()
               })
             }}
           />
@@ -163,6 +163,7 @@ export function DriveOverlay({ client, t }: DriveOverlayProps) {
       </header>
 
       {error !== undefined && <div className={css.error}><strong>{t('error')}</strong><span>{error}</span></div>}
+      <UploadQueue client={client} items={snapshot.uploadQueue} t={t} />
 
       <div className={css.workspace}>
         <aside className={css.folders}>

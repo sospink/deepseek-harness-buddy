@@ -1,5 +1,5 @@
 ---
-description: "独立 Buddy Drive 浏览器工作区：生成式 Remote 挂载、重连状态、上传、侧栏入口、资料管理和详情 Surface。"
+description: "独立 Buddy Drive 浏览器工作区：生成式 Remote 挂载、重连状态、有界上传队列、侧栏入口、资料管理和详情 Surface。"
 kind: "package-reference"
 ---
 
@@ -15,7 +15,9 @@ kind: "package-reference"
 
 在 API Gateway、Connection、Locale、Layout、Sidebar 和 UI Renderer 之后，与原生 Web Client Module 一起挂载。Client Module 自行挂载 `@sospink/dsh-buddy-api-drive/remote`，因此分支无需修改上游 `api-remotes` Assembly。
 
-侧栏操作会打开云盘，并在关闭时恢复焦点。应用工作区包含文件夹导航、搜索和上传控件、文件列表以及文件详情/操作。用户可以创建文件夹、上传 Markdown/PDF/DOCX 文档、选择上传分类、搜索当前文件夹、显示已删除文件、更新分类、下载原文件、软删除和恢复。
+侧栏操作会打开云盘，并在关闭时恢复焦点。应用工作区包含文件夹导航、搜索和上传控件、文件列表以及文件详情/操作。用户可以创建文件夹、选择上传分类，把最多 100 个 Markdown/PDF/DOCX 文件加入有界队列，查看单项和总体进度，取消排队或正在上传的任务，重试失败/取消任务，清理已完成/已取消行，搜索当前文件夹、显示已删除文件、更新分类、下载原文件、软删除和恢复。最多同时上传两个文件；单项失败不会阻塞后续队列项。
+
+每个队列项在其生命周期内拥有一个稳定的 Upload ID。Client 通过 `X-Buddy-Drive-Upload-Id` 发送它，因此传输中止后的重试可以重放 Host 提交而不会创建重复文件。Host 返回 `201` 后即使后续元数据刷新失败，该项仍保持成功；刷新错误会单独报告。
 
 Markdown 文件已经具备真实的渲染/源码预览，内容来自不可变 Content Route，并复用 Harness `MarkdownText`。源码模式最多保留 2 MiB；富文本渲染另行限制为最多 256 KiB/4,000 行的 UTF-8 前缀，避免长文档产生无界 Markdown AST/DOM。文件选择变化时取消旧读取；进入渲染器前会转义已解析的图片标记，避免文档内 HTTP(S) 图片发起请求。原始 HTML 在 Harness 渲染器中保持字面文本。
 
@@ -28,6 +30,8 @@ PDF 文件使用真实 PDF.js Canvas Viewer，后端为不可变 Range Route、�
 | 文件 | 职责 |
 |---|---|
 | [`src/client/service.ts`](src/client/service.ts) | Remote Mount Consumer、重连 Snapshot Model、上传和元数据操作、焦点恢复、内容 URL |
+| [`src/client/upload.ts`](src/client/upload.ts) | 同源 XHR 上传传输、有界进度、超时和取消 |
+| [`src/client/UploadQueue.tsx`](src/client/UploadQueue.tsx) | 有界队列投影、进度摘要、取消、重试和清理控件 |
 | [`src/client/index.ts`](src/client/index.ts) | Client Module 生命周期、Remote Contribution Mount、字典与 Slot 注册 |
 | [`src/client/DriveTrigger.tsx`](src/client/DriveTrigger.tsx) | 宽侧栏/轨道入口 |
 | [`src/client/DriveOverlay.tsx`](src/client/DriveOverlay.tsx) | 三栏文件管理工作区与按格式分派的预览位置 |
@@ -74,7 +78,7 @@ PDF 文件使用真实 PDF.js Canvas Viewer，后端为不可变 Range Route、�
 - **Markdown 预览预算**：源码模式最多保留一个不可变版本的 2 MiB 内容；富文本只使用 256 KiB/4,000 行前缀并明确提示截断。更大的原文件仍可下载。
 - **远程 Markdown 图片不激活**：已解析的行内/引用图片会显示为惰性 Markdown 文本；当前尚无按文档配置的图片白名单。
 - **只搜索当前文件夹**：搜索框在内存中过滤选中目录；跨目录和内容索引搜索属于后续工作。
-- **多文件顺序上传**：选择的文件逐个上传，以保持顺序和错误语义简单；带有界并发的进度队列后续完善。
+- **有界上传队列**：浏览器最多保留 100 行，最多同时发送两个请求。队列状态有意只存在于当前页面；刷新不会恢复进行中的文件，但 Host 幂等语义会避免已到达服务端的提交在重试时重复创建。
 - **窄屏使用纵向堆叠导航**：低于 900px 时文件夹、文件列表和详情纵向排列；专用的移动端文件/详情路由与历史记录模型仍延期。
 
 ### 开发备注

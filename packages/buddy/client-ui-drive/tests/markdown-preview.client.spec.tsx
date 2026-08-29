@@ -160,7 +160,7 @@ describe('MarkdownPreview', () => {
 
 
   it('bounds rich rendering while preserving the complete source view', async () => {
-    const source = `${'# long\n'}${'line\n'.repeat(4_100)}END_OF_COMPLETE_SOURCE`
+    const source = '# long\n' + 'line\n'.repeat(4_100) + 'END_OF_COMPLETE_SOURCE'
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(source))
     const view = render(<MarkdownPreview url="/content/long" t={t} />)
     expect(await screen.findByText(/富文本预览已按长文档预算截断/)).not.toBeNull()

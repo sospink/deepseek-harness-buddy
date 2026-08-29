@@ -21,7 +21,7 @@ The generated `ctx.remote.drive` namespace provides `baseline`, `createFolder`, 
 
 ### Upload route
 
-`POST /api/buddy-drive/upload` accepts an `application/octet-stream` body bounded by `ctx.drive.limits.maxFileBytes`. A new file supplies one `name`, one `kind`, optional `parentId`, and repeated `tag` query values. A new version supplies only `fileId`. Optional `X-Buddy-Drive-Media-Type` is advisory and must agree with Host admission. The route never accepts a filesystem path or Base64 JSON body.
+`POST /api/buddy-drive/upload` accepts an `application/octet-stream` body bounded by `ctx.drive.limits.maxFileBytes`. A new file supplies one `name`, one `kind`, optional `parentId`, and repeated `tag` query values. A new version supplies only `fileId`. Optional `X-Buddy-Drive-Media-Type` is advisory and must agree with Host admission. New-file imports may also supply `X-Buddy-Drive-Upload-Id`; the key is restricted to 128 ASCII identifier characters and is durable across retries. Reusing the key with the same canonical request digest replays the original file response; reusing it for different input returns `409 IDEMPOTENCY_CONFLICT`. Version uploads do not accept the key. The route never accepts a filesystem path or Base64 JSON body.
 
 ### Content route
 
@@ -42,7 +42,7 @@ The generated `ctx.remote.drive` namespace provides `baseline`, `createFolder`, 
 | [`src/index.ts`](src/index.ts) | Typert Remote owner and binary-route registration lifecycle |
 | [`src/commands.ts`](src/commands.ts) | Unary command projection and stable `TypertRemoteFailure` mapping |
 | [`src/feed.ts`](src/feed.ts) | Complete baseline traversal and reconnect snapshot generations |
-| [`src/http.ts`](src/http.ts) | Authenticated upload/content/PDF-asset handlers, query validation, ranges, and defensive headers |
+| [`src/http.ts`](src/http.ts) | Authenticated upload/content/PDF-asset handlers, upload-id validation, query validation, ranges, and defensive headers |
 | [`src/pdf-assets.ts`](src/pdf-assets.ts) | Pinned PDF Worker bytes and allowlisted packed CMap lookup/cache |
 | [`src/docx-assets.ts`](src/docx-assets.ts) | Self-contained OOXML preflight Worker and iframe-only DOCX runtime bytes |
 | [`src/paths.ts`](src/paths.ts) | Browser-safe public HTTP route constants |

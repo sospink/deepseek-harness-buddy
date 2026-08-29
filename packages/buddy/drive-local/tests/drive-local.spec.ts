@@ -9,6 +9,7 @@ import type { StorageBackend } from '@deepseek-ai/dsh-storage'
 import { DomainFacility } from '@deepseek-ai/dsh-storage-domain'
 import { MemoryMediaPool, MemoryStorageBackend } from '../../../storage/storage-domain/tests/helpers/memory-backend.ts'
 import { DriveFileId, DriveFolderId, DriveLibraryId } from '@sospink/dsh-buddy-drive'
+import type { DriveFile } from '@sospink/dsh-buddy-drive'
 import LocalDriveStore from '../src/index.ts'
 import { blobPath, digestBytes } from '../src/blob.ts'
 
@@ -126,6 +127,44 @@ describe('LocalDriveStore lifecycle and durable flow', () => {
       .toContain('张三')
     expect(second.drive.listAudit({ targetId: file.id }).map(event => event.operation))
       .toEqual(['file/restore', 'file/delete', 'file/metadata', 'file/import'])
+  })
+
+  it('replays an import idempotency key once and rejects conflicting reuse', async () => {
+    const result = await harness()
+    const input = {
+      libraryId: DriveLibraryId('default'), name: 'replay.md', kind: 'general' as const,
+      data: new TextEncoder().encode('# replay'), idempotencyKey: 'upload-replay-1',
+      mutation: { actor: 'human' as const, correlationId: 'batch-one' as never },
+    }
+    const first = await result.drive.importFile(input)
+    const replay = await result.drive.importFile({
+      ...input, mutation: { actor: 'human', correlationId: 'batch-two' as never },
+    })
+    expect(replay).toEqual(first)
+    expect(result.drive.listFiles()).toHaveLength(1)
+    expect(result.drive.listVersions(first.id)).toHaveLength(1)
+    const event = result.drive.listAudit({ targetId: first.id })[0]
+    expect(event).toMatchObject({ operation: 'file/import', correlationId: 'batch-one' })
+    expect(event).not.toHaveProperty('idempotencyKey')
+    expect(event).not.toHaveProperty('requestDigest')
+    const durable = (result.drive as unknown as {
+      state?: { audit: Array<{ idempotencyKey?: string; requestDigest?: string }> }
+    }).state?.audit.find(candidate => candidate.idempotencyKey === 'upload-replay-1')
+    expect(durable?.requestDigest).toMatch(/^sha256:[0-9a-f]{64}$/u)
+    await expect(result.drive.importFile({ ...input, data: new TextEncoder().encode('# changed') }))
+      .rejects.toMatchObject({ code: 'IDEMPOTENCY_CONFLICT' })
+    await expect(result.drive.importFile({ ...input, idempotencyKey: 'bad key' }))
+      .rejects.toMatchObject({ code: 'INVALID_METADATA' })
+
+    const internal = result.drive as unknown as {
+      state?: Record<string, unknown> & { files: DriveFile[] }
+    }
+    const savedFiles = internal.state?.files
+    if (savedFiles === undefined) throw new Error('Local Drive internal state is unavailable')
+    const savedState = internal.state
+    internal.state = { ...savedState, files: [] }
+    await expect(result.drive.importFile(input)).rejects.toMatchObject({ code: 'STORAGE_INCONSISTENT' })
+    internal.state = { ...savedState, files: savedFiles }
   })
 
   it('versions a file immutably and deduplicates equal blob bytes', async () => {

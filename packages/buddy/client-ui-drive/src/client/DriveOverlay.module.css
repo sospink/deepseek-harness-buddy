@@ -120,9 +120,31 @@ dd { margin: 0; font-size: 13px; overflow-wrap: anywhere; }
   line-height: 20px;
 }
 
-.uploadButton { border: 0; }
+.uploadButton { position: relative; border: 0; }
 .uploadButton:hover { background: var(--dsw-alias-button-primary-hover); }
-.uploadDisabled { opacity: 0.55; cursor: default; }
+.uploadBadge { min-width: 16px; height: 16px; display: inline-flex; align-items: center; justify-content: center; padding: 0 4px; border-radius: 999px; background: rgb(255 255 255 / 24%); font-size: 10px; }
+.uploadQueue { flex: none; max-height: 250px; display: flex; flex-direction: column; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--dsw-alias-border-l1); background: var(--dsw-alias-bg-layer-2); }
+.uploadQueueHeader { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.uploadQueueHeader > div { min-width: 0; display: flex; align-items: baseline; gap: 8px; }
+.uploadQueueHeader strong { font-size: 13px; }
+.uploadQueueHeader span { color: var(--dsw-alias-label-secondary); font-size: 11px; }
+.uploadOverall { width: 100%; height: 5px; }
+.uploadRows { min-height: 0; display: flex; flex-direction: column; gap: 6px; overflow: auto; }
+.uploadRow { display: grid; grid-template-columns: minmax(0, 1fr) minmax(90px, 160px) auto; align-items: center; gap: 8px; padding: 7px 8px; border-radius: 8px; background: var(--dsw-alias-bg-base); }
+.uploadRowMain { min-width: 0; display: flex; align-items: center; gap: 8px; }
+.uploadName { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-size: 12px; }
+.uploadState { flex: none; color: var(--dsw-alias-label-secondary); font-size: 11px; }
+.uploadRow progress { width: 100%; }
+.uploadError { grid-column: 1 / 3; color: var(--dsw-alias-label-error); overflow-wrap: anywhere; }
+.uploadActions { display: flex; justify-content: flex-end; }
+.uploadActions button { border: 0; background: transparent; color: var(--dsw-alias-label-link); cursor: pointer; font-size: 11px; }
+@media (max-width: 520px) {
+  .uploadQueue { padding: 8px; }
+  .uploadQueueHeader > div { align-items: flex-start; flex-direction: column; gap: 2px; }
+  .uploadRow { grid-template-columns: minmax(0, 1fr) auto; }
+  .uploadRow progress { grid-column: 1 / -1; }
+  .uploadError { grid-column: 1 / -1; }
+}
 
 .preview { min-height: 240px; display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--dsw-alias-border-l2); border-radius: 14px; background: var(--dsw-alias-background-container-primary); }
 .previewToolbar { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px; border-bottom: 1px solid var(--dsw-alias-border-l2); color: var(--dsw-alias-label-caption); font-size: 11px; }

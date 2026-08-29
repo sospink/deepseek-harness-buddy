@@ -10,7 +10,7 @@ import {
   DriveVersionId,
 } from '@sospink/dsh-buddy-drive'
 import type {
-  DriveAuditEvent,
+  DriveAuditEvent, DriveDigest,
   DriveFile,
   DriveFolder,
   DriveLibrary,
@@ -52,6 +52,12 @@ const operation = z.union([
 const targetType = z.union([
   z.literal('library'), z.literal('folder'), z.literal('file'), z.literal('version'),
 ])
+
+/** Local-only replay metadata; never projected through the provider-neutral audit API. */
+export interface LocalDriveAuditEvent extends DriveAuditEvent {
+  readonly idempotencyKey?: string
+  readonly requestDigest?: DriveDigest
+}
 
 /** Runtime schema for one library snapshot. */
 export const driveLibrarySchema = z.object({
@@ -109,7 +115,9 @@ export const driveAuditSchema = z.object({
   createdAt: timestamp,
   previousVersionId: versionId.optional(),
   versionId: versionId.optional(),
-}) as z.ZodType<DriveAuditEvent>
+  idempotencyKey: z.string().min(1).max(128).optional(),
+  requestDigest: z.string().regex(/^sha256:[0-9a-f]{64}$/u).optional(),
+}) as z.ZodType<LocalDriveAuditEvent>
 
 /** Complete metadata state committed in one durable domain-global write. */
 export const driveStateSchema = z.object({

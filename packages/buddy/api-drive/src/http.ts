@@ -55,7 +55,8 @@ export function driveHttpError(error: unknown): DriveHttpError {
     if (error.code.endsWith('_NOT_FOUND') || error.code === 'BLOB_MISSING') {
       return new DriveHttpError(404, error.code, error.message)
     }
-    if (error.code === 'DUPLICATE_NAME' || error.code === 'INVALID_MOVE' || error.code === 'FILE_DELETED') {
+    if (error.code === 'DUPLICATE_NAME' || error.code === 'IDEMPOTENCY_CONFLICT'
+      || error.code === 'INVALID_MOVE' || error.code === 'FILE_DELETED') {
       return new DriveHttpError(409, error.code, error.message)
     }
     if (error.code.startsWith('INVALID_') || error.code === 'UNSUPPORTED_FILE_TYPE'
@@ -80,6 +81,14 @@ function mediaTypeHeader(request: IncomingMessage): string | undefined {
   return value
 }
 
+function uploadIdHeader(request: IncomingMessage): string | undefined {
+  const value = request.headers['x-buddy-drive-upload-id']
+  if (Array.isArray(value) || (value !== undefined && !/^[A-Za-z0-9._:-]{1,128}$/u.test(value))) {
+    throw new DriveHttpError(400, 'bad-request', 'Upload id header is invalid.')
+  }
+  return value
+}
+
 /** Create the exact authenticated upload route. */
 export function createDriveUploadRoute(ctx: Context): WebRoute {
   return {
@@ -98,11 +107,15 @@ export function createDriveUploadRoute(ctx: Context): WebRoute {
         }
         const url = new URL(request.url ?? DRIVE_UPLOAD_PATH, 'http://dsh.internal')
         assertParams(url, new Set(['fileId', 'name', 'kind', 'parentId', 'tag']))
-        const data = await readBoundedBody(request, ctx.drive.limits.maxFileBytes)
         const declaredMediaType = mediaTypeHeader(request)
+        const uploadId = uploadIdHeader(request)
         const fileId = oneParam(url, 'fileId')
+        const data = await readBoundedBody(request, ctx.drive.limits.maxFileBytes)
         let value: DriveUploadValue
         if (fileId !== undefined) {
+          if (uploadId !== undefined) {
+            throw new DriveHttpError(400, 'bad-request', 'Upload id applies only to new file imports.')
+          }
           if (url.searchParams.has('name') || url.searchParams.has('kind')
             || url.searchParams.has('parentId') || url.searchParams.has('tag')) {
             throw new DriveHttpError(400, 'bad-request', 'Version upload accepts only fileId.')
@@ -126,6 +139,7 @@ export function createDriveUploadRoute(ctx: Context): WebRoute {
             tags: url.searchParams.getAll('tag'),
             ...(parentId === undefined ? {} : { parentId: DriveFolderId(parentId) }),
             ...(declaredMediaType === undefined ? {} : { declaredMediaType }),
+            ...(uploadId === undefined ? {} : { idempotencyKey: uploadId }),
           })
           value = { kind: 'file', file }
         }

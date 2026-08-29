@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`@sospink/dsh-buddy-drive-local` implements `ctx.drive` on one Host. It commits the complete metadata relation through the `buddy_drive` Storage Domain global and stores immutable source bytes under a private SHA-256 object tree. It admits Markdown, PDF, and DOCX on the Host, enforces quotas and sibling-name/tree invariants, records mutation audits, verifies every referenced blob during startup, and removes temporary or unreferenced provider-owned objects.
+`@sospink/dsh-buddy-drive-local` implements `ctx.drive` on one Host. It commits the complete metadata relation through the `buddy_drive` Storage Domain global and stores immutable source bytes under a private SHA-256 object tree. It admits Markdown, PDF, and DOCX on the Host, enforces quotas and sibling-name/tree invariants, records mutation audits, durably replays new-file imports by their idempotency key, verifies every referenced blob during startup, and removes temporary or unreferenced provider-owned objects.
 
 ## Use this package
 
@@ -29,7 +29,7 @@ Names are display-only single segments, at most 255 UTF-8 bytes. Visible folders
 
 ### Commit and recovery
 
-Every mutation is serialized. The provider copies caller bytes, validates and publishes a private content-addressed object, then commits one complete metadata state. A failed metadata write leaves the prior in-memory and durable state authoritative; an unreachable object may remain and is removed on the next startup. Startup rejects missing, corrupt, symlinked, malformed, or unexpectedly permissioned referenced storage rather than treating corruption as an empty drive.
+Every mutation is serialized. The provider copies caller bytes, validates and publishes a private content-addressed object, then commits one complete metadata state. A new-file import with an idempotency key stores the key and canonical request digest in local audit metadata; the same key and digest return the original file instead of publishing another file, while a digest mismatch is an explicit conflict. A failed metadata write leaves the prior in-memory and durable state authoritative; an unreachable object may remain and is removed on the next startup. Startup rejects missing, corrupt, symlinked, malformed, or unexpectedly permissioned referenced storage rather than treating corruption as an empty drive.
 
 Blob publication writes and synchronizes an owner-only temporary inode, hard-links it into the final digest path without replacing an existing entry, removes the temporary name, and synchronizes the containing directory. Existing objects must be regular non-symlink files whose length and digest match.
 
@@ -37,7 +37,7 @@ Blob publication writes and synchronizes an owner-only temporary inode, hard-lin
 
 | File | Role |
 |---|---|
-| [`src/index.ts`](src/index.ts) | Service lifecycle, metadata operations, atomic state commit, quotas, audit, and graph validation |
+| [`src/index.ts`](src/index.ts) | Service lifecycle, metadata operations, atomic state commit, quotas, audit, idempotent imports, and graph validation |
 | [`src/spec.ts`](src/spec.ts) | Zod durable state and `buddy_drive` Domain declaration |
 | [`src/admission.ts`](src/admission.ts) | Name/tag normalization and Markdown/PDF/DOCX authoritative admission |
 | [`src/blob.ts`](src/blob.ts) | Private content-addressed publication, reads, verification, startup reconciliation, and injectable filesystem failure boundary |

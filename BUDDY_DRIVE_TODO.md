@@ -2,7 +2,7 @@
 
 > 基线日期：2026-08-29
 > 当前上游提交：`cd5ef8148158c3a752a658978873241fdf8e2bbc`（`dsh-v0.1.2-alpha.1`）
-> 开发分支：`feature/buddy-preview-acceptance`
+> 开发分支：`feature/buddy-upload-queue`
 > 架构提案：`.agents/notes/proposed/feature/2026-08-29-safety-agent-drive-library.zh.md`
 
 ## 状态定义
@@ -115,11 +115,38 @@
 - [x] 在 `sidebar.footer.action` 注册“资料云盘”。
 - [x] 在 `shell.overlay` 注册独立云盘页面。
 - [x] 实现文件夹导航、当前目录文件列表与搜索、分类、原始文件上传、下载、软删除和恢复。
-- [ ] 增加多文件上传队列、可视进度、用户取消和失败重试；当前第一版为单文件原始 Body 上传。
+- [x] 增加多文件上传队列、可视进度、用户取消和失败重试。
+
+### 阶段 2C 上传队列设计与验收契约（2026-08-30）
+
+- 队列由 Browser Consumer 所有，不扩张 Drive Service Definition 或 Host 上传协议；Host 继续以单文件原始二进制请求作为原子提交边界。
+- 队列最多保留 100 项、最多并发 2 项；超限必须在任何请求发出前整体拒绝本次新增选择。
+- 每项投影 `queued/uploading/succeeded/failed/cancelled`、文件名、总字节、已发送字节、错误和已提交 File ID；React Snapshot 不保留 XHR、AbortController 或其他可变句柄。
+- XHR 仅用于同源上传进度与取消；成功仍只认 Host `201` 和合法 `{ kind: "file", file }`。排队/上传中可取消，失败/取消可重试。
+- Host 已提交成功后，即使随后 Baseline Refresh 失败，该项仍保持 `succeeded`，只报告资料库刷新错误，不把它变为可重试上传，避免生成重复文件。
+- 清理操作只移除 `succeeded/cancelled`；`failed` 项保留到用户重试。选择新文件时不阻塞已有上传，直到达到队列上限。
+
+### 阶段 2C 上传队列实现与验收证据（2026-08-30）
+
+- 新增 `src/client/upload.ts` 同源 XHR Transport 和 `src/client/UploadQueue.tsx` 队列 UI；Client Service 负责稳定 Upload ID、最多 2 项并发、逐项进度、取消、重试、清理和最终刷新。
+- 聚焦 Client/API/Local 测试覆盖队列状态机、XHR 成功/失败/超时/取消、队列上限、并发、失败隔离、Refresh 失败、Upload ID 重放和冲突；27 个 Test Files、193 个 Tests 全部通过，Statements `1744/1744`、Branches `1079/1079`、Functions `458/458`、Lines `1470/1470`，全部 `100%`。
+- 真实 Chromium Web Profile 已同时选择至少 3 个文件：初始观察到 2 项 `uploading`、后续项 `queued`；queued 和 uploading 均可取消；取消后重试成功；首次请求已由 Host 提交但浏览器收到 abort 时，重试使用相同 Upload ID 并只保留一个发布文件。
+- 同一 Profile 的持久化 `buddy_drive.json` 已核对：完成项和取消后重试项各只有一个 `file/import` 文件与一条带 `idempotencyKey`/`requestDigest` 的审计记录；被取消的排队项没有发布文件；一项无效 PDF 失败后，后续两个有效 Markdown 仍成功。
+
+### 阶段 2C 退出条件
+
+- [x] 真实浏览器同时选择至少 3 个文件时，观察到并发不超过 2、逐项进度和最终成功状态。
+- [x] 用户可取消 queued 与 uploading 项；已取消项不会发布文件，重试后只发布一次。
+- [x] 一项失败不阻塞后续项；失败项可重试，成功项不会因 Refresh 失败被误标为可重试。
+- [x] 队列状态机、XHR Protocol、UI 操作和边界分支具备严格 100% 源码覆盖率。
 - [x] 实现 Snapshot Feed 重连、状态替换、失败回滚和手动刷新错误态。
 - [x] 完成原生文件输入、关闭后焦点恢复和中英文文案。
 - [x] 完成 Modal 初始焦点、正向/反向 Tab 边界和 390 px 窄窗口真实浏览器验收。
 - [x] 新建 `@sospink/dsh-buddy-drive-app`，以可安装 Bundle 组合 Local、API 与 Client UI。
+
+### 阶段 2C 退出结论
+
+Phase 2C 的实现、聚焦测试、严格覆盖率、真实 Chromium 浏览器和持久化幂等证据均已完成。原生 Safari 26.3.1、正式品牌/协议输入、企业云盘部署能力和 Phase 5 仍按下文保持未完成；本结论不把 Playwright WebKit 结果冒充原生 Safari。
 
 ### 阶段 2B Client UI/Bundle 证据（2026-08-29）
 
@@ -231,15 +258,15 @@
 
 ## 当前开发批次
 
-本批次只认定以下 Phase 2/3 验收收口范围，未完成项不得提前标记为阶段完成：
+本批次只认定以下 Phase 2C 上传体验范围，未完成项不得提前标记为阶段完成：
 
-1. 让资料云盘 Modal 具备初始焦点、正向/反向 Tab 边界，并在 390 px 视口保留文件列表、预览/详情和下载。
-2. 为预览 Renderer 增加故障隔离，证明单个预览崩溃不影响元数据、原文件下载和其他文件。
-3. 分离 Markdown 完整源码预算与富文本渲染预算，并为 DOCX 长分页增加浏览器延迟布局。
-4. 使用同一隔离 Profile 在 Chromium、Playwright WebKit 和可用时的原生 Safari 验证中英文代表样本、恶意内容、长文档和网络边界。
-5. 修正文档语义漂移，记录可复现证据、环境限制和未完成项。
+1. 建立有界多文件队列和最多 2 项并发的调度状态机。
+2. 通过同源 XHR 提供逐项上传进度、取消和明确的 Host `201` 成功边界。
+3. 提供 queued/uploading 取消、failed/cancelled 重试，以及 succeeded/cancelled 清理。
+4. 保证一项失败不阻塞后续项，且已提交成功不会因 Refresh 失败变成重复上传入口。
+5. 以严格覆盖率、真实浏览器和完整仓库门禁验收，再提交独立功能分支。
 
-原生 Safari 26.3.1 尚因本机未启用“允许远程自动化”而未完成；多文件上传队列和 Phase 5 部署加固也不属于已完成范围。
+原生 Safari 26.3.1、正式品牌/协议输入和 Phase 5 部署加固不属于本批次已完成范围。
 
 ## 决策与遗留风险
 

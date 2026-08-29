@@ -15,6 +15,7 @@ export type DriveErrorCode =
   | 'FILE_NOT_FOUND'
   | 'VERSION_NOT_FOUND'
   | 'DUPLICATE_NAME'
+  | 'IDEMPOTENCY_CONFLICT'
   | 'INVALID_MOVE'
   | 'FILE_DELETED'
   | 'BLOB_MISSING'

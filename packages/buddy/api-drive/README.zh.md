@@ -21,7 +21,7 @@ kind: "package-reference"
 
 ### 上传路由
 
-`POST /api/buddy-drive/upload` 接受 `application/octet-stream` Body，大小由 `ctx.drive.limits.maxFileBytes` 限制。新文件提供一个 `name`、一个 `kind`、可选 `parentId` 和重复 `tag` Query；新版本只能提供 `fileId`。可选 `X-Buddy-Drive-Media-Type` 只作提示，并且必须与 Host 准入一致。路由不接受文件系统路径或 Base64 JSON Body。
+`POST /api/buddy-drive/upload` 接受 `application/octet-stream` Body，大小由 `ctx.drive.limits.maxFileBytes` 限制。新文件提供一个 `name`、一个 `kind`、可选 `parentId` 和重复 `tag` Query；新版本只能提供 `fileId`。可选 `X-Buddy-Drive-Media-Type` 只作提示，并且必须与 Host 准入一致。新文件导入还可以提供 `X-Buddy-Drive-Upload-Id`；该 Key 限制为最多 128 个 ASCII 标识符字符，并且会跨重试持久化。使用相同 Key 和相同规范请求摘要会重放原文件响应；相同 Key 用于不同输入时返回 `409 IDEMPOTENCY_CONFLICT`。版本上传不接受该 Key。路由不接受文件系统路径或 Base64 JSON Body。
 
 ### 内容路由
 
@@ -42,7 +42,7 @@ kind: "package-reference"
 | [`src/index.ts`](src/index.ts) | Typert Remote Owner 和二进制路由注册生命周期 |
 | [`src/commands.ts`](src/commands.ts) | Unary Command 投影和稳定 `TypertRemoteFailure` 映射 |
 | [`src/feed.ts`](src/feed.ts) | 完整 Baseline 遍历和可重连 Snapshot Generation |
-| [`src/http.ts`](src/http.ts) | 认证上传/内容/PDF 资源 Handler、Query 校验、Range 和防御响应头 |
+| [`src/http.ts`](src/http.ts) | 认证上传/内容/PDF 资源 Handler、Upload ID/Query 校验、Range 和防御响应头 |
 | [`src/pdf-assets.ts`](src/pdf-assets.ts) | 固定 PDF Worker 字节和白名单 Packed CMap 查找/缓存 |
 | [`src/docx-assets.ts`](src/docx-assets.ts) | 自包含 OOXML 预检 Worker 和仅供 iframe 使用的 DOCX Runtime 字节 |
 | [`src/paths.ts`](src/paths.ts) | 浏览器安全的公开 HTTP 路由常量 |

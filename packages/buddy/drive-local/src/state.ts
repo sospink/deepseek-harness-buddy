@@ -60,6 +60,22 @@ export function validateDriveState(state: DriveState, limits: DriveLimits): void
       throw new DriveError('STORAGE_INCONSISTENT', 'Drive file references an invalid current version.')
     }
   }
+  const idempotencyKeys = new Set<string>()
+  for (const event of state.audit) {
+    const hasKey = event.idempotencyKey !== undefined
+    const hasDigest = event.requestDigest !== undefined
+    if (hasKey !== hasDigest) {
+      throw new DriveError('STORAGE_INCONSISTENT', 'Drive import idempotency metadata is incomplete.')
+    }
+    if (!hasKey) continue
+    const file = state.files.find(candidate => candidate.id === event.targetId)
+    const version = state.versions.find(candidate => candidate.id === event.versionId)
+    if (event.operation !== 'file/import' || event.targetType !== 'file'
+      || file === undefined || version?.fileId !== file.id || idempotencyKeys.has(event.idempotencyKey)) {
+      throw new DriveError('STORAGE_INCONSISTENT', 'Drive import idempotency metadata is inconsistent.')
+    }
+    idempotencyKeys.add(event.idempotencyKey)
+  }
   const used = state.versions.reduce((sum, version) => sum + version.bytes, 0)
   if (used > limits.maxLibraryBytes || state.audit.length > limits.maxAuditEvents) {
     throw new DriveError('STORAGE_INCONSISTENT', 'Drive durable limits are exceeded.')

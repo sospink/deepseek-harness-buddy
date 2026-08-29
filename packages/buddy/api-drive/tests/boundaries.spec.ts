@@ -15,7 +15,7 @@ describe('Buddy API Drive pure HTTP boundaries', () => {
     for (const code of ['FILE_NOT_FOUND', 'BLOB_MISSING'] as const) {
       expect(driveHttpError(new DriveError(code, code))).toMatchObject({ status: 404, code })
     }
-    for (const code of ['DUPLICATE_NAME', 'INVALID_MOVE', 'FILE_DELETED'] as const) {
+    for (const code of ['DUPLICATE_NAME', 'IDEMPOTENCY_CONFLICT', 'INVALID_MOVE', 'FILE_DELETED'] as const) {
       expect(driveHttpError(new DriveError(code, code))).toMatchObject({ status: 409, code })
     }
     for (const code of ['INVALID_NAME', 'UNSUPPORTED_FILE_TYPE', 'MEDIA_TYPE_MISMATCH'] as const) {

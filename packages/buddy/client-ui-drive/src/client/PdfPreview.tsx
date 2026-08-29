@@ -101,7 +101,8 @@ function PdfReadyView({ ready, t }: { ready: PdfReadyState; t: DriveOverlayProps
   useEffect(() => {
     let disposed = false
     void ready.document.getPage(pageNumber).then(async (page) => {
-      const [annotations, actions] = await Promise.all([page.getAnnotations({ intent: 'display' }), page.getJSActions()])
+      const annotations = await page.getAnnotations({ intent: 'display' })
+      const actions = await page.getJSActions() as object | null
       if (disposed) return
       setLinks(pdfExternalLinks(annotations))
       if (actions !== null && Object.keys(actions).length > 0) setScriptsBlocked(true)
@@ -193,7 +194,7 @@ function PdfPageCanvas({ document, pageNumber, zoom, onFailure }: {
         transform: outputScale === 1 ? undefined : [outputScale, 0, 0, outputScale, 0, 0],
       })
       await renderTask.promise
-    }).catch((error) => {
+    }).catch((error: unknown) => {
       if (!disposed) onFailure(error instanceof Error ? error.message : String(error))
     })
     return () => {

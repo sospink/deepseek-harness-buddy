@@ -123,7 +123,12 @@ export function inspectDocxBuffer(
       worker.terminate()
       operation()
     }
-    const abort = (): void => { finish(() => { reject(signal.reason ?? new DOMException('Aborted', 'AbortError')) }) }
+    const abort = (): void => {
+      finish(() => {
+        if (signal.reason instanceof Error) reject(signal.reason)
+        else reject(new DOMException('Aborted', 'AbortError'))
+      })
+    }
     const timer = setTimeout(() => { finish(() => { reject(new Error('DOCX preflight timed out.')) }) }, timeoutMs)
     worker.onerror = (event) => { finish(() => { reject(new Error(event.message || 'DOCX preflight Worker failed.')) }) }
     worker.onmessage = (event) => {

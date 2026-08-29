@@ -86,6 +86,34 @@ describe('Buddy Drive upload route', () => {
     expect(ctx.drive.listFiles(parent.id)).toHaveLength(1)
   })
 
+  it('maps one upload id to durable import idempotency and rejects conflicting reuse', async () => {
+    const { ctx } = await harness()
+    const route = createDriveUploadRoute(ctx)
+    const requestFor = (body: Uint8Array, id: string | string[]) => request({
+      method: 'POST', url: `${DRIVE_UPLOAD_PATH}?name=replay.md&kind=general`,
+      headers: {
+        'content-type': 'application/octet-stream',
+        'x-buddy-drive-media-type': 'text/markdown',
+        'x-buddy-drive-upload-id': id,
+      },
+      body,
+    })
+    const source = strToU8('# replay')
+    const first = await invoke(route.handler, requestFor(source, 'upload-replay-1'))
+    const replay = await invoke(route.handler, requestFor(source, 'upload-replay-1'))
+    expect(first.status).toBe(201)
+    expect(uploadedFile(replay.json()).id).toBe(uploadedFile(first.json()).id)
+    expect(ctx.drive.listFiles()).toHaveLength(1)
+    const conflict = await invoke(route.handler, requestFor(strToU8('# changed'), 'upload-replay-1'))
+    expect(conflict.status).toBe(409)
+    expect(conflict.json()).toMatchObject({ error: { code: 'IDEMPOTENCY_CONFLICT' } })
+    for (const invalid of ['bad key', '', ['one', 'two']] as const) {
+      const response = await invoke(route.handler, requestFor(source, invalid as string | string[]))
+      expect(response.status).toBe(400)
+      expect(response.json()).toMatchObject({ error: { code: 'bad-request' } })
+    }
+  })
+
   it('appends an immutable version and rejects ambiguous version parameters', async () => {
     const { ctx } = await harness()
     const route = createDriveUploadRoute(ctx)
@@ -119,6 +147,15 @@ describe('Buddy Drive upload route', () => {
     }))
     expect(ambiguous.status).toBe(400)
     expect(ambiguous.json()).toMatchObject({ error: { code: 'bad-request' } })
+
+    const importOnlyId = await invoke(route.handler, request({
+      method: 'POST', url: `${DRIVE_UPLOAD_PATH}?fileId=${file.id}`,
+      headers: {
+        'content-type': 'application/octet-stream', 'x-buddy-drive-upload-id': 'version-id',
+      }, body: strToU8('# v4'),
+    }))
+    expect(importOnlyId.status).toBe(400)
+    expect(importOnlyId.json()).toMatchObject({ error: { code: 'bad-request' } })
   })
 
   it('rejects authentication, methods, content types, parameters, admission, and body limits', async () => {
@@ -138,6 +175,11 @@ describe('Buddy Drive upload route', () => {
       method: 'POST', headers: {
         'content-type': 'application/octet-stream',
         'x-buddy-drive-media-type': ['text/markdown', 'application/pdf'],
+      }, body: strToU8('# x'),
+    }))).json()).toMatchObject({ error: { code: 'bad-request' } })
+    expect((await invoke(route.handler, request({
+      method: 'POST', url: `${DRIVE_UPLOAD_PATH}?name=invalid-id.md&kind=general`, headers: {
+        'content-type': 'application/octet-stream', 'x-buddy-drive-upload-id': 'invalid upload id',
       }, body: strToU8('# x'),
     }))).json()).toMatchObject({ error: { code: 'bad-request' } })
     expect((await invoke(route.handler, request({

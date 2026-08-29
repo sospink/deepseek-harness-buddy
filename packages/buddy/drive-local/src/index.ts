@@ -47,6 +47,7 @@ import { admitDriveDocument, normalizeDriveName, normalizeDriveTags } from './ad
 import { digestBytes, publishBlob, readBlob, reconcileBlobs } from './blob.ts'
 import { compareDriveNamed, compareDriveVersions } from './ordering.ts'
 import { driveDomainSpec } from './spec.ts'
+import type { LocalDriveAuditEvent } from './spec.ts'
 import { validateDriveState } from './state.ts'
 import type { DriveState } from './spec.ts'
 
@@ -87,8 +88,9 @@ function versionSnapshot(version: DriveVersion): DriveVersion {
   return Object.freeze({ ...version })
 }
 
-function auditSnapshot(event: DriveAuditEvent): DriveAuditEvent {
-  return Object.freeze({ ...event })
+function auditSnapshot(event: LocalDriveAuditEvent): DriveAuditEvent {
+  const { idempotencyKey: _idempotencyKey, requestDigest: _requestDigest, ...publicEvent } = event
+  return Object.freeze(publicEvent)
 }
 
 function librarySnapshot(library: DriveLibrary): DriveLibrary {
@@ -106,6 +108,13 @@ function nameKey(name: string): string {
 function optionalParent<T extends { parentId?: DriveFolderIdType }>(value: T, parentId: DriveFolderIdType | undefined): T {
   const { parentId: _old, ...rest } = value
   return (parentId === undefined ? rest : { ...rest, parentId }) as T
+}
+
+interface LocalAuditDetails {
+  readonly previousVersionId?: DriveVersion['id']
+  readonly versionId?: DriveVersion['id']
+  readonly idempotencyKey?: string
+  readonly requestDigest?: DriveVersion['digest']
 }
 
 function mutationContext(mutation: DriveMutationContext | undefined): {
@@ -143,6 +152,27 @@ function requireVersionSource(source: unknown): DriveVersion['source'] {
 
 function nowAfter(previous: string): string {
   return new Date(Math.max(Date.now(), Date.parse(previous) + 1)).toISOString()
+}
+
+function importRequestDigest(input: {
+  readonly libraryId: string
+  readonly parentId?: string
+  readonly name: string
+  readonly kind: DriveFile['kind']
+  readonly mediaType: DriveFile['mediaType']
+  readonly tags: readonly string[]
+  readonly contentDigest: string
+}): DriveVersion['digest'] {
+  const canonical = JSON.stringify([
+    input.libraryId,
+    input.parentId ?? null,
+    input.name,
+    input.kind,
+    input.mediaType,
+    [...input.tags],
+    input.contentDigest,
+  ])
+  return digestBytes(new TextEncoder().encode(canonical))
 }
 
 /** Durable local document drive with one atomic metadata document and content-addressed blobs. */
@@ -319,28 +349,57 @@ export class LocalDriveStore extends DriveStore {
       limits: this.limits,
     })
     const tags = normalizeDriveTags(input.tags)
+    const contentDigest = digestBytes(data)
     return this.enqueue(async () => {
       this.requireLibrary(input.libraryId)
       this.requireParent(input.parentId)
+      const kind = requireFileKind(input.kind)
+      const requestDigest = importRequestDigest({
+        libraryId: input.libraryId,
+        ...(input.parentId === undefined ? {} : { parentId: input.parentId }),
+        name: admitted.normalizedName,
+        kind,
+        mediaType: admitted.mediaType,
+        tags,
+        contentDigest,
+      })
+      const mutation = mutationContext(input.mutation)
+      const idempotencyKey = input.idempotencyKey
+      if (idempotencyKey !== undefined && !/^[A-Za-z0-9._:-]{1,128}$/u.test(idempotencyKey)) {
+        throw new DriveError('INVALID_METADATA', 'Drive import idempotency key is invalid.')
+      }
+      const replay = idempotencyKey === undefined ? undefined : this.requireState().audit.find(event => (
+        event.operation === 'file/import' && event.idempotencyKey === idempotencyKey
+      ))
+      if (replay !== undefined) {
+        if (replay.requestDigest !== requestDigest) {
+          throw new DriveError('IDEMPOTENCY_CONFLICT', 'Drive upload id was already used for different input.')
+        }
+        const existing = this.requireState().files.find(candidate => candidate.id === replay.targetId)
+        if (existing === undefined) {
+          throw new DriveError('STORAGE_INCONSISTENT', 'Drive upload replay references a missing file.')
+        }
+        return fileSnapshot(existing)
+      }
       this.assertNameAvailable(input.parentId, admitted.normalizedName)
       this.assertQuota(data.byteLength)
-      const mutation = mutationContext(input.mutation)
       const createdAt = nowAfter(this.requireState().library.updatedAt)
       const fileId = DriveFileId(randomUUID())
       const version: DriveVersion = {
         id: DriveVersionId(randomUUID()), fileId,
-        digest: digestBytes(data), bytes: data.byteLength, createdAt,
+        digest: contentDigest, bytes: data.byteLength, createdAt,
         actor: mutation.actor, source: 'upload', preview: 'pending',
       }
       await publishBlob(this.root, version.digest, data)
       const file: DriveFile = {
         id: fileId, libraryId: input.libraryId,
         ...(input.parentId === undefined ? {} : { parentId: input.parentId }),
-        name: admitted.normalizedName, kind: requireFileKind(input.kind), mediaType: admitted.mediaType,
+        name: admitted.normalizedName, kind, mediaType: admitted.mediaType,
         currentVersionId: version.id, tags, createdAt, updatedAt: createdAt,
       }
       const audit = this.audit(mutation, 'file/import', 'file', file.id, createdAt, {
         versionId: version.id,
+        ...(idempotencyKey === undefined ? {} : { idempotencyKey, requestDigest }),
       })
       await this.commit({
         ...this.requireState(), library: { ...this.requireState().library, updatedAt: createdAt },
@@ -557,8 +616,8 @@ export class LocalDriveStore extends DriveStore {
     targetType: DriveAuditEvent['targetType'],
     targetId: string,
     createdAt: string,
-    versions?: Pick<DriveAuditEvent, 'previousVersionId' | 'versionId'>,
-  ): DriveAuditEvent {
+    versions?: LocalAuditDetails,
+  ): LocalDriveAuditEvent {
     if (this.requireState().audit.length >= this.limits.maxAuditEvents) {
       throw new DriveError('AUDIT_LIMIT_EXCEEDED', 'Drive audit retention limit has been reached.')
     }
@@ -567,6 +626,8 @@ export class LocalDriveStore extends DriveStore {
       operation, targetType, targetId, createdAt,
       ...(versions?.previousVersionId === undefined ? {} : { previousVersionId: versions.previousVersionId }),
       ...(versions?.versionId === undefined ? {} : { versionId: versions.versionId }),
+      ...(versions?.idempotencyKey === undefined ? {} : { idempotencyKey: versions.idempotencyKey }),
+      ...(versions?.requestDigest === undefined ? {} : { requestDigest: versions.requestDigest }),
     }
   }
 

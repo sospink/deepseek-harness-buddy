@@ -71,12 +71,14 @@ export function DocxPreview({ url, t }: { url: string; t: DriveOverlayProps['t']
       setView({ state: 'failed', message: 'DOCX rendering timed out.' })
     }, DOCX_RENDER_TIMEOUT_MS)
     const message = (event: MessageEvent<unknown>): void => {
-      if (event.source !== iframeRef.current?.contentWindow) return
+      const iframe = iframeRef.current
+      const contentWindow = iframe?.contentWindow
+      if (contentWindow === null || contentWindow === undefined || event.source !== contentWindow) return
       const received = parseDocxFrameMessage(event.data, frame.nonce)
       if (received === undefined) return
       if (received.type === 'boot' && !sent) {
         sent = true
-        iframeRef.current?.contentWindow?.postMessage({
+        contentWindow.postMessage({
           channel: received.channel, nonce: frame.nonce, type: 'render', buffer: frame.result.buffer,
         }, '*', [frame.result.buffer])
       } else if (received.type === 'ready') {

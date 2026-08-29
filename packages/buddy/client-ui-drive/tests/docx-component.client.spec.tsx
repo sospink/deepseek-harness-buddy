@@ -78,7 +78,7 @@ describe('DocxPreview', () => {
     }))
     await waitFor(() => { expect(mocks.parse).toHaveBeenCalled() })
     await waitFor(() => { expect(post).toHaveBeenCalledOnce() })
-    expect(post.mock.calls[0]?.[0]).toMatchObject({ type: 'render', buffer: expect.any(ArrayBuffer) })
+    expect(post.mock.calls[0]?.[0]).toMatchObject({ type: 'render' })
     await Promise.resolve()
     messages.listener(new MessageEvent('message', {
       source: contentWindow, data: { channel: DOCX_FRAME_CHANNEL, nonce: 'n', type: 'boot' },

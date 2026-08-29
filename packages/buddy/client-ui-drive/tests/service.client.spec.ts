@@ -4,6 +4,7 @@ import type { RemoteResult } from '@deepseek-ai/dsh-typert-protocol'
 import { DriveFileId, DriveLibraryId, DriveVersionId } from '@sospink/dsh-buddy-drive'
 import type { DriveBaseline, DriveFile } from '@sospink/dsh-buddy-api-drive/types'
 import { BuddyDriveClient } from '../src/client/service.ts'
+import { DRIVE_UPLOAD_QUEUE_MAX_ITEMS, type UploadProgress, type UploadTransport } from '../src/client/upload.ts'
 
 const now = '2026-08-29T00:00:00.000Z'
 const library = { id: DriveLibraryId('default'), title: 'Drive', createdAt: now, updatedAt: now }
@@ -32,8 +33,38 @@ function remote(overrides: Record<string, unknown> = {}) {
   }
 }
 
-const originalFetch = globalThis.fetch
-afterEach(() => { globalThis.fetch = originalFetch })
+afterEach(() => { vi.restoreAllMocks() })
+
+interface ControlledUpload {
+  readonly input: Parameters<UploadTransport>[0]
+  readonly progress: (value: UploadProgress) => void
+  readonly resolve: (value: DriveFile) => void
+  readonly reject: (reason: unknown) => void
+  readonly abort: ReturnType<typeof vi.fn>
+}
+
+function idFactory(): () => string {
+  let value = 0
+  return () => { value += 1; return `upload-${String(value)}` }
+}
+
+function controlledTransport(): { readonly calls: ControlledUpload[]; readonly start: UploadTransport } {
+  const calls: ControlledUpload[] = []
+  return {
+    calls,
+    start(input, progress) {
+      let resolve!: (value: DriveFile) => void
+      let reject!: (reason: unknown) => void
+      const promise = new Promise<DriveFile>((resolvePromise, rejectPromise) => {
+        resolve = resolvePromise
+        reject = rejectPromise
+      })
+      const abort = vi.fn()
+      calls.push({ input, progress, resolve, reject, abort })
+      return { promise, abort }
+    },
+  }
+}
 
 describe('BuddyDriveClient', () => {
   it('opens, replaces, reports failures, closes, and restores focus', async () => {
@@ -82,46 +113,113 @@ describe('BuddyDriveClient', () => {
     },
   )
 
-  it('uploads raw bytes, includes optional query values, refreshes, and resets uploading', async () => {
+  it('bounds the queue before starting requests and treats empty selection as a no-op', () => {
+    const transport = controlledTransport()
+    const client = new BuddyDriveClient(new Context(), remote() as never, { uploadTransport: transport.start, createUploadId: idFactory() })
+    expect(client.enqueueUploads([])).toEqual([])
+    const tooMany = Array.from({ length: DRIVE_UPLOAD_QUEUE_MAX_ITEMS + 1 }, (_, index) => ({
+      file: new File(['x'], `file-${String(index)}.md`), kind: 'general' as const,
+    }))
+    expect(() => client.enqueueUploads(tooMany)).toThrow('at most 100 items')
+    expect(transport.calls).toHaveLength(0)
+    expect(client.source.getSnapshot().uploadQueue).toEqual([])
+  })
+
+  it('runs at most two uploads, publishes progress, continues after failure, and refreshes once', async () => {
     const api = remote()
-    const client = new BuddyDriveClient(new Context(), api as never)
-    const response = new Response(JSON.stringify({ kind: 'file', file }), {
-      status: 201, headers: { 'content-type': 'application/json' },
-    })
-    globalThis.fetch = vi.fn(async () => response)
-    const uploaded = await client.upload({
-      file: new File(['# file'], 'role file.md', { type: 'text/markdown' }),
-      kind: 'role-assignment', parentId: 'parent' as never, tags: ['a', 'b'],
-    })
-    expect(uploaded).toEqual(file)
-    const fetchMock = vi.mocked(globalThis.fetch)
-    const target = fetchMock.mock.calls[0]?.[0]
-    const url = typeof target === 'string' ? target : target instanceof URL ? target.href : target?.url
-    expect(url).toContain('name=role+file.md')
-    const init = fetchMock.mock.calls[0]?.[1]
-    expect(init?.method).toBe('POST')
-    expect(init?.body).toBeInstanceOf(File)
-    expect(client.source.getSnapshot().uploading).toBe(false)
-    expect(api.baseline).toHaveBeenCalled()
+    const transport = controlledTransport()
+    const client = new BuddyDriveClient(new Context(), api as never, { uploadTransport: transport.start, createUploadId: idFactory() })
+    const files = ['one.md', 'two.md', 'three.md'].map(name => new File(['abc'], name, { type: 'text/markdown' }))
+    const ids = client.enqueueUploads(files.map(file => ({ file, kind: 'reference' })))
+    expect(ids).toEqual(['upload-1', 'upload-2', 'upload-3'])
+    expect(transport.calls.map(call => call.input.file.name)).toEqual(['one.md', 'two.md'])
+    transport.calls[0]?.progress({ loaded: 2, total: 3 })
+    expect(client.source.getSnapshot().uploadQueue[0]).toMatchObject({ status: 'uploading', loaded: 2, total: 3 })
+    transport.calls[0]?.resolve({ ...file, id: DriveFileId('one') })
+    await vi.waitFor(() => { expect(transport.calls).toHaveLength(3) })
+    transport.calls[1]?.reject(new Error('second failed'))
+    transport.calls[2]?.resolve({ ...file, id: DriveFileId('three') })
+    await vi.waitFor(() => { expect(client.source.getSnapshot().uploading).toBe(false) })
+    expect(client.source.getSnapshot().uploadQueue.map(item => [item.status, item.error])).toEqual([
+      ['succeeded', undefined], ['failed', 'second failed'], ['succeeded', undefined],
+    ])
+    await vi.waitFor(() => { expect(api.baseline).toHaveBeenCalledOnce() })
   })
 
-  it('surfaces upload HTTP and malformed-response failures and resets uploading', async () => {
-    const client = new BuddyDriveClient(new Context(), remote() as never)
-    globalThis.fetch = vi.fn(async () => new Response(JSON.stringify({
-      error: { code: 'bad', message: 'upload rejected' },
-    }), { status: 400 }))
-    await expect(client.upload({ file: new File(['x'], 'x.md'), kind: 'general' }))
-      .rejects.toThrow('bad: upload rejected')
-    expect(client.source.getSnapshot().uploading).toBe(false)
+  it('cancels queued and active rows, ignores late completions, retries, and clears only terminal clean rows', async () => {
+    const transport = controlledTransport()
+    const client = new BuddyDriveClient(new Context(), remote() as never, { uploadTransport: transport.start, createUploadId: idFactory() })
+    const ids = client.enqueueUploads(['one.md', 'two.md', 'three.md'].map(name => ({
+      file: new File(['x'], name), kind: 'general' as const,
+    })))
+    client.cancelUpload(ids[2] as string)
+    expect(client.source.getSnapshot().uploadQueue[2]?.status).toBe('cancelled')
+    client.cancelUpload(ids[0] as string)
+    expect(transport.calls[0]?.abort).toHaveBeenCalledOnce()
+    expect(client.source.getSnapshot().uploadQueue[0]?.status).toBe('cancelled')
+    transport.calls[0]?.progress({ loaded: 1, total: 1 })
+    transport.calls[0]?.resolve({ ...file, id: DriveFileId('late') })
+    await Promise.resolve()
+    expect(client.source.getSnapshot().uploadQueue[0]?.status).toBe('cancelled')
 
-    globalThis.fetch = vi.fn(async () => new Response(JSON.stringify({ error: {} }), { status: 400 }))
-    await expect(client.upload({ file: new File(['x'], 'x.md'), kind: 'general' }))
-      .rejects.toThrow('upload-failed: Upload failed.')
+    const staleFailureTransport = controlledTransport()
+    const staleFailure = new BuddyDriveClient(new Context(), remote() as never, {
+      uploadTransport: staleFailureTransport.start, createUploadId: idFactory(),
+    })
+    const staleId = staleFailure.enqueueUploads([{ file: new File(['x'], 'stale.md'), kind: 'general' }])[0] as string
+    staleFailure.cancelUpload(staleId)
+    staleFailureTransport.calls[0]?.reject(new Error('late failure'))
+    await Promise.resolve()
+    expect(staleFailure.source.getSnapshot().uploadQueue[0]?.status).toBe('cancelled')
 
-    globalThis.fetch = vi.fn(async () => new Response(JSON.stringify({ kind: 'other' }), { status: 201 }))
-    await expect(client.upload({ file: new File(['x'], 'x.md'), kind: 'general' }))
-      .rejects.toThrow('invalid response')
+    client.retryUpload(ids[0] as string)
+    await vi.waitFor(() => { expect(transport.calls).toHaveLength(3) })
+    expect(transport.calls[0]?.input.uploadId).toBe(ids[0])
+    expect(transport.calls[2]?.input.uploadId).toBe(ids[0])
+    transport.calls[1]?.reject('string failure')
+    await vi.waitFor(() => { expect(client.source.getSnapshot().uploadQueue[1]?.status).toBe('failed') })
+    client.retryUpload(ids[1] as string)
+    await vi.waitFor(() => { expect(transport.calls).toHaveLength(4) })
+    transport.calls[2]?.resolve({ ...file, id: DriveFileId('retry-one') })
+    transport.calls[3]?.resolve({ ...file, id: DriveFileId('retry-two') })
+    await vi.waitFor(() => { expect(client.source.getSnapshot().uploading).toBe(false) })
+    client.clearFinishedUploads()
+    expect(client.source.getSnapshot().uploadQueue).toEqual([])
+    client.clearFinishedUploads()
+    client.cancelUpload('missing')
+    client.retryUpload('missing')
   })
+
+  it('keeps committed success when refresh fails and contains synchronous transport failure', async () => {
+    const api = remote({ baseline: vi.fn(() => failed('refresh-failed')) })
+    const transport = controlledTransport()
+    const client = new BuddyDriveClient(new Context(), api as never, { uploadTransport: transport.start, createUploadId: idFactory() })
+    const first = client.enqueueUploads([{ file: new File(['x'], 'one.md'), kind: 'general' }])[0] as string
+    transport.calls[0]?.resolve({ ...file, id: DriveFileId('committed') })
+    await vi.waitFor(() => { expect(client.source.getSnapshot().error).toContain('refresh-failed') })
+    expect(client.source.getSnapshot().uploadQueue[0]).toMatchObject({ status: 'succeeded', fileId: 'committed' })
+    client.retryUpload(first)
+    expect(transport.calls).toHaveLength(1)
+
+    const stringTransport = controlledTransport()
+    const stringClient = new BuddyDriveClient(new Context(), remote() as never, {
+      uploadTransport: stringTransport.start, createUploadId: idFactory(),
+    })
+    vi.spyOn(stringClient, 'refresh').mockRejectedValue('string refresh failure')
+    stringClient.enqueueUploads([{ file: new File(['x'], 'string.md'), kind: 'general' }])
+    stringTransport.calls[0]?.resolve({ ...file, id: DriveFileId('string') })
+    await vi.waitFor(() => { expect(stringClient.source.getSnapshot().error).toBe('string refresh failure') })
+
+    const throwing = new BuddyDriveClient(new Context(), remote() as never, {
+      createUploadId: idFactory(),
+      uploadTransport: () => { throw new Error('transport constructor failed') },
+    })
+    throwing.enqueueUploads([{ file: new File(['x'], 'bad.md'), kind: 'general' }])
+    await vi.waitFor(() => { expect(throwing.source.getSnapshot().uploadQueue[0]).toMatchObject({
+      status: 'failed', error: 'transport constructor failed',
+    }) })
+  })
+
 
   it('formats immutable content URLs', () => {
     const client = new BuddyDriveClient(new Context(), remote() as never)

@@ -15,11 +15,11 @@ kind: "package-reference"
 
 Consumer 注入 `drive` 并且只通过 `ctx.drive` 操作，不能获得 Provider 路径或 Blob URL。第一版契约支持文件夹创建/重命名/移动、文件导入/新增版本/重命名/移动、软删除/恢复、稳定列表、版本历史、近期审计读取和不可变内容校验读取。
 
-一个逻辑文件拥有稳定的 `DriveFileId`；每次被接受的内容修改都会创建新的 `DriveVersionId` 并推进 `currentVersionId`。`DriveDigest` 是 SHA-256 内容身份，不是 Bearer Capability。`DriveMutationContext` 携带可信操作者归属和可选关联 id；缺失的关联 id 由 Provider 生成。
+一个逻辑文件拥有稳定的 `DriveFileId`；每次被接受的内容修改都会创建新的 `DriveVersionId` 并推进 `currentVersionId`。`DriveDigest` 是 SHA-256 内容身份，不是 Bearer Capability。`ImportDriveFileInput.idempotencyKey` 是新文件导入可选的、由调用方持有的稳定 Key：Provider 可以为相同请求重放首次提交的文件；同一 Key 对应不同请求时必须拒绝并报告冲突。`DriveMutationContext` 携带可信操作者归属和可选关联 id；缺失的关联 id 由 Provider 生成。
 
 ### 错误处理
 
-Provider 抛出带稳定 `DriveErrorCode` 的 `DriveError`。调用方按 `code` 分支，不能依赖诊断文本。业务对象缺失、重名、非法移动、配额、格式不支持和持久化完整性失败保持不同错误。
+Provider 抛出带稳定 `DriveErrorCode` 的 `DriveError`。调用方按 `code` 分支，不能依赖诊断文本。业务对象缺失、重名、幂等冲突、非法移动、配额、格式不支持和持久化完整性失败保持不同错误。
 
 ## 实现说明
 

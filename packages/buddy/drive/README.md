@@ -15,11 +15,11 @@ English | [中文](README.zh.md)
 
 Consumers inject `drive` and operate only through `ctx.drive`. They never receive a provider path or blob URL. The first-release contract supports folder creation/rename/move, file import/version/rename/move, soft delete/restore, stable listings, version history, recent audit reads, and verified immutable content reads.
 
-A logical file has one stable `DriveFileId`; every accepted content mutation creates a distinct `DriveVersionId` and advances `currentVersionId`. `DriveDigest` is a SHA-256 content identity, not a bearer capability. `DriveMutationContext` carries trusted actor attribution and an optional correlation id; providers mint the missing correlation id.
+A logical file has one stable `DriveFileId`; every accepted content mutation creates a distinct `DriveVersionId` and advances `currentVersionId`. `DriveDigest` is a SHA-256 content identity, not a bearer capability. `ImportDriveFileInput.idempotencyKey` is an optional stable caller-owned key for new-file imports: a provider may replay the first committed file for the same request, while a different request under the same key must be rejected as a conflict. `DriveMutationContext` carries trusted actor attribution and an optional correlation id; providers mint the missing correlation id.
 
 ### Error handling
 
-Providers throw `DriveError` with a stable `DriveErrorCode`. Callers branch on `code`, not diagnostic text. Business misses, duplicate names, invalid moves, quotas, unsupported documents, and durable integrity failures remain distinct.
+Providers throw `DriveError` with a stable `DriveErrorCode`. Callers branch on `code`, not diagnostic text. Business misses, duplicate names, idempotency conflicts, invalid moves, quotas, unsupported documents, and durable integrity failures remain distinct.
 
 ## Understand the implementation
 

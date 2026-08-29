@@ -13,7 +13,8 @@ import type { DriveBaseline, DriveFile } from '@sospink/dsh-buddy-api-drive/type
 import { DriveOverlay, type DriveOverlayProps } from '../src/client/DriveOverlay.tsx'
 import { DriveTrigger, type DriveTriggerProps } from '../src/client/DriveTrigger.tsx'
 import { zh } from '../src/client/locales.ts'
-import { BuddyDriveClient } from '../src/client/service.ts'
+import { BuddyDriveClient, type BuddyDriveClientOptions } from '../src/client/service.ts'
+import type { UploadTransport } from '../src/client/upload.ts'
 
 const now = '2026-08-29T00:00:00.000Z'
 const folder = {
@@ -32,7 +33,7 @@ const baseline: DriveBaseline = {
   files: [file, deleted],
 }
 
-function client() {
+function client(options: BuddyDriveClientOptions = {}) {
   const api = {
     baseline: vi.fn(async () => ({ ok: true as const, value: baseline })),
     createFolder: vi.fn(async () => ({ ok: true as const, value: { folder } })),
@@ -40,7 +41,7 @@ function client() {
     deleteFile: vi.fn(async () => ({ ok: true as const, value: { file: deleted } })),
     restoreFile: vi.fn(async () => ({ ok: true as const, value: { file } })),
   }
-  const value = new BuddyDriveClient(new Context(), api as never)
+  const value = new BuddyDriveClient(new Context(), api as never, options)
   value.replace(baseline)
   return { value, api }
 }
@@ -167,7 +168,7 @@ describe('DriveOverlay', () => {
     const b = client()
     b.value.open()
     const createFolder = vi.spyOn(b.value, 'createFolder').mockResolvedValue()
-    const upload = vi.spyOn(b.value, 'upload').mockResolvedValue(file)
+    const enqueue = vi.spyOn(b.value, 'enqueueUploads').mockReturnValue(['upload-1'])
     render(<DriveOverlay {...overlayProps(b.value)} />)
     fireEvent.click(screen.getByRole('button', { name: '新建文件夹' }))
     fireEvent.change(screen.getByPlaceholderText('文件夹名称'), { target: { value: '新目录' } })
@@ -177,7 +178,7 @@ describe('DriveOverlay', () => {
     const input = document.querySelector('input[type="file"]') as HTMLInputElement
     const selected = new File(['# test'], 'test.md', { type: 'text/markdown' })
     fireEvent.change(input, { target: { files: [selected] } })
-    await waitFor(() => { expect(upload).toHaveBeenCalledWith({ file: selected, kind: 'general' }) })
+    expect(enqueue).toHaveBeenCalledWith([{ file: selected, kind: 'general' }])
 
     fireEvent.click(screen.getByRole('button', { name: '显示已删除文件' }))
     fireEvent.click(screen.getByText('角色资料'))
@@ -199,7 +200,7 @@ describe('DriveOverlay', () => {
     b.value.replace({ ...baseline, folders: [sibling, folder, nested], files: [file, docx] })
     b.value.open()
     const restore = vi.spyOn(b.value, 'restoreFile').mockResolvedValue()
-    const upload = vi.spyOn(b.value, 'upload').mockResolvedValue(file)
+    const enqueue = vi.spyOn(b.value, 'enqueueUploads').mockReturnValue(['upload-1'])
     const close = vi.spyOn(b.value, 'close')
     render(<DriveOverlay {...overlayProps(b.value)} />)
     fireEvent.keyDown(document, { key: 'Enter' })
@@ -221,26 +222,32 @@ describe('DriveOverlay', () => {
     const selected = new File(['# x'], 'x.md', { type: 'text/markdown' })
     fireEvent.change(input, { target: { files: [selected] } })
     await waitFor(() => {
-      expect(upload).toHaveBeenCalledWith({ file: selected, kind: 'reference', parentId: nested.id })
+      expect(enqueue).toHaveBeenCalledWith([{ file: selected, kind: 'reference', parentId: nested.id }])
     })
     fireEvent.change(input, { target: { files: null } })
     fireEvent.click(screen.getByRole('button', { name: '关闭资料云盘' }))
     expect(close).toHaveBeenCalled()
   })
 
-  it('shows uploading state and handles non-Error action failures', async () => {
-    const b = client()
+  it('shows active queue while keeping file selection available and handles non-Error action failures', async () => {
+    let resolveUpload!: (value: DriveFile) => void
+    const uploadTransport: UploadTransport = () => ({
+      promise: new Promise((resolve) => { resolveUpload = resolve }),
+      abort: vi.fn(),
+    })
+    const b = client({ uploadTransport })
     b.value.open()
-    let resolveFetch!: (response: Response) => void
-    vi.spyOn(globalThis, 'fetch').mockImplementation(() => new Promise((resolve) => { resolveFetch = resolve }))
-    const pendingUpload = b.value.upload({ file: new File(['# x'], 'x.md'), kind: 'general' })
+    b.value.enqueueUploads([{ file: new File(['# x'], 'x.md'), kind: 'general' }])
     const create = vi.spyOn(b.value, 'createFolder').mockRejectedValue('string failure')
     render(<DriveOverlay {...overlayProps(b.value)} />)
-    const uploadingInput = screen.getByLabelText('正在上传…')
-    if (!(uploadingInput instanceof HTMLInputElement)) throw new Error('upload control is not an input')
-    expect(uploadingInput.disabled).toBe(true)
-    resolveFetch(new Response(JSON.stringify({ kind: 'file', file }), { status: 201 }))
-    await pendingUpload
+    expect(screen.getByRole('region', { name: '上传队列' })).not.toBeNull()
+    expect(screen.getByText('上传中')).not.toBeNull()
+    const uploadInput = screen.getByLabelText('上传文件')
+    if (!(uploadInput instanceof HTMLInputElement)) throw new Error('upload control is not an input')
+    expect(uploadInput.disabled).toBe(false)
+    expect(screen.getByRole('button', { name: '上传文件' }).textContent).toContain('1')
+    resolveUpload(file)
+    await waitFor(() => { expect(screen.getByText('已上传')).not.toBeNull() })
     fireEvent.click(screen.getByRole('button', { name: '新建文件夹' }))
     fireEvent.change(screen.getByPlaceholderText('文件夹名称'), { target: { value: '失败目录' } })
     fireEvent.click(screen.getByRole('button', { name: '创建' }))

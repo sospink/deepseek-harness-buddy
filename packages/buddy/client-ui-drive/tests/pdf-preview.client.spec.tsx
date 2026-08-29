@@ -25,19 +25,10 @@ import { PdfPreview } from '../src/client/PdfPreview.tsx'
 const t = makeTranslate(zh)
 
 
-type PageLoader = (pageNumber: number) => Promise<PDFPageProxy>
-
-function pageLoader(document: PDFDocumentProxy): PageLoader {
-  const implementation = (document.getPage as unknown as {
-    getMockImplementation(): PageLoader | undefined
-  }).getMockImplementation()
-  if (implementation === undefined) throw new Error('PDF fixture has no page loader')
-  return implementation
-}
-
 afterEach(() => { cleanup(); vi.restoreAllMocks(); runtime.load.mockReset() })
 beforeEach(() => {
-  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue({} as CanvasRenderingContext2D)
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext')
+    .mockReturnValue({} as CanvasRenderingContext2D)
 })
 
 describe('PDF preview policy', () => {
@@ -55,8 +46,9 @@ describe('PDF preview policy', () => {
   it('requires a mounted Canvas and a 2D context', () => {
     expect(() => pdfCanvasContext(null)).toThrow('Canvas is unavailable.')
     const canvas = document.createElement('canvas')
-    vi.mocked(HTMLCanvasElement.prototype.getContext).mockReturnValueOnce({} as CanvasRenderingContext2D)
-    expect(pdfCanvasContext(canvas)).toEqual({ canvas, context: expect.any(Object) })
+    const context = {} as CanvasRenderingContext2D
+    vi.spyOn(canvas, 'getContext').mockReturnValueOnce(context)
+    expect(pdfCanvasContext(canvas)).toEqual({ canvas, context })
   })
 
   it('bounds the backing canvas before allocation', () => {
@@ -119,27 +111,45 @@ function pdfFixture(options: {
   annotations?: readonly object[]
   failRender?: unknown
 } = {}) {
+  type PageMock = {
+    readonly getAnnotations: ReturnType<typeof vi.fn>
+    readonly getJSActions: ReturnType<typeof vi.fn>
+    readonly getTextContent: ReturnType<typeof vi.fn>
+    readonly getViewport: ReturnType<typeof vi.fn>
+    readonly render: ReturnType<typeof vi.fn>
+    readonly cleanup: ReturnType<typeof vi.fn>
+  }
   const cancel = vi.fn()
   const cleanupPage = vi.fn()
-  const page = (number: number): PDFPageProxy => ({
-    getAnnotations: vi.fn(async () => options.annotations ?? []),
-    getJSActions: vi.fn(async () => options.pageActions ?? null),
-    getTextContent: vi.fn(async () => ({ items: [{ str: number === 2 ? 'safety target' : 'first page' }] })),
-    getViewport: vi.fn(() => ({ width: 200, height: 300 })),
-    render: vi.fn(() => ({
-      promise: options.failRender === undefined ? Promise.resolve() : Promise.reject(options.failRender),
-      cancel,
-    } as unknown as RenderTask)),
-    cleanup: cleanupPage,
-  } as unknown as PDFPageProxy)
+  const pageMocks = new Map<number, PageMock>()
+  const page = (number: number): PDFPageProxy => {
+    const failRender = options.failRender
+    const pageMock: PageMock = {
+      getAnnotations: vi.fn(async () => options.annotations ?? []),
+      getJSActions: vi.fn(async () => options.pageActions ?? null),
+      getTextContent: vi.fn(async () => ({ items: [{ str: number === 2 ? 'safety target' : 'first page' }] })),
+      getViewport: vi.fn(() => ({ width: 200, height: 300 })),
+      render: vi.fn(() => ({
+        promise: failRender === undefined
+          ? Promise.resolve()
+          : Promise.resolve().then(() => { throw failRender }),
+        cancel,
+      } as unknown as RenderTask)),
+      cleanup: cleanupPage,
+    }
+    pageMocks.set(number, pageMock)
+    return pageMock as unknown as PDFPageProxy
+  }
   const pages = new Map<number, PDFPageProxy>()
+  const loadPage = async (number: number): Promise<PDFPageProxy> => {
+    if (!pages.has(number)) pages.set(number, page(number))
+    return pages.get(number) as PDFPageProxy
+  }
+  const getPage = vi.fn(loadPage)
   const document = {
     numPages: 2,
     getJSActions: vi.fn(async () => options.documentActions ?? null),
-    getPage: vi.fn(async (number: number) => {
-      if (!pages.has(number)) pages.set(number, page(number))
-      return pages.get(number)!
-    }),
+    getPage,
   } as unknown as PDFDocumentProxy
   let progress: ((value: { loaded: number; total: number }) => void) | undefined
   const destroy = vi.fn(async () => undefined)
@@ -151,7 +161,7 @@ function pdfFixture(options: {
   const getDocument = vi.fn(() => task)
   runtime.load.mockResolvedValue({ GlobalWorkerOptions: workerOptions, getDocument })
   return {
-    document, task, destroy, getDocument, workerOptions, pages, cancel, cleanupPage,
+    document, task, destroy, getDocument, getPage, loadPage, workerOptions, pages, pageMocks, cancel, cleanupPage,
     progress: (value: { loaded: number; total: number }) => progress?.(value),
   }
 }
@@ -176,8 +186,7 @@ describe('PdfPreview', () => {
     expect(link.getAttribute('rel')).toBe('noopener noreferrer')
     expect(screen.queryByText('Unsafe')).toBeNull()
     await waitFor(() => { expect(view.container.querySelector('canvas')).not.toBeNull() })
-    const first = fixture.pages.get(1)!
-    expect(first.render).toHaveBeenCalledWith(expect.objectContaining({ annotationMode: 0 }))
+    expect(fixture.pageMocks.get(1)?.render).toHaveBeenCalledWith(expect.objectContaining({ annotationMode: 0 }))
 
     fireEvent.click(screen.getByRole('button', { name: '下一页' }))
     expect(await screen.findByText('页 2 / 2')).not.toBeNull()
@@ -216,10 +225,10 @@ describe('PdfPreview', () => {
     expect(screen.getByText('单次搜索最多检查前 500 页')).not.toBeNull()
     for (let index = 0; index < 8; index += 1) fireEvent.click(screen.getByRole('button', { name: '−' }))
     expect(screen.getByText('50%')).not.toBeNull()
-    expect((screen.getByRole('button', { name: '−' }) as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: '−' }).disabled).toBe(true)
     for (let index = 0; index < 8; index += 1) fireEvent.click(screen.getByRole('button', { name: '+' }))
     expect(screen.getByText('200%')).not.toBeNull()
-    expect((screen.getByRole('button', { name: '+' }) as HTMLButtonElement).disabled).toBe(true)
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: '+' }).disabled).toBe(true)
     fireEvent.change(screen.getByPlaceholderText('搜索 PDF 文本'), { target: { value: 'absent' } })
     fireEvent.submit(screen.getByPlaceholderText('搜索 PDF 文本').closest('form')!)
     expect(await screen.findByText('在搜索预算内未找到匹配内容')).not.toBeNull()
@@ -301,20 +310,22 @@ describe('PdfPreview lifecycle and failure containment', () => {
 
   it('contains active and disposed page-metadata failures', async () => {
     const active = pdfFixture()
-    const activePage = await pageLoader(active.document)(1)
-    ;(activePage.getAnnotations as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('metadata failed'))
+    await active.getPage(1)
+    const activePage = active.pageMocks.get(1)
+    activePage?.getAnnotations.mockRejectedValue(new Error('metadata failed'))
     render(<PdfPreview url="/content/metadata" t={t} />)
-    await waitFor(() => { expect(activePage.getAnnotations).toHaveBeenCalled() })
+    await waitFor(() => { expect(activePage?.getAnnotations).toHaveBeenCalled() })
 
     cleanup()
     let rejectAnnotations!: (reason: unknown) => void
     const disposed = pdfFixture()
-    const disposedPage = await pageLoader(disposed.document)(1)
-    ;(disposedPage.getAnnotations as ReturnType<typeof vi.fn>).mockReturnValue(
+    await disposed.getPage(1)
+    const disposedPage = disposed.pageMocks.get(1)
+    disposedPage?.getAnnotations.mockReturnValue(
       new Promise((_resolve, reject) => { rejectAnnotations = reject }),
     )
     const view = render(<PdfPreview url="/content/disposed-page" t={t} />)
-    await waitFor(() => { expect(disposedPage.getAnnotations).toHaveBeenCalled() })
+    await waitFor(() => { expect(disposedPage?.getAnnotations).toHaveBeenCalled() })
     view.unmount()
     rejectAnnotations(new Error('late metadata failure'))
     await Promise.resolve()
@@ -323,18 +334,21 @@ describe('PdfPreview lifecycle and failure containment', () => {
 
   it('aborts an overlapping search and ignores its late completion', async () => {
     const fixture = pdfFixture()
-    const original = pageLoader(fixture.document)
+    const original = fixture.loadPage
     let delayedCalls = 0
     let resolveFirst!: (value: Awaited<ReturnType<PDFPageProxy['getTextContent']>>) => void
-    ;(fixture.document.getPage as ReturnType<typeof vi.fn>).mockImplementation(async (number: number) => {
-      const page = await original(number)
+    fixture.getPage.mockImplementation((number: number) => original(number).then((page) => {
       if (number !== 2) return page
       delayedCalls += 1
+      const pageMock = fixture.pageMocks.get(2)
+      if (pageMock === undefined) throw new Error('PDF fixture page mock is missing')
       if (delayedCalls === 1) {
-        return { ...page, getTextContent: () => new Promise((resolve) => { resolveFirst = resolve }) } as PDFPageProxy
+        pageMock.getTextContent.mockReturnValue(new Promise((resolve) => { resolveFirst = resolve }))
+        return page
       }
-      return { ...page, getTextContent: async () => ({ items: [{ str: 'second result' }] }) } as PDFPageProxy
-    })
+      pageMock.getTextContent.mockResolvedValue({ items: [{ str: 'second result' }] })
+      return page
+    }))
     render(<PdfPreview url="/content/search-overlap" t={t} />)
     await screen.findByText('页 1 / 2')
     const input = screen.getByPlaceholderText('搜索 PDF 文本')
@@ -352,18 +366,21 @@ describe('PdfPreview lifecycle and failure containment', () => {
 
   it('ignores an aborted search rejection after a replacement search starts', async () => {
     const fixture = pdfFixture()
-    const original = pageLoader(fixture.document)
+    const original = fixture.loadPage
     let rejectFirst!: (reason: unknown) => void
     let searches = 0
-    ;(fixture.document.getPage as ReturnType<typeof vi.fn>).mockImplementation(async (number: number) => {
-      const page = await original(number)
+    fixture.getPage.mockImplementation((number: number) => original(number).then((page) => {
       if (number !== 2) return page
       searches += 1
+      const pageMock = fixture.pageMocks.get(2)
+      if (pageMock === undefined) throw new Error('PDF fixture page mock is missing')
       if (searches === 1) {
-        return { ...page, getTextContent: () => new Promise((_resolve, reject) => { rejectFirst = reject }) } as PDFPageProxy
+        pageMock.getTextContent.mockReturnValue(new Promise((_resolve, reject) => { rejectFirst = reject }))
+        return page
       }
-      return { ...page, getTextContent: async () => ({ items: [{ str: 'replacement' }] }) } as PDFPageProxy
-    })
+      pageMock.getTextContent.mockResolvedValue({ items: [{ str: 'replacement' }] })
+      return page
+    }))
     render(<PdfPreview url="/content/abort-search" t={t} />)
     await screen.findByText('页 1 / 2')
     const input = screen.getByPlaceholderText('搜索 PDF 文本')
@@ -381,14 +398,16 @@ describe('PdfPreview lifecycle and failure containment', () => {
   it('reports active search errors for Error and non-Error failures', async () => {
     for (const failure of [new Error('search error'), 'string search error']) {
       const fixture = pdfFixture()
-      const original = pageLoader(fixture.document)
+      const original = fixture.loadPage
       let calls = 0
-      ;(fixture.document.getPage as ReturnType<typeof vi.fn>).mockImplementation(async (number: number) => {
-        const page = await original(number)
+      fixture.getPage.mockImplementation((number: number) => original(number).then((page) => {
         calls += 1
         if (calls <= 2) return page
-        return { ...page, getTextContent: async () => { throw failure } } as unknown as PDFPageProxy
-      })
+        const pageMock = fixture.pageMocks.get(number)
+        if (pageMock === undefined) throw new Error('PDF fixture page mock is missing')
+        pageMock.getTextContent.mockImplementation(() => { throw failure })
+        return page
+      }))
       render(<PdfPreview url="/content/search-error" t={t} />)
       await screen.findByText('页 1 / 2')
       fireEvent.change(screen.getByPlaceholderText('搜索 PDF 文本'), { target: { value: 'query' } })
@@ -399,7 +418,7 @@ describe('PdfPreview lifecycle and failure containment', () => {
   })
 
   it('contains missing canvas, non-Error render failure, DPR scaling, and late page resolution', async () => {
-    vi.mocked(HTMLCanvasElement.prototype.getContext).mockReturnValueOnce(null)
+    vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValueOnce(null)
     pdfFixture()
     render(<PdfPreview url="/content/no-canvas" t={t} />)
     expect(await screen.findByText('Canvas is unavailable.')).not.toBeNull()
@@ -413,34 +432,35 @@ describe('PdfPreview lifecycle and failure containment', () => {
     Object.defineProperty(globalThis, 'devicePixelRatio', { value: 2, configurable: true })
     const scaled = pdfFixture()
     render(<PdfPreview url="/content/scaled" t={t} />)
-    await waitFor(() => { expect(scaled.pages.get(1)?.render).toHaveBeenCalled() })
-    expect(scaled.pages.get(1)?.render).toHaveBeenCalledWith(expect.objectContaining({ transform: [2, 0, 0, 2, 0, 0] }))
+    await waitFor(() => { expect(scaled.pageMocks.get(1)?.render).toHaveBeenCalled() })
+    expect(scaled.pageMocks.get(1)?.render).toHaveBeenCalledWith(expect.objectContaining({ transform: [2, 0, 0, 2, 0, 0] }))
     cleanup()
     Object.defineProperty(globalThis, 'devicePixelRatio', { value: 0, configurable: true })
     const fallbackScale = pdfFixture()
     render(<PdfPreview url="/content/fallback-scale" t={t} />)
-    await waitFor(() => { expect(fallbackScale.pages.get(1)?.render).toHaveBeenCalled() })
-    expect(fallbackScale.pages.get(1)?.render).toHaveBeenCalledWith(expect.objectContaining({ transform: undefined }))
+    await waitFor(() => { expect(fallbackScale.pageMocks.get(1)?.render).toHaveBeenCalled() })
+    expect(fallbackScale.pageMocks.get(1)?.render).toHaveBeenCalledWith(expect.objectContaining({ transform: undefined }))
     cleanup()
 
     let resolvePage!: (page: PDFPageProxy) => void
     const late = pdfFixture()
-    const originalPage = pageLoader(late.document)
-    const validPage = await originalPage(1)
-    ;(late.document.getPage as ReturnType<typeof vi.fn>).mockClear().mockReturnValue(new Promise((resolve) => { resolvePage = resolve }))
+    const validPage = await late.loadPage(1)
+    late.getPage.mockClear().mockReturnValue(new Promise((resolve) => { resolvePage = resolve }))
     const view = render(<PdfPreview url="/content/late-canvas" t={t} />)
-    await waitFor(() => { expect(late.document.getPage).toHaveBeenCalled() })
+    await waitFor(() => { expect(late.getPage).toHaveBeenCalled() })
     view.unmount()
     resolvePage(validPage)
     await Promise.resolve()
 
     let rejectRender!: (reason: unknown) => void
     const lateRender = pdfFixture()
-    const lateRenderPage = await pageLoader(lateRender.document)(1)
-    ;(lateRenderPage.render as ReturnType<typeof vi.fn>).mockReturnValue({
+    await lateRender.loadPage(1)
+    const lateRenderPage = lateRender.pageMocks.get(1)
+    if (lateRenderPage === undefined) throw new Error('PDF fixture page mock is missing')
+    lateRenderPage.render.mockReturnValue({
       promise: new Promise((_resolve, reject) => { rejectRender = reject }),
       cancel: vi.fn(),
-    } as unknown as RenderTask)
+    })
     const rendering = render(<PdfPreview url="/content/late-render" t={t} />)
     await waitFor(() => { expect(lateRenderPage.render).toHaveBeenCalled() })
     rendering.unmount()

@@ -157,6 +157,8 @@ export interface MoveDriveFolderInput {
 /** Import one new logical file and its first immutable version. */
 export interface ImportDriveFileInput {
   readonly libraryId: DriveLibraryId
+  /** Stable caller-owned key; equal replays return the first committed file. */
+  readonly idempotencyKey?: string
   readonly parentId?: DriveFolderId
   readonly name: string
   readonly kind: DriveFileKind
