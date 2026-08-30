@@ -29,6 +29,49 @@
   line-height: 18px;
 }
 
+.morph {
+  position: relative;
+  z-index: 1;
+  width: min(320px, 100%);
+  max-width: var(--dsh-composer-card-max-width);
+  transition:
+    width 400ms cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    transform 180ms ease-out;
+}
+
+.morphExpanded {
+  width: min(480px, 100%);
+}
+
+.attachmentShelf {
+  box-sizing: border-box;
+  height: 0;
+  margin: 0 20px -8px;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(100%);
+  transition:
+    height 400ms cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    opacity 280ms ease-out,
+    transform 400ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.attachmentShelfOpen {
+  height: 68px;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.attachmentShelfInner {
+  box-sizing: border-box;
+  min-height: 68px;
+  padding: 8px 8px 12px;
+  border: 1px solid var(--dsw-alias-border-l2);
+  border-bottom: 0;
+  border-radius: 16px 16px 0 0;
+  background: var(--dsw-specific-selector);
+}
+
 .card {
   box-sizing: border-box;
   position: relative; /* overlay anchor positioning context */
@@ -38,7 +81,6 @@
      top pad on the card before .InputText. */
   gap: 12px;
   width: 100%;
-  max-width: var(--dsh-composer-card-max-width);
   padding-top: 10px;
   /* Input stroke: black/0.10 light, white/0.06 dark (figma darkmode note says
      the input border is one notch weaker than buttons) — exactly the
@@ -47,7 +89,13 @@
   border-radius: 22px;
   background: var(--dsw-specific-input-major);
   box-shadow: var(--dsw-shadow-lv2);
-  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+  overflow: visible;
+  transition:
+    min-height 400ms cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    border-radius 300ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    background-color 160ms ease;
   /* The draft text follows the Settings font-size preference (the textarea,
      mirror, and backdrop all inherit from here, so the three layers stay in
      step); the line height keeps the default 10px leading via the shared px
@@ -61,6 +109,81 @@
      (see ui-theme styles/scrollbar.css for the rebinding contract). */
   --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
   --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
+}
+
+.cardCollapsed {
+  height: 48px;
+  min-height: 48px;
+  max-height: 48px;
+  gap: 0;
+  padding-top: 0;
+  overflow: hidden;
+  cursor: text;
+}
+
+.cardCollapsed .scroll {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  overflow: hidden;
+}
+
+.cardCollapsed .grow {
+  width: 100%;
+}
+
+.cardCollapsed .input {
+  min-height: 0;
+  padding: 0 48px 0 16px;
+  opacity: 0;
+  transform: translateY(-4px) scale(0.97);
+  pointer-events: none;
+}
+
+.cardCollapsed .placeholder {
+  inset: 13px 48px auto 16px;
+  font-weight: 500;
+  transition: opacity 220ms ease, transform 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.cardCollapsed .row,
+.cardCollapsed .accessory {
+  position: absolute;
+  inset: auto 0 0;
+  opacity: 0;
+  filter: blur(4px);
+  transform: translateY(8px);
+  pointer-events: none;
+}
+
+.compactExpand {
+  position: absolute;
+  z-index: 6;
+  right: 8px;
+  bottom: 7px;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: var(--dsw-alias-button-info-fill);
+  color: #fff;
+  cursor: pointer;
+  transition:
+    opacity 220ms ease,
+    transform 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    background-color 140ms ease;
+}
+
+.compactExpand:hover {
+  background: var(--dsw-alias-button-info-hover);
+  transform: scale(1.04);
+}
+
+.compactExpand:active {
+  transform: scale(0.94);
 }
 
 .card:not(.cardWorkspaceTrigger):focus-within {
@@ -236,6 +359,13 @@
      on purpose: CSS modules hash container-name per module, so a name declared
      here can never match a query in another module's sheet. */
   container-type: inline-size;
+  opacity: 1;
+  filter: blur(0);
+  transform: translateY(0);
+  transition:
+    opacity 280ms ease 80ms,
+    filter 280ms ease 80ms,
+    transform 360ms cubic-bezier(0.175, 0.885, 0.32, 1.275) 60ms;
 }
 
 .tools,
@@ -344,6 +474,14 @@
      keeps its original seat while the smaller chips sit lower. Transform, not
      margin, so flex centering math is untouched. */
   transform: translateY(-2px);
+  overflow: hidden;
+}
+
+.primary svg {
+  transition:
+    opacity 260ms ease,
+    transform 320ms cubic-bezier(0.175, 0.885, 0.32, 1.275),
+    filter 260ms ease;
 }
 
 .primary:not(:disabled):hover {
@@ -384,5 +522,15 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .card, .row button, .row select, .primary { transition: none; animation: none; }
+  .morph, .attachmentShelf, .card, .row, .row button, .row select, .primary, .primary svg {
+    transition: none;
+    animation: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .morph,
+  .morphExpanded {
+    width: 100%;
+  }
 }

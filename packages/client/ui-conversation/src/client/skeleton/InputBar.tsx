@@ -14,7 +14,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { CSSProperties, KeyboardEvent, MouseEvent, ReactNode } from 'react'
+import type { CSSProperties, FocusEvent, KeyboardEvent, MouseEvent, ReactNode } from 'react'
 import clsx from 'clsx'
 import {
   IconPlusOutline16, IconWarningOutline16, Toast, Tooltip,
@@ -101,6 +101,7 @@ export function InputBar({
   }, [notice, showToast])
   const cardRef = useRef<HTMLDivElement | null>(null)
   const scrollRef = useRef<HTMLDivElement | null>(null)
+  const [expanded, setExpanded] = useState(false)
 
   // The Access seat's data: the host-computed permissions projection
   // (undefined = capability absent → the chip renders nothing).
@@ -244,6 +245,25 @@ export function InputBar({
 
   const canAcceptDrop = !locked && !machineBusy && addImages !== undefined
 
+  // Match the reference composer's compact-to-expanded posture without
+  // replacing the resident Lexical surface. Drafts, attachments, and active
+  // machine work pin the composer open; an empty idle composer may collapse.
+  useEffect(() => {
+    if (!empty || running || machineBusy || variant === 'hero') setExpanded(true)
+  }, [empty, running, machineBusy, variant])
+
+  const activateComposer = (): void => {
+    if (workspaceTrigger || expanded || locked) return
+    setExpanded(true)
+  }
+
+  const collapseComposer = (event: FocusEvent<HTMLDivElement>): void => {
+    if (!empty || running || machineBusy || variant === 'hero') return
+    const next = event.relatedTarget
+    if (next instanceof Node && event.currentTarget.contains(next)) return
+    setExpanded(false)
+  }
+
   // The keymap handlers read live bar state through this ref so the editor
   // registration survives re-renders without re-arming per keystroke.
   const gate = useRef({
@@ -382,125 +402,146 @@ export function InputBar({
           their pointer events), so the WHOLE capsule is the pick target.
           pointerdown stops here so the Menu's outside-close cannot race the
           click's reopen (close-then-open flickers the chip's open echo). */}
-      <div
-        ref={cardRef}
-        className={clsx(
-          css.card,
-          workspaceTrigger && css.cardWorkspaceTrigger,
-          !empty && css.cardHasDraft,
-          attachments.length > 0 && css.cardHasAttachments,
-          machineBusy && css.cardBusy,
-        )}
-        data-composer-card
-        onClick={workspaceTrigger ? onRequestWorkspace : undefined}
-        onPointerDown={workspaceTrigger ? (e) => { e.stopPropagation() } : undefined}
-      >
-        {overlay !== undefined && <div className={css.overlayAnchor}>{overlay}</div>}
-        {accessory !== undefined && <div className={css.accessory}>{accessory}</div>}
-        {renderSlot('conversation.input.attachments', {
-          attachments,
-          canAcceptDrop,
-          onAddImages: intakeImages,
-          onRemoveImage: (id) => { removeImage?.(id) },
-          dropLimits: imageLimits === undefined ? undefined : {
-            count: imageLimits.maxImagesPerMessage,
-            size: imageSizeText(imageLimits.maxImageBytes),
-          },
-        })}
-        {/* One scrollport, one text surface: the contenteditable grows with
+      <div className={clsx(css.morph, expanded && css.morphExpanded, attachments.length > 0 && css.morphHasAttachments)}>
+        <div className={clsx(css.attachmentShelf, expanded && attachments.length > 0 && css.attachmentShelfOpen)}>
+          <div className={css.attachmentShelfInner}>
+            {renderSlot('conversation.input.attachments', {
+              attachments,
+              canAcceptDrop,
+              onAddImages: intakeImages,
+              onRemoveImage: (id) => { removeImage?.(id) },
+              dropLimits: imageLimits === undefined ? undefined : {
+                count: imageLimits.maxImagesPerMessage,
+                size: imageSizeText(imageLimits.maxImageBytes),
+              },
+            })}
+          </div>
+        </div>
+        <div
+          ref={cardRef}
+          className={clsx(
+            css.card,
+            !expanded && css.cardCollapsed,
+            workspaceTrigger && css.cardWorkspaceTrigger,
+            !empty && css.cardHasDraft,
+            attachments.length > 0 && css.cardHasAttachments,
+            machineBusy && css.cardBusy,
+          )}
+          data-composer-card
+          data-expanded={expanded}
+          onBlur={collapseComposer}
+          onMouseDown={workspaceTrigger ? undefined : activateComposer}
+          onClick={workspaceTrigger ? onRequestWorkspace : undefined}
+          onPointerDown={workspaceTrigger ? (e) => { e.stopPropagation() } : undefined}
+        >
+          {overlay !== undefined && <div className={css.overlayAnchor}>{overlay}</div>}
+          {accessory !== undefined && <div className={css.accessory}>{accessory}</div>}
+          {/* One scrollport, one text surface: the contenteditable grows with
             its content and .scroll — capped at 14 lines in CSS — is the only
             thing that scrolls. Chips are decorator portals inside the same
             surface, so wrapping, caret geometry, and scrolling are the
             browser's own. */}
-        <div ref={scrollRef} className={css.scroll} data-input-scroll>
-          <div className={css.grow}>
-            <ComposerContentEditable
-              editor={workspaceTrigger ? null : editor}
-              editable={editable}
-              className={clsx(css.input, editorDisabled && css.inputDisabled)}
-              data-phase={input?.phase ?? 'inert'}
-              aria-disabled={editorDisabled || undefined}
-              data-placeholder={placeholderText}
-              // The placeholder was the textarea's accessible name; a div's
-              // data attribute is not, so the label restores it.
-              aria-label={workspaceTrigger ? t('hero.chooseWorkspace') : placeholderText}
-              aria-haspopup={workspaceTrigger ? 'menu' : undefined}
-              aria-expanded={workspaceTrigger ? workspacePickerOpen : undefined}
-              tabIndex={workspaceTrigger ? 0 : undefined}
-              onKeyDown={workspaceTrigger ? onWorkspaceKeyDown : undefined}
-              style={hint === null ? undefined : { '--dsh-composer-hint': JSON.stringify(hint) } as CSSProperties}
-            />
-            {empty && !claimActive && (
-              <div aria-hidden className={css.placeholder} data-composer-placeholder>
-                {placeholderText}
-              </div>
-            )}
-            <DecoratorPortals editor={workspaceTrigger ? null : editor} />
-          </div>
-        </div>
-        <div className={css.row}>
-          <div className={css.tools}>
-            <Tooltip label={t('input.commands')} side="top" delayMs={500}>
-              <button
-                type="button"
-                className={css.add}
-                aria-label={t('input.commands')}
-                aria-haspopup="listbox"
-                aria-expanded={commandMenuOpen}
-                disabled={locked || toggleCommandMenu === undefined}
-                onMouseDown={keepFocus}
-                onClick={onToggleCommandMenu}
-              >
-                <IconPlusOutline16 size={14} />
-              </button>
-            </Tooltip>
-            <div className={css.modes}>
-              {accessSelect}
-              {sessionId === undefined ? null : renderSlot('conversation.input.plan', { locked })}
+          <div ref={scrollRef} className={css.scroll} data-input-scroll>
+            <div className={css.grow}>
+              <ComposerContentEditable
+                editor={workspaceTrigger ? null : editor}
+                editable={editable}
+                className={clsx(css.input, editorDisabled && css.inputDisabled)}
+                data-phase={input?.phase ?? 'inert'}
+                aria-disabled={editorDisabled || undefined}
+                data-placeholder={placeholderText}
+                // The placeholder was the textarea's accessible name; a div's
+                // data attribute is not, so the label restores it.
+                aria-label={workspaceTrigger ? t('hero.chooseWorkspace') : placeholderText}
+                aria-haspopup={workspaceTrigger ? 'menu' : undefined}
+                aria-expanded={workspaceTrigger ? workspacePickerOpen : undefined}
+                tabIndex={workspaceTrigger ? 0 : undefined}
+                onKeyDown={workspaceTrigger ? onWorkspaceKeyDown : undefined}
+                style={hint === null ? undefined : { '--dsh-composer-hint': JSON.stringify(hint) } as CSSProperties}
+              />
+              {empty && !claimActive && (
+                <div aria-hidden className={css.placeholder} data-composer-placeholder>
+                  {placeholderText}
+                </div>
+              )}
+              <DecoratorPortals editor={workspaceTrigger ? null : editor} />
             </div>
-            {leftItems}
           </div>
-          <div className={css.trailing}>
-            {rightItems}
-            {sessionId === undefined ? null : renderSlot('conversation.input.model', { locked: modelSeatLocked })}
-            <ContextMeter useProjection={useProjection} t={t} />
-            {interruptible && (
-              <Tooltip label={t('input.stop')} side="top" delayMs={500}>
+          <div className={css.row}>
+            <div className={css.tools}>
+              <Tooltip label={t('input.commands')} side="top" delayMs={500}>
+                <button
+                  type="button"
+                  className={css.add}
+                  aria-label={t('input.commands')}
+                  aria-haspopup="listbox"
+                  aria-expanded={commandMenuOpen}
+                  disabled={locked || toggleCommandMenu === undefined}
+                  onMouseDown={keepFocus}
+                  onClick={onToggleCommandMenu}
+                >
+                  <IconPlusOutline16 size={14} />
+                </button>
+              </Tooltip>
+              <div className={css.modes}>
+                {accessSelect}
+                {sessionId === undefined ? null : renderSlot('conversation.input.plan', { locked })}
+              </div>
+              {leftItems}
+            </div>
+            <div className={css.trailing}>
+              {rightItems}
+              {sessionId === undefined ? null : renderSlot('conversation.input.model', { locked: modelSeatLocked })}
+              <ContextMeter useProjection={useProjection} t={t} />
+              {interruptible && (
+                <Tooltip label={t('input.stop')} side="top" delayMs={500}>
+                  <button
+                    type="button"
+                    className={css.primary}
+                    aria-label={t('input.stop')}
+                    disabled={stop === undefined}
+                    onMouseDown={keepFocus}
+                    onClick={stop}
+                  >
+                    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
+                      <rect x="3" y="3" width="10" height="10" rx="3" fill="currentColor" />
+                    </svg>
+                  </button>
+                </Tooltip>
+              )}
+              <Tooltip label={primaryLabel} side="top" delayMs={500}>
                 <button
                   type="button"
                   className={css.primary}
-                  aria-label={t('input.stop')}
-                  disabled={stop === undefined}
+                  aria-label={primaryLabel}
+                  disabled={primaryStops ? stop === undefined : empty || disabled || machineBusy}
                   onMouseDown={keepFocus}
-                  onClick={stop}
+                  onClick={onPrimary}
                 >
-                  <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
-                    <rect x="3" y="3" width="10" height="10" rx="3" fill="currentColor" />
-                  </svg>
+                  {primaryStops ? (
+                    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
+                      <rect x="3" y="3" width="10" height="10" rx="3" fill="currentColor" />
+                    </svg>
+                  ) : (
+                    <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
+                      <path d="M8.3125 0.980183C8.66767 1.0531 8.97902 1.20418 9.2627 1.43233C9.48724 1.61297 9.73029 1.85793 9.97949 2.10714L14.707 6.83468L13.293 8.24874L9 3.95577V15.0417H7V3.95577L2.70703 8.24874L1.29297 6.83468L6.02051 2.10714C6.26971 1.85793 6.51277 1.61297 6.7373 1.43233C6.97662 1.23986 7.28445 1.04402 7.6875 0.980183C7.8973 0.947006 8.1031 0.95516 8.3125 0.980183Z" fill="currentColor" />
+                    </svg>
+                  )}
                 </button>
               </Tooltip>
-            )}
-            <Tooltip label={primaryLabel} side="top" delayMs={500}>
-              <button
-                type="button"
-                className={css.primary}
-                aria-label={primaryLabel}
-                disabled={primaryStops ? stop === undefined : empty || disabled || machineBusy}
-                onMouseDown={keepFocus}
-                onClick={onPrimary}
-              >
-                {primaryStops ? (
-                  <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
-                    <rect x="3" y="3" width="10" height="10" rx="3" fill="currentColor" />
-                  </svg>
-                ) : (
-                  <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
-                    <path d="M8.3125 0.980183C8.66767 1.0531 8.97902 1.20418 9.2627 1.43233C9.48724 1.61297 9.73029 1.85793 9.97949 2.10714L14.707 6.83468L13.293 8.24874L9 3.95577V15.0417H7V3.95577L2.70703 8.24874L1.29297 6.83468L6.02051 2.10714C6.26971 1.85793 6.51277 1.61297 6.7373 1.43233C6.97662 1.23986 7.28445 1.04402 7.6875 0.980183C7.8973 0.947006 8.1031 0.95516 8.3125 0.980183Z" fill="currentColor" />
-                  </svg>
-                )}
-              </button>
-            </Tooltip>
+            </div>
           </div>
+          {!expanded && !workspaceTrigger && (
+            <button
+              type="button"
+              className={css.compactExpand}
+              aria-label={placeholderText}
+              onMouseDown={(event) => { event.preventDefault() }}
+              onClick={activateComposer}
+            >
+              <IconPlusOutline16 size={14} />
+            </button>
+          )}
         </div>
       </div>
       {footer}
