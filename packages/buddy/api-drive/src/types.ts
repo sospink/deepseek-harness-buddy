@@ -83,6 +83,11 @@ export interface DriveFileRequest {
   readonly fileId: DriveFileId
 }
 
+/** Request to permanently remove one or more file identities. */
+export interface DrivePurgeFilesRequest {
+  readonly fileIds: readonly DriveFileId[]
+}
+
 /** One folder mutation result. */
 export interface DriveFolderValue {
   readonly folder: DriveFolder

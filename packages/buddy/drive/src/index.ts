@@ -21,6 +21,7 @@ import type {
   ImportDriveFileInput,
   MoveDriveFileInput,
   MoveDriveFolderInput,
+  PurgeDriveFilesInput,
   RenameDriveFileInput,
   RenameDriveFolderInput,
   RestoreDriveFileInput,
@@ -52,6 +53,7 @@ export type {
   ImportDriveFileInput,
   MoveDriveFileInput,
   MoveDriveFolderInput,
+  PurgeDriveFilesInput,
   RenameDriveFileInput,
   RenameDriveFolderInput,
   RestoreDriveFileInput,
@@ -222,6 +224,11 @@ export abstract class DriveStore extends Service {
    * @returns The committed file.
    */
   abstract deleteFile(input: DeleteDriveFileInput): Promise<DriveFile>
+  /** Permanently remove files and reclaim blobs no longer referenced by any version.
+   * @param input - File identities and trusted mutation attribution.
+   * @returns The number of files permanently removed.
+   */
+  abstract purgeFiles(input: PurgeDriveFilesInput): Promise<number>
   /**
    * Restore one soft-deleted logical file; repeated restoration is idempotent.
    * @param input - File restore request.

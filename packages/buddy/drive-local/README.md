@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`@sospink/dsh-buddy-drive-local` implements `ctx.drive` on one Host. It commits the complete metadata relation through the `buddy_drive` Storage Domain global and stores immutable source bytes under a private SHA-256 object tree. It admits Markdown, PDF, and DOCX on the Host, enforces quotas and sibling-name/tree invariants, records mutation audits, durably replays new-file imports by their idempotency key, verifies every referenced blob during startup, and removes temporary or unreferenced provider-owned objects.
+`@sospink/dsh-buddy-drive-local` implements `ctx.drive` on one Host. It commits the complete metadata relation through the `buddy_drive` Storage Domain global and stores immutable source bytes under a private SHA-256 object tree. It admits Markdown, PDF, and DOCX on the Host, enforces quotas and sibling-name/tree invariants, records mutation audits, durably replays new-file imports by their idempotency key, permanently removes selected files with their historical versions, verifies every referenced blob during startup, and removes temporary or unreferenced provider-owned objects.
 
 ## Table of Contents
 

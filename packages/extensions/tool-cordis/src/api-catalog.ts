@@ -596,6 +596,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         returns: 'The committed file value.',
       },
       {
+        signature: '@Remote(\'purgeFiles\') purgeFiles(request: DrivePurgeFilesRequest): Promise<{ count: number }>',
+        description: 'Permanently remove selected files through the browser Remote.',
+        parameters: [{ name: 'request', description: 'File identities to remove.' }],
+        returns: 'The number of files removed.',
+      },
+      {
         signature: '@Remote(\'restoreFile\') restoreFile(request: DriveFileRequest): Promise<DriveFileValue>',
         description: 'Restore a soft-deleted file through the browser Remote.',
         parameters: [{ name: 'request', description: 'File identity request.' }],
@@ -991,6 +997,12 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Soft-delete one logical file; repeated deletion is idempotent.',
         parameters: [{ name: 'input', description: 'File deletion request.' }],
         returns: 'The committed file.',
+      },
+      {
+        signature: 'abstract purgeFiles(input: PurgeDriveFilesInput): Promise<number>',
+        description: 'Permanently remove files and reclaim blobs no longer referenced by any version.',
+        parameters: [{ name: 'input', description: 'File identities and trusted mutation attribution.' }],
+        returns: 'The number of files permanently removed.',
       },
       {
         signature: 'abstract restoreFile(input: RestoreDriveFileInput): Promise<DriveFile>',
@@ -4159,7 +4171,7 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   },
   {
     name: 'DriveAuditOperation',
-    declaration: 'export type DriveAuditOperation = \'library/create\' | \'library/restore\' | \'folder/create\' | \'folder/rename\' | \'folder/move\' | \'file/import\' | \'file/version\' | \'file/rename\' | \'file/move\' | \'file/metadata\' | \'file/delete\' | \'file/restore\';',
+    declaration: 'export type DriveAuditOperation = \'library/create\' | \'library/restore\' | \'folder/create\' | \'folder/rename\' | \'folder/move\' | \'file/import\' | \'file/version\' | \'file/rename\' | \'file/move\' | \'file/metadata\' | \'file/delete\' | \'file/purge\' | \'file/restore\';',
   },
   {
     name: 'DriveAuditQuery',
@@ -4236,6 +4248,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'DrivePreviewStatus',
     declaration: 'export type DrivePreviewStatus = \'pending\' | \'ready\' | \'unsupported\' | \'failed\';',
+  },
+  {
+    name: 'DrivePurgeFilesRequest',
+    declaration: 'export interface DrivePurgeFilesRequest {\n    readonly fileIds: readonly DriveFileId[];\n}',
   },
   {
     name: 'DriveRenameFileRequest',
@@ -4928,6 +4944,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'PtcDispatchLog',
     declaration: 'export interface PtcDispatchLog {\n    readonly exec: ToolExecution;\n    readonly agent?: Agent;\n    readonly subCallId: ToolCallId;\n    readonly name: string;\n    readonly isError: boolean;\n    readonly content: ContentBlock[];\n}',
+  },
+  {
+    name: 'PurgeDriveFilesInput',
+    declaration: 'export interface PurgeDriveFilesInput {\n    readonly fileIds: readonly DriveFileId[];\n    readonly mutation?: DriveMutationContext;\n}',
   },
   {
     name: 'ReadFileLine',

@@ -132,6 +132,12 @@ Host service backing the generated `ctx.remote.drive` namespace.
  */
 @Remote('deleteFile') deleteFile(request: DriveFileRequest): Promise<DriveFileValue>
 
+/** Permanently remove selected files through the browser Remote.
+ * @param request - File identities to remove.
+ * @returns The number of files removed.
+ */
+@Remote('purgeFiles') purgeFiles(request: DrivePurgeFilesRequest): Promise<{ count: number }>
+
 /**
  * Restore a soft-deleted file through the browser Remote.
  * @param request - File identity request.
@@ -280,6 +286,12 @@ abstract updateFileMetadata(input: UpdateDriveFileMetadataInput): Promise<DriveF
  * @returns The committed file.
  */
 abstract deleteFile(input: DeleteDriveFileInput): Promise<DriveFile>
+
+/** Permanently remove files and reclaim blobs no longer referenced by any version.
+ * @param input - File identities and trusted mutation attribution.
+ * @returns The number of files permanently removed.
+ */
+abstract purgeFiles(input: PurgeDriveFilesInput): Promise<number>
 
 /**
  * Restore one soft-deleted logical file; repeated restoration is idempotent.

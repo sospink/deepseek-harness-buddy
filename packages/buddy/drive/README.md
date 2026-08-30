@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`@sospink/dsh-buddy-drive` is the Service Definition for the Buddy document-drive capability. It owns the provider-neutral vocabulary and `ctx.drive` contract for one library, an acyclic folder tree, logical files, immutable versions, mutation audits, admission limits, and verified version reads. It performs no IO and chooses no filesystem, database, object store, HTTP transport, browser preview, Agent tool, retention schedule, identity model, or sharing policy.
+`@sospink/dsh-buddy-drive` is the Service Definition for the Buddy document-drive capability. It owns the provider-neutral vocabulary and `ctx.drive` contract for one library, an acyclic folder tree, logical files, immutable versions, mutation audits, admission limits, verified version reads, and permanent file removal. It performs no IO and chooses no filesystem, database, object store, HTTP transport, browser preview, Agent tool, retention schedule, identity model, or sharing policy.
 
 ## Table of Contents
 

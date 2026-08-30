@@ -384,7 +384,13 @@ export function InputBar({
           click's reopen (close-then-open flickers the chip's open echo). */}
       <div
         ref={cardRef}
-        className={clsx(css.card, workspaceTrigger && css.cardWorkspaceTrigger)}
+        className={clsx(
+          css.card,
+          workspaceTrigger && css.cardWorkspaceTrigger,
+          !empty && css.cardHasDraft,
+          attachments.length > 0 && css.cardHasAttachments,
+          machineBusy && css.cardBusy,
+        )}
         data-composer-card
         onClick={workspaceTrigger ? onRequestWorkspace : undefined}
         onPointerDown={workspaceTrigger ? (e) => { e.stopPropagation() } : undefined}

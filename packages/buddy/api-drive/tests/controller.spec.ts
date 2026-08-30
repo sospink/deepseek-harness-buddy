@@ -50,6 +50,8 @@ describe('BuddyDriveController', () => {
     expect((await value.controller.audit()).events.length).toBeGreaterThan(0)
     expect((await value.controller.deleteFile({ fileId: file.id })).file.deletedAt).toBeDefined()
     expect((await value.controller.restoreFile({ fileId: file.id })).file).not.toHaveProperty('deletedAt')
+    await expect(value.controller.purgeFiles({ fileIds: [file.id] })).resolves.toEqual({ count: 1 })
+    expect(value.controller.baseline().files).toEqual([])
 
     const abort = new AbortController()
     const iterator = value.controller.follow(abort.signal)[Symbol.asyncIterator]()

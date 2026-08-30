@@ -48,6 +48,8 @@ describe('DriveCommands', () => {
     expect((await commands.audit()).events.length).toBeGreaterThan(0)
     expect((await commands.deleteFile({ fileId: file.id })).file.deletedAt).toBeDefined()
     expect((await commands.restoreFile({ fileId: file.id })).file).not.toHaveProperty('deletedAt')
+    await expect(commands.purgeFiles({ fileIds: [file.id] })).resolves.toEqual({ count: 1 })
+    expect(commands.baseline().files).toEqual([])
   })
 
   it('maps Drive business failures and preserves unrelated errors', async () => {

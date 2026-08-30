@@ -2,6 +2,9 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalS
 import clsx from 'clsx'
 import {
   Button,
+  IconCheckOutline16,
+  RiskConfirmation,
+  Toast,
   IconArchiveOutline20,
   IconCloseOutline16,
   IconDownloadOutline16,
@@ -14,7 +17,7 @@ import {
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
 import type {
-  DriveFile, DriveFileKind, DriveFolder, DriveFolderId,
+  DriveFile, DriveFileId, DriveFileKind, DriveFolder, DriveFolderId,
 } from '@sospink/dsh-buddy-api-drive/types'
 import type { BuddyDriveClient } from './service.ts'
 import type { DriveUiInjected } from './DriveTrigger.tsx'
@@ -62,6 +65,10 @@ export function DriveOverlay({ client, t }: DriveOverlayProps) {
   const [folderName, setFolderName] = useState('')
   const [uploadKind, setUploadKind] = useState<DriveFileKind>('general')
   const [error, setError] = useState<string | undefined>(undefined)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set())
+  const [purgeOpen, setPurgeOpen] = useState(false)
+  const [purgeAcknowledged, setPurgeAcknowledged] = useState(false)
+  const [notice, setNotice] = useState<string | undefined>(undefined)
   const dialogRef = useRef<HTMLElement>(null)
   const uploadInputRef = useRef<HTMLInputElement>(null)
   const uploadButtonRef = useRef<HTMLButtonElement>(null)
@@ -107,6 +114,8 @@ export function DriveOverlay({ client, t }: DriveOverlayProps) {
     && (search.trim() === '' || file.name.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))),
   [data?.files, folderId, search, showDeleted])
   const selected = data?.files.find(file => file.id === selectedId)
+  const selectableFiles = files
+  const allSelected = selectableFiles.length > 0 && selectableFiles.every(file => selectedIds.has(file.id))
 
   if (!snapshot.open) return null
 
@@ -162,7 +171,8 @@ export function DriveOverlay({ client, t }: DriveOverlayProps) {
         </div>
       </header>
 
-      {error !== undefined && <div className={css.error}><strong>{t('error')}</strong><span>{error}</span></div>}
+      {error !== undefined && <Toast text={`${t('error')}: ${error}`} onDone={() => { setError(undefined) }} />}
+      {notice !== undefined && <Toast text={notice} icon={<IconCheckOutline16 />} onDone={() => { setNotice(undefined) }} />}
       <UploadQueue client={client} items={snapshot.uploadQueue} t={t} />
 
       <div className={css.workspace}>
@@ -221,6 +231,15 @@ export function DriveOverlay({ client, t }: DriveOverlayProps) {
               {showDeleted ? t('hideDeleted') : t('showDeleted')}
             </button>
           </div>
+          {selectableFiles.length > 0 && (
+            <div className={css.selectionToolbar}>
+              <label className={css.selectAll}><input type="checkbox" checked={allSelected} onChange={() => {
+                setSelectedIds(allSelected ? new Set() : new Set(selectableFiles.map(file => file.id)))
+              }} />{t('selectAll')}</label>
+              <span>{t('selected', { count: selectedIds.size })}</span>
+              <Button size="sm" variant="primary" disabled={selectedIds.size === 0} icon={<IconTrashOutline16 size={14} />} onClick={() => { setPurgeAcknowledged(false); setPurgeOpen(true) }}>{t('purge')}</Button>
+            </div>
+          )}
           <div className={css.fileList}>
             {snapshot.state === 'loading' && <div className={css.empty}>{t('loading')}</div>}
             {snapshot.state === 'failed' && (
@@ -230,17 +249,25 @@ export function DriveOverlay({ client, t }: DriveOverlayProps) {
               <div className={css.empty}><strong>{t('empty')}</strong><span>{t('emptyHint')}</span></div>
             )}
             {files.map(file => (
-              <button
+              <div
                 key={file.id}
-                type="button"
                 className={clsx(css.fileRow, selectedId === file.id && css.selected)}
-                onClick={() => { setSelectedId(file.id) }}
               >
-                <span className={css.fileType}>{mediaLabel(file.mediaType, t)}</span>
-                <span className={css.fileName}>{file.name}</span>
-                <span className={css.fileKind}>{t(`kind.${file.kind}`)}</span>
-                {file.deletedAt !== undefined && <span className={css.deleted}>{t('deleted')}</span>}
-              </button>
+                <input className={css.fileCheckbox} type="checkbox" aria-label={`${t('selectAll')} ${file.name}`} checked={selectedIds.has(file.id)} onClick={(event) => { event.stopPropagation() }} onChange={() => {
+                  setSelectedIds((current) => {
+                    const next = new Set(current)
+                    if (next.has(file.id)) next.delete(file.id)
+                    else next.add(file.id)
+                    return next
+                  })
+                }} />
+                <button type="button" className={css.fileRowButton} onClick={() => { setSelectedId(file.id) }}>
+                  <span className={css.fileType}>{mediaLabel(file.mediaType, t)}</span>
+                  <span className={css.fileName}>{file.name}</span>
+                  <span className={css.fileKind}>{t(`kind.${file.kind}`)}</span>
+                  {file.deletedAt !== undefined && <span className={css.deleted}>{t('deleted')}</span>}
+                </button>
+              </div>
             ))}
           </div>
         </main>
@@ -248,19 +275,47 @@ export function DriveOverlay({ client, t }: DriveOverlayProps) {
         <aside className={css.details}>
           <div className={css.sectionTitle}>{t('details')}</div>
           {selected === undefined ? <div className={css.empty}>{t('selectFile')}</div> : (
-            <FileDetails client={client} file={selected} run={run} t={t} />
+            <FileDetails client={client} file={selected} run={run} t={t} onPurge={(fileId) => {
+              setSelectedIds(new Set([fileId]))
+              setPurgeAcknowledged(false)
+              setPurgeOpen(true)
+            }} />
           )}
         </aside>
       </div>
+      <RiskConfirmation
+        open={purgeOpen}
+        onCancel={() => { setPurgeOpen(false); setPurgeAcknowledged(false) }}
+        title={t('purgeTitle')}
+        description={t('purgeDescription')}
+        acknowledgeLabel={t('purgeAcknowledge')}
+        cancelLabel={t('cancel')}
+        closeLabel={t('close')}
+        confirmLabel={t('purgeConfirm')}
+        acknowledged={purgeAcknowledged}
+        onAcknowledgedChange={setPurgeAcknowledged}
+        onConfirm={() => {
+          const ids = [...selectedIds]
+          setPurgeOpen(false)
+          setPurgeAcknowledged(false)
+          void run(async () => {
+            await client.purgeFiles(ids as DriveFileId[])
+            setSelectedIds(new Set())
+            setSelectedId(current => current !== undefined && ids.includes(current) ? undefined : current)
+            setNotice(t('purgeSuccess', { count: ids.length }))
+          })
+        }}
+      />
     </section>
   )
 }
 
-function FileDetails({ client, file, run, t }: {
+function FileDetails({ client, file, run, t, onPurge }: {
   client: BuddyDriveClient
   file: DriveFile
   run: (operation: () => Promise<void>) => Promise<void>
   t: DriveOverlayProps['t']
+  onPurge: (fileId: DriveFileId) => void
 }) {
   const [kind, setKind] = useState<DriveFileKind>(file.kind)
   useEffect(() => { setKind(file.kind) }, [file.id, file.kind])
@@ -293,8 +348,8 @@ function FileDetails({ client, file, run, t }: {
           <IconDownloadOutline16 size={16} />{t('download')}
         </a>
         {file.deletedAt === undefined ? (
-          <Button size="sm" variant="ghost" icon={<IconTrashOutline16 size={16} />} onClick={() => { void run(() => client.deleteFile(file.id)) }}>
-            {t('delete')}
+          <Button size="sm" variant="ghost" icon={<IconTrashOutline16 size={16} />} onClick={() => { onPurge(file.id) }}>
+            {t('purge')}
           </Button>
         ) : (
           <Button size="sm" variant="ghost" onClick={() => { void run(() => client.restoreFile(file.id)) }}>{t('restore')}</Button>

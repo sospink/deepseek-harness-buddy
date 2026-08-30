@@ -36,6 +36,7 @@ import type {
   ImportDriveFileInput,
   MoveDriveFileInput,
   MoveDriveFolderInput,
+  PurgeDriveFilesInput,
   RenameDriveFileInput,
   RenameDriveFolderInput,
   RestoreDriveFileInput,
@@ -534,6 +535,33 @@ export class LocalDriveStore extends DriveStore {
         audit: [...this.requireState().audit, this.audit(mutation, 'file/delete', 'file', file.id, deletedAt)],
       })
       return fileSnapshot(file)
+    })
+  }
+
+  /** Permanently remove files and reclaim blobs that no longer have references.
+   * @param input - File identities and trusted mutation attribution.
+   * @returns The number of files permanently removed.
+   */
+  purgeFiles(input: PurgeDriveFilesInput): Promise<number> {
+    return this.enqueue(async () => {
+      const fileIds = [...new Set(input.fileIds)]
+      if (fileIds.length === 0) throw new DriveError('PURGE_EMPTY', 'Drive purge requires at least one file.')
+      const state = this.requireState()
+      const files = fileIds.map(fileId => this.requireFile(fileId))
+      const fileIdSet = new Set(fileIds)
+      const remainingVersions = state.versions.filter(version => !fileIdSet.has(version.fileId))
+      const mutation = mutationContext(input.mutation)
+      const updatedAt = new Date(Math.max(Date.now(), ...files.map(file => Date.parse(file.updatedAt) + 1))).toISOString()
+      const audit = files.map(file => this.audit(mutation, 'file/purge', 'file', file.id, updatedAt))
+      await this.commit({
+        ...state,
+        library: { ...state.library, updatedAt },
+        files: state.files.filter(file => !fileIdSet.has(file.id)),
+        versions: remainingVersions,
+        audit: [...state.audit, ...audit],
+      })
+      await reconcileBlobs(this.root, new Map(remainingVersions.map(version => [version.digest, version.bytes])))
+      return files.length
     })
   }
 

@@ -47,7 +47,7 @@ const operation = z.union([
   z.literal('library/create'), z.literal('library/restore'), z.literal('folder/create'), z.literal('folder/rename'),
   z.literal('folder/move'), z.literal('file/import'), z.literal('file/version'),
   z.literal('file/rename'), z.literal('file/move'), z.literal('file/metadata'),
-  z.literal('file/delete'), z.literal('file/restore'),
+  z.literal('file/delete'), z.literal('file/purge'), z.literal('file/restore'),
 ])
 const targetType = z.union([
   z.literal('library'), z.literal('folder'), z.literal('file'), z.literal('version'),

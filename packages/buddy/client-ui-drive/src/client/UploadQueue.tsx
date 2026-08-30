@@ -1,6 +1,7 @@
 /** Upload queue projection and controls; mutable transport handles stay in the Client service. */
 
-import { Button } from '@deepseek-ai/dsh-client-ui-primitives'
+import { useEffect, useRef, useState } from 'react'
+import { Button, IconCheckOutline16, IconCloseOutline16, Modal } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { DriveOverlayProps } from './DriveOverlay.tsx'
 import type { BuddyDriveClient, DriveUploadItem } from './service.ts'
 import css from './DriveOverlay.module.css'
@@ -23,48 +24,78 @@ export function UploadQueue({ client, items, t }: {
   readonly items: readonly DriveUploadItem[]
   readonly t: DriveOverlayProps['t']
 }) {
+  const [expanded, setExpanded] = useState(true)
+  const [successCount, setSuccessCount] = useState<number | undefined>(undefined)
+  const previous = useRef(new Map<string, DriveUploadItem['status']>())
+  const initialized = useRef(false)
+  useEffect(() => {
+    if (initialized.current) {
+      const newlySucceeded = items.filter(item => item.status === 'succeeded'
+        && previous.current.get(item.id) !== 'succeeded').length
+      if (newlySucceeded > 0) setSuccessCount(newlySucceeded)
+    }
+    previous.current = new Map(items.map(item => [item.id, item.status]))
+    initialized.current = true
+  }, [items])
   if (items.length === 0) return null
   const active = items.filter(item => item.status === 'queued' || item.status === 'uploading').length
   const done = items.filter(item => item.status === 'succeeded').length
   const clearable = items.some(item => item.status === 'succeeded' || item.status === 'cancelled')
   const overall = queuePercent(items)
   return (
-    <section className={css.uploadQueue} aria-label={t('upload.queue')}>
-      <div className={css.uploadQueueHeader}>
-        <div>
-          <strong>{t('upload.queue')}</strong>
-          <span>{String(done)} / {String(items.length)} {t('upload.completed')} · {String(active)} {t('upload.active')}</span>
+    <>
+      {successCount !== undefined && (
+        <Modal
+          open
+          onClose={() => { setSuccessCount(undefined) }}
+          title={t('uploadSuccessTitle')}
+          description={t('uploadSuccessDescription', { count: successCount })}
+          closeLabel={t('uploadClose')}
+          footer={<Button variant="primary" onClick={() => { setSuccessCount(undefined) }} icon={<IconCheckOutline16 />}>{t('uploadClose')}</Button>}
+        />
+      )}
+      <section className={css.uploadQueue} aria-label={t('upload.queue')} data-expanded={expanded}>
+        <div className={css.uploadQueueHeader}>
+          <div>
+            <strong>{t('upload.queue')}</strong>
+            <span>{String(done)} / {String(items.length)} {t('upload.completed')} · {String(active)} {t('upload.active')}</span>
+          </div>
+          <div className={css.uploadQueueHeaderActions}>
+            {clearable && <Button size="sm" variant="ghost" onClick={() => { client.clearFinishedUploads() }}>{t('upload.clear')}</Button>}
+            <Button size="sm" variant="ghost" aria-label={expanded ? t('close') : t('upload.queue')} onClick={() => { setExpanded(value => !value) }} icon={<IconCloseOutline16 size={14} />} />
+          </div>
         </div>
-        {clearable && <Button size="sm" variant="ghost" onClick={() => { client.clearFinishedUploads() }}>{t('upload.clear')}</Button>}
-      </div>
-      <progress className={css.uploadOverall} value={overall} max={100} aria-label={t('upload.overall')} />
-      <div className={css.uploadRows}>
-        {items.map((item) => {
-          const progress = percent(item)
-          return (
-            <div key={item.id} className={css.uploadRow} data-upload-status={item.status}>
-              <div className={css.uploadRowMain}>
-                <span className={css.uploadName}>{item.name}</span>
-                <span className={css.uploadState}>{t(`upload.status.${item.status}`)}</span>
-              </div>
-              <progress value={progress} max={100} aria-label={`${item.name} ${String(progress)}%`} />
-              {item.error === undefined ? null : <small className={css.uploadError}>{item.error}</small>}
-              <div className={css.uploadActions}>
-                {(item.status === 'queued' || item.status === 'uploading') && (
-                  <button type="button" onClick={() => { client.cancelUpload(item.id) }}>
-                    {t('upload.cancel')} {item.name}
-                  </button>
-                )}
-                {(item.status === 'failed' || item.status === 'cancelled') && (
-                  <button type="button" onClick={() => { client.retryUpload(item.id) }}>
-                    {t('upload.retry')} {item.name}
-                  </button>
-                )}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </section>
+        {expanded && <>
+          <progress className={css.uploadOverall} value={overall} max={100} aria-label={t('upload.overall')} />
+          <div className={css.uploadRows}>
+            {items.map((item) => {
+              const progress = percent(item)
+              return (
+                <div key={item.id} className={css.uploadRow} data-upload-status={item.status}>
+                  <div className={css.uploadRowMain}>
+                    <span className={css.uploadName}>{item.name}</span>
+                    <span className={css.uploadState}>{t(`upload.status.${item.status}`)}</span>
+                  </div>
+                  <progress value={progress} max={100} aria-label={`${item.name} ${String(progress)}%`} />
+                  {item.error === undefined ? null : <small className={css.uploadError}>{item.error}</small>}
+                  <div className={css.uploadActions}>
+                    {(item.status === 'queued' || item.status === 'uploading') && (
+                      <button type="button" onClick={() => { client.cancelUpload(item.id) }}>
+                        {t('upload.cancel')} {item.name}
+                      </button>
+                    )}
+                    {(item.status === 'failed' || item.status === 'cancelled') && (
+                      <button type="button" onClick={() => { client.retryUpload(item.id) }}>
+                        {t('upload.retry')} {item.name}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </>}
+      </section>
+    </>
   )
 }

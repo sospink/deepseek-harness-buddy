@@ -51,6 +51,7 @@ export type DriveAuditOperation =
   | 'file/move'
   | 'file/metadata'
   | 'file/delete'
+  | 'file/purge'
   | 'file/restore'
 
 /** Deployment-resolved admission and retention limits. */
@@ -203,6 +204,12 @@ export interface UpdateDriveFileMetadataInput {
 /** Soft-delete one logical file. */
 export interface DeleteDriveFileInput {
   readonly fileId: DriveFileId
+  readonly mutation?: DriveMutationContext
+}
+
+/** Permanently remove existing logical files and every unreferenced version blob. */
+export interface PurgeDriveFilesInput {
+  readonly fileIds: readonly DriveFileId[]
   readonly mutation?: DriveMutationContext
 }
 

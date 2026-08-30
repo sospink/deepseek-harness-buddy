@@ -47,6 +47,7 @@
   border-radius: 22px;
   background: var(--dsw-specific-input-major);
   box-shadow: var(--dsw-shadow-lv2);
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
   /* The draft text follows the Settings font-size preference (the textarea,
      mirror, and backdrop all inherit from here, so the three layers stay in
      step); the line height keeps the default 10px leading via the shared px
@@ -60,6 +61,23 @@
      (see ui-theme styles/scrollbar.css for the rebinding contract). */
   --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
   --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
+}
+
+.card:not(.cardWorkspaceTrigger):focus-within {
+  border-color: var(--dsw-alias-state-business-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--dsw-alias-state-business-primary) 14%, transparent), var(--dsw-shadow-lv2);
+}
+
+.cardHasDraft {
+  background: var(--dsw-specific-input-major);
+}
+
+.cardHasAttachments {
+  padding-top: 8px;
+}
+
+.cardBusy {
+  border-color: color-mix(in srgb, var(--dsw-alias-state-business-primary) 56%, var(--dsw-alias-border-l2-darkmode-thin));
 }
 
 /* No-workspace trigger state: dashed l4 stroke marks the card as a pick-a-
@@ -101,6 +119,12 @@
   align-items: center;
   gap: 8px;
   padding: 10px 12px 0;
+}
+
+.accessory :global(button),
+.row button,
+.row select {
+  transition: background-color 120ms ease, color 120ms ease, opacity 120ms ease, transform 120ms ease;
 }
 
 /* Floating overlay anchor (menu / popupSelect shell): entries position
@@ -322,6 +346,23 @@
   transform: translateY(-2px);
 }
 
+.primary:not(:disabled):hover {
+  transform: translateY(-3px) scale(1.04);
+}
+
+.primary:not(:disabled):active {
+  transform: translateY(-1px) scale(0.96);
+}
+
+.cardBusy .primary:not(:disabled) {
+  animation: input-send-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes input-send-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--dsw-alias-state-business-primary) 0%, transparent); }
+  50% { box-shadow: 0 0 0 5px color-mix(in srgb, var(--dsw-alias-state-business-primary) 18%, transparent); }
+}
+
 .primary:hover:not(:disabled) {
   background: var(--dsw-alias-button-info-hover);
 }
@@ -340,4 +381,8 @@
   color: inherit;
   font-size: 12px;
   cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card, .row button, .row select, .primary { transition: none; animation: none; }
 }

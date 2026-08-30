@@ -13,6 +13,7 @@ import type {
   DriveBaseline,
   DriveCreateFolderRequest,
   DriveFileRequest,
+  DrivePurgeFilesRequest,
   DriveFileValue,
   DriveFolderValue,
   DriveFollowFrame,
@@ -129,6 +130,13 @@ export class BuddyDriveController extends TypertRemoteService {
    */
   @Remote('deleteFile')
   deleteFile(request: DriveFileRequest): Promise<DriveFileValue> { return this.commands.deleteFile(request) }
+
+  /** Permanently remove selected files through the browser Remote.
+   * @param request - File identities to remove.
+   * @returns The number of files removed.
+   */
+  @Remote('purgeFiles')
+  purgeFiles(request: DrivePurgeFilesRequest): Promise<{ count: number }> { return this.commands.purgeFiles(request) }
 
   /**
    * Restore a soft-deleted file through the browser Remote.

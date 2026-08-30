@@ -40,6 +40,7 @@ function client(options: BuddyDriveClientOptions = {}) {
     updateFileMetadata: vi.fn(async () => ({ ok: true as const, value: { file } })),
     deleteFile: vi.fn(async () => ({ ok: true as const, value: { file: deleted } })),
     restoreFile: vi.fn(async () => ({ ok: true as const, value: { file } })),
+    purgeFiles: vi.fn(async () => ({ ok: true as const, value: { count: 1 } })),
   }
   const value = new BuddyDriveClient(new Context(), api as never, options)
   value.replace(baseline)
@@ -144,7 +145,7 @@ describe('DriveOverlay', () => {
     const b = client()
     b.value.open()
     const update = vi.spyOn(b.value, 'updateMetadata').mockResolvedValue()
-    const remove = vi.spyOn(b.value, 'deleteFile').mockResolvedValue()
+    const purge = vi.spyOn(b.value, 'purgeFiles').mockResolvedValue()
     render(<DriveOverlay {...overlayProps(b.value)} />)
     expect(screen.getByRole('dialog', { name: '资料云盘' })).not.toBeNull()
     expect(screen.getByText('全部文件')).not.toBeNull()
@@ -160,8 +161,11 @@ describe('DriveOverlay', () => {
     fireEvent.click(screen.getByRole('button', { name: '保存分类' }))
     await waitFor(() => { expect(update).toHaveBeenCalledWith(file.id, 'reference', ['角色']) })
     expect(screen.getByRole('link', { name: '下载' }).getAttribute('href')).toBe('/api/buddy-drive/content/version')
-    fireEvent.click(screen.getByRole('button', { name: '删除' }))
-    await waitFor(() => { expect(remove).toHaveBeenCalledWith(file.id) })
+    fireEvent.click(screen.getAllByRole('button', { name: '永久删除' }).at(-1)!)
+    const confirmation = screen.getByRole('dialog', { name: '永久删除文件' })
+    fireEvent.click(screen.getByLabelText('我确认永久删除这些文件及其内容'))
+    fireEvent.click(confirmation.querySelector('button[data-risk-confirm]') ?? screen.getByRole('button', { name: '确认永久删除' }))
+    await waitFor(() => { expect(purge).toHaveBeenCalledWith([file.id]) })
   })
 
   it('creates a folder, uploads selected files, exposes deleted files, retries, and closes with Escape', async () => {
@@ -252,7 +256,7 @@ describe('DriveOverlay', () => {
     fireEvent.change(screen.getByPlaceholderText('文件夹名称'), { target: { value: '失败目录' } })
     fireEvent.click(screen.getByRole('button', { name: '创建' }))
     await waitFor(() => { expect(create).toHaveBeenCalled() })
-    expect(await screen.findByText('string failure')).not.toBeNull()
+    expect((await screen.findByRole('alert')).textContent).toContain('string failure')
   })
 
   it('renders loading, failure, and operation errors honestly', async () => {
@@ -264,7 +268,7 @@ describe('DriveOverlay', () => {
     expect(screen.getByText('无法连接')).not.toBeNull()
     fireEvent.click(screen.getByRole('button', { name: '重试' }))
     await waitFor(() => { expect(refresh).toHaveBeenCalled() })
-    expect(await screen.findByText('仍然失败')).not.toBeNull()
+    expect((await screen.findByRole('alert')).textContent).toContain('仍然失败')
     view.unmount()
 
     const loading = new BuddyDriveClient(new Context(), {} as never)

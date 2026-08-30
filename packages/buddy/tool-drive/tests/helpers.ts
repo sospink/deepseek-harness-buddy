@@ -116,6 +116,7 @@ export class FakeDrive extends DriveStore {
   moveFile(_input: MoveDriveFileInput): Promise<DriveFile> { throw new Error('read-only fixture') }
   updateFileMetadata(_input: UpdateDriveFileMetadataInput): Promise<DriveFile> { throw new Error('read-only fixture') }
   deleteFile(_input: DeleteDriveFileInput): Promise<DriveFile> { throw new Error('read-only fixture') }
+  purgeFiles(_input: { fileIds: readonly DriveFileId[] }): Promise<number> { throw new Error('read-only fixture') }
   restoreFile(_input: RestoreDriveFileInput): Promise<DriveFile> { throw new Error('read-only fixture') }
 }
 

@@ -192,6 +192,15 @@ export class BuddyDriveClient extends Service {
     await this.refresh()
   }
 
+  /** Permanently remove selected files through the authenticated Remote.
+   * @param fileIds - File identities to remove.
+   */
+  async purgeFiles(fileIds: readonly DriveFileId[]): Promise<void> {
+    const result = await this.remote.purgeFiles({ fileIds })
+    if (!result.ok) throw failureMessage(result.error)
+    await this.refresh()
+  }
+
   /** Add files to the bounded upload queue and start available requests.
    * @param inputs - Files and metadata to enqueue.
    * @returns Generated upload ids in input order.

@@ -9,6 +9,7 @@ import type {
   DriveBaseline,
   DriveCreateFolderRequest,
   DriveFileRequest,
+  DrivePurgeFilesRequest,
   DriveFileValue,
   DriveFolderValue,
   DriveMoveFileRequest,
@@ -77,6 +78,14 @@ export class DriveCommands {
 
   async deleteFile(request: DriveFileRequest): Promise<DriveFileValue> {
     return this.wrap(async () => ({ file: await this.ctx.drive.deleteFile({ fileId: DriveFileId(request.fileId) }) }))
+  }
+
+  /** Permanently remove selected files through the Drive provider.
+   * @param request - File identities to remove.
+   * @returns The number of files removed.
+   */
+  purgeFiles(request: DrivePurgeFilesRequest): Promise<{ count: number }> {
+    return this.wrap(async () => ({ count: await this.ctx.drive.purgeFiles({ fileIds: request.fileIds.map(DriveFileId) }) }))
   }
 
   async restoreFile(request: DriveFileRequest): Promise<DriveFileValue> {

@@ -438,6 +438,21 @@ describe('LocalDriveStore public operation matrix', () => {
     expect((await result.drive.restoreFile({ fileId: file.id })).updatedAt).toBe(restored.updatedAt)
   })
 
+  it('permanently removes selected files, versions, and unreferenced blobs', async () => {
+    const result = await harness()
+    const file = await result.drive.importFile({
+      libraryId: DriveLibraryId('default'), name: 'purge.md', kind: 'general', data: new TextEncoder().encode('# purge'),
+    })
+    const version = result.drive.getVersion(file.currentVersionId)
+    if (version === undefined) throw new Error('purge fixture version is missing')
+    expect(await readFile(blobPath(result.root, version.digest))).toBeDefined()
+    await expect(result.drive.purgeFiles({ fileIds: [file.id] })).resolves.toBe(1)
+    expect(result.drive.getFile(file.id)).toBeUndefined()
+    expect(result.drive.getVersion(version.id)).toBeUndefined()
+    await expect(readFile(blobPath(result.root, version.digest))).rejects.toMatchObject({ code: 'ENOENT' })
+    expect(result.drive.listAudit({ targetId: file.id })[0]?.operation).toBe('file/purge')
+  })
+
   it('validates library/version lookups, bounded audit reads, and read cancellation', async () => {
     const result = await harness()
     await expect(result.drive.createFolder({ libraryId: DriveLibraryId('unknown'), name: 'x' }))
