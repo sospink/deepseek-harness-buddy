@@ -34,7 +34,7 @@
   z-index: 1;
   width: 100%;
   max-width: var(--dsh-composer-card-max-width);
-  transition: transform 180ms ease-out;
+  transition: transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .morphExpanded {
@@ -49,9 +49,9 @@
   opacity: 0;
   transform: translateY(100%);
   transition:
-    height 400ms cubic-bezier(0.175, 0.885, 0.32, 1.275),
-    opacity 280ms ease-out,
-    transform 400ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    height 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 220ms ease-out,
+    transform 320ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .attachmentShelfOpen {
@@ -79,6 +79,8 @@
      top pad on the card before .InputText. */
   gap: 12px;
   width: 100%;
+  height: 94px;
+  min-height: 94px;
   padding-top: 10px;
   /* Input stroke: black/0.10 light, white/0.06 dark (figma darkmode note says
      the input border is one notch weaker than buttons) — exactly the
@@ -89,11 +91,13 @@
   box-shadow: var(--dsw-shadow-lv2);
   overflow: visible;
   transition:
-    min-height 400ms cubic-bezier(0.175, 0.885, 0.32, 1.275),
-    border-radius 300ms ease,
-    border-color 160ms ease,
-    box-shadow 160ms ease,
-    background-color 160ms ease;
+    height 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    min-height 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    max-height 320ms cubic-bezier(0.22, 1, 0.36, 1),
+    border-radius 240ms ease-out,
+    border-color 180ms ease-out,
+    box-shadow 220ms ease-out,
+    background-color 180ms ease-out;
   /* The draft text follows the Settings font-size preference (the textarea,
      mirror, and backdrop all inherit from here, so the three layers stay in
      step); the line height keeps the default 10px leading via the shared px
@@ -134,14 +138,20 @@
   min-height: 0;
   padding: 0 48px 0 16px;
   opacity: 0;
-  transform: translateY(-4px) scale(0.97);
+  transform: translateY(-2px) scale(0.985);
   pointer-events: none;
 }
 
 .cardCollapsed .placeholder {
-  inset: 13px 48px auto 16px;
+  top: 50%;
+  right: 48px;
+  left: 16px;
+  line-height: 22px;
   font-weight: 500;
-  transition: opacity 220ms ease, transform 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  transform: translateY(-50%);
+  transition:
+    opacity 180ms ease-out,
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .cardCollapsed .row,
@@ -149,8 +159,7 @@
   position: absolute;
   inset: auto 0 0;
   opacity: 0;
-  filter: blur(4px);
-  transform: translateY(8px);
+  transform: translateY(6px);
   pointer-events: none;
 }
 
@@ -170,9 +179,9 @@
   color: #fff;
   cursor: pointer;
   transition:
-    opacity 220ms ease,
-    transform 300ms cubic-bezier(0.175, 0.885, 0.32, 1.275),
-    background-color 140ms ease;
+    opacity 180ms ease-out,
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    background-color 160ms ease-out;
 }
 
 .compactExpand:hover {
@@ -190,10 +199,12 @@
 }
 
 .cardHasDraft {
+  height: auto;
   background: var(--dsw-specific-input-major);
 }
 
 .cardHasAttachments {
+  height: auto;
   padding-top: 8px;
 }
 
@@ -299,6 +310,9 @@
   color: var(--dsw-alias-label-primary);
   /* Business blue, not brand-primary: that token resolves to ink in this sheet. */
   caret-color: var(--dsw-alias-state-business-primary);
+  transition:
+    opacity 180ms ease-out,
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 /* Lexical paragraphs are <p> blocks: strip the UA margins so the surface
@@ -322,6 +336,9 @@
   color: var(--dsw-alias-label-caption);
   pointer-events: none;
   user-select: none;
+  transition:
+    opacity 180ms ease-out,
+    transform 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .inputDisabled {
@@ -358,12 +375,11 @@
      here can never match a query in another module's sheet. */
   container-type: inline-size;
   opacity: 1;
-  filter: blur(0);
   transform: translateY(0);
+  will-change: opacity, transform;
   transition:
-    opacity 280ms ease 80ms,
-    filter 280ms ease 80ms,
-    transform 360ms cubic-bezier(0.175, 0.885, 0.32, 1.275) 60ms;
+    opacity 220ms ease-out 50ms,
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1) 30ms;
 }
 
 .tools,
