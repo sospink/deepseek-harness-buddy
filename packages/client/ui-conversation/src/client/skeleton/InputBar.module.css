@@ -32,15 +32,13 @@
 .morph {
   position: relative;
   z-index: 1;
-  width: min(320px, 100%);
+  width: 100%;
   max-width: var(--dsh-composer-card-max-width);
-  transition:
-    width 400ms cubic-bezier(0.175, 0.885, 0.32, 1.275),
-    transform 180ms ease-out;
+  transition: transform 180ms ease-out;
 }
 
 .morphExpanded {
-  width: min(480px, 100%);
+  width: 100%;
 }
 
 .attachmentShelf {
@@ -525,12 +523,5 @@
   .morph, .attachmentShelf, .card, .row, .row button, .row select, .primary, .primary svg {
     transition: none;
     animation: none;
-  }
-}
-
-@media (max-width: 520px) {
-  .morph,
-  .morphExpanded {
-    width: 100%;
   }
 }
