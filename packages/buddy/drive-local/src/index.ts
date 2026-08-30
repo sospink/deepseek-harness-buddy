@@ -553,12 +553,23 @@ export class LocalDriveStore extends DriveStore {
       const mutation = mutationContext(input.mutation)
       const updatedAt = new Date(Math.max(Date.now(), ...files.map(file => Date.parse(file.updatedAt) + 1))).toISOString()
       const audit = files.map(file => this.audit(mutation, 'file/purge', 'file', file.id, updatedAt))
+      const retainedAudit = state.audit.map((event) => {
+        if (!fileIdSet.has(event.targetId as DriveFileIdType) || event.idempotencyKey === undefined) return event
+        // The purged file/version can no longer back an import replay. Preserve
+        // the public audit event while retiring its provider-private replay data.
+        const {
+          idempotencyKey: _idempotencyKey,
+          requestDigest: _requestDigest,
+          ...publicEvent
+        } = event
+        return publicEvent
+      })
       await this.commit({
         ...state,
         library: { ...state.library, updatedAt },
         files: state.files.filter(file => !fileIdSet.has(file.id)),
         versions: remainingVersions,
-        audit: [...state.audit, ...audit],
+        audit: [...retainedAudit, ...audit],
       })
       await reconcileBlobs(this.root, new Map(remainingVersions.map(version => [version.digest, version.bytes])))
       return files.length

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { makeTranslate } from '@deepseek-ai/dsh-client-test-runtime'
 import type { DriveUploadItem } from '../src/client/service.ts'
 import { UploadQueue } from '../src/client/UploadQueue.tsx'
@@ -66,5 +66,16 @@ describe('UploadQueue', () => {
     render(<UploadQueue client={client() as never} items={[succeeded]} t={t} />)
     expect(screen.getByLabelText('zero-ok.md 100%')).not.toBeNull()
     expect(screen.getByLabelText('上传总体进度').getAttribute('value')).toBe('100')
+  })
+
+  it('collapses a completed batch and clears it when the success dialog closes', async () => {
+    const value = client()
+    const view = render(<UploadQueue client={value as never} items={[item('uploading')]} t={t} />)
+    view.rerender(<UploadQueue client={value as never} items={[item('succeeded')]} t={t} />)
+
+    expect(await screen.findByRole('dialog')).not.toBeNull()
+    expect(screen.getByRole('region', { name: '上传队列' }).getAttribute('data-expanded')).toBe('false')
+    fireEvent.click(screen.getAllByRole('button', { name: '知道了' }).at(-1)!)
+    await waitFor(() => { expect(value.clearFinishedUploads).toHaveBeenCalledOnce() })
   })
 })

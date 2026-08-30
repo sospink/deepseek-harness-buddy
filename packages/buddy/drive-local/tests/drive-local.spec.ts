@@ -453,6 +453,22 @@ describe('LocalDriveStore public operation matrix', () => {
     expect(result.drive.listAudit({ targetId: file.id })[0]?.operation).toBe('file/purge')
   })
 
+  it('retires import replay metadata when permanently deleting an uploaded file', async () => {
+    const result = await harness()
+    const input = {
+      libraryId: DriveLibraryId('default'),
+      name: 'purge-replay.md',
+      kind: 'general' as const,
+      data: new TextEncoder().encode('# purge replay'),
+      idempotencyKey: 'upload-purge-replay',
+    }
+    const file = await result.drive.importFile(input)
+
+    await expect(result.drive.purgeFiles({ fileIds: [file.id] })).resolves.toBe(1)
+    expect(result.drive.getFile(file.id)).toBeUndefined()
+    await expect(result.drive.importFile(input)).resolves.toMatchObject({ name: input.name })
+  })
+
   it('validates library/version lookups, bounded audit reads, and read cancellation', async () => {
     const result = await harness()
     await expect(result.drive.createFolder({ libraryId: DriveLibraryId('unknown'), name: 'x' }))

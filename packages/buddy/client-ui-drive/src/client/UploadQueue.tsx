@@ -28,11 +28,19 @@ export function UploadQueue({ client, items, t }: {
   const [successCount, setSuccessCount] = useState<number | undefined>(undefined)
   const previous = useRef(new Map<string, DriveUploadItem['status']>())
   const initialized = useRef(false)
+  const closeSuccess = () => {
+    setSuccessCount(undefined)
+    client.clearFinishedUploads()
+  }
   useEffect(() => {
     if (initialized.current) {
       const newlySucceeded = items.filter(item => item.status === 'succeeded'
         && previous.current.get(item.id) !== 'succeeded').length
-      if (newlySucceeded > 0) setSuccessCount(newlySucceeded)
+      const allSucceeded = items.length > 0 && items.every(item => item.status === 'succeeded')
+      if (newlySucceeded > 0 && allSucceeded) {
+        setSuccessCount(items.length)
+        setExpanded(false)
+      }
     }
     previous.current = new Map(items.map(item => [item.id, item.status]))
     initialized.current = true
@@ -47,11 +55,11 @@ export function UploadQueue({ client, items, t }: {
       {successCount !== undefined && (
         <Modal
           open
-          onClose={() => { setSuccessCount(undefined) }}
+          onClose={closeSuccess}
           title={t('uploadSuccessTitle')}
           description={t('uploadSuccessDescription', { count: successCount })}
           closeLabel={t('uploadClose')}
-          footer={<Button variant="primary" onClick={() => { setSuccessCount(undefined) }} icon={<IconCheckOutline16 />}>{t('uploadClose')}</Button>}
+          footer={<Button variant="primary" onClick={closeSuccess} icon={<IconCheckOutline16 />}>{t('uploadClose')}</Button>}
         />
       )}
       <section className={css.uploadQueue} aria-label={t('upload.queue')} data-expanded={expanded}>
