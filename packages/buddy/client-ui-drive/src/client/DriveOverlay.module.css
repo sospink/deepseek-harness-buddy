@@ -44,7 +44,12 @@
 .folderForm button, .toolbar button { border: none; border-radius: 8px; padding: 6px 9px; background: var(--dsw-alias-interactive-bg-hover); color: inherit; cursor: pointer; }
 .toolbar { flex: none; display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-bottom: 1px solid var(--dsw-alias-border-l1); }
 .toolbar > :first-child { flex: 1; }
-.toolbar select, .kindControl select { border: 1px solid var(--dsw-alias-border-l2); border-radius: 8px; padding: 7px 8px; background: var(--dsw-alias-bg-base); color: inherit; }
+.kindSelect { display: inline-flex; align-items: center; justify-content: space-between; gap: 12px; height: 36px; min-width: 126px; padding: 0 14px; border: none; border-radius: 18px; outline: none; background: var(--dsw-alias-bg-module-platform); color: var(--dsw-alias-label-primary); cursor: pointer; font: inherit; font-size: 14px; line-height: 22px; white-space: nowrap; }
+.kindSelect:hover, .kindSelect[aria-expanded="true"] { background: var(--dsw-alias-interactive-bg-hover); }
+.kindSelect:focus-visible { box-shadow: 0 0 0 2px var(--dsw-alias-state-business-tertiary); }
+.kindSelectWide { width: 100%; }
+.kindChevron { flex: none; color: var(--dsw-alias-label-tertiary); transition: transform 160ms ease; }
+.kindChevronOpen { transform: rotate(180deg); }
 .fileList { flex: 1; min-height: 0; overflow: auto; padding: 8px 12px 20px; }
 .fileRow { width: 100%; display: grid; grid-template-columns: 20px minmax(0, 1fr); align-items: stretch; gap: 8px; min-height: 46px; padding: 4px 8px; border-bottom: 1px solid var(--dsw-alias-border-l1); background: transparent; color: inherit; text-align: left; }
 .fileRow:hover { background: var(--dsw-alias-interactive-bg-hover); }

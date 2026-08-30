@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalS
 import clsx from 'clsx'
 import {
   Button,
+  IconChevronDownOutline14,
   IconCheckOutline16,
   RiskConfirmation,
   Toast,
@@ -13,6 +14,7 @@ import {
   IconSearchOutline16,
   IconTrashOutline16,
   Input,
+  Menu,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
 import type {} from '@deepseek-ai/dsh-client-ui-layout/client'
@@ -49,6 +51,43 @@ function mediaLabel(mediaType: DriveFile['mediaType'], t: DriveOverlayProps['t']
   if (mediaType === 'text/markdown') return t('media.markdown')
   if (mediaType === 'application/pdf') return t('media.pdf')
   return t('media.docx')
+}
+
+function KindSelect({ value, onChange, t, wide = false }: {
+  value: DriveFileKind
+  onChange: (value: DriveFileKind) => void
+  t: DriveOverlayProps['t']
+  wide?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+  const label = t(`kind.${value}`)
+  return (
+    <Menu
+      open={open}
+      portal
+      dense
+      items={KINDS.map(kind => ({ id: kind, label: t(`kind.${kind}`) }))}
+      selectedId={value}
+      onClose={() => { setOpen(false) }}
+      onSelect={(id) => {
+        onChange(id as DriveFileKind)
+        setOpen(false)
+      }}
+      anchor={(
+        <button
+          type="button"
+          className={clsx(css.kindSelect, wide && css.kindSelectWide)}
+          aria-label={`${t('kind')}: ${label}`}
+          aria-haspopup="menu"
+          aria-expanded={open}
+          onClick={() => { setOpen(current => !current) }}
+        >
+          <span>{label}</span>
+          <IconChevronDownOutline14 className={clsx(css.kindChevron, open && css.kindChevronOpen)} />
+        </button>
+      )}
+    />
+  )
 }
 
 /** Full-window standalone drive workspace. */
@@ -224,9 +263,7 @@ export function DriveOverlay({ client, t }: DriveOverlayProps) {
         <main className={css.files}>
           <div className={css.toolbar}>
             <Input icon={<IconSearchOutline16 size={16} />} value={search} placeholder={t('search')} onChange={(event) => { setSearch(event.target.value) }} />
-            <select value={uploadKind} aria-label={t('kind')} onChange={(event) => { setUploadKind(event.target.value as DriveFileKind) }}>
-              {KINDS.map(kind => <option key={kind} value={kind}>{t(`kind.${kind}`)}</option>)}
-            </select>
+            <KindSelect value={uploadKind} onChange={setUploadKind} t={t} />
             <button type="button" onClick={() => { setShowDeleted(value => !value) }}>
               {showDeleted ? t('hideDeleted') : t('showDeleted')}
             </button>
@@ -334,12 +371,10 @@ function FileDetails({ client, file, run, t, onPurge }: {
         <div><dt>{t('updatedAt')}</dt><dd>{new Date(file.updatedAt).toLocaleString()}</dd></div>
         <div><dt>{t('tags')}</dt><dd>{file.tags.join(', ') || '—'}</dd></div>
       </dl>
-      <label className={css.kindControl}>
+      <div className={css.kindControl}>
         <span>{t('kind')}</span>
-        <select value={kind} onChange={(event) => { setKind(event.target.value as DriveFileKind) }}>
-          {KINDS.map(value => <option key={value} value={value}>{t(`kind.${value}`)}</option>)}
-        </select>
-      </label>
+        <KindSelect value={kind} onChange={setKind} t={t} wide />
+      </div>
       <Button size="sm" variant="outline" onClick={() => { void run(() => client.updateMetadata(file.id, kind, file.tags)) }}>
         {t('saveKind')}
       </Button>
