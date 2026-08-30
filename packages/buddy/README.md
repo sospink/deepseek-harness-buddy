@@ -24,6 +24,7 @@ The `buddy/` group contains private packages owned by the `sospink/deepseek-harn
 
 ## Related documentation
 
+- [Buddy Drive subsystem](../../docs/subsystems/buddy-drive.md) — the provider, browser adapter, and read-only model Consumer boundaries.
 - [Safety Agent drive proposal](../../.agents/notes/proposed/feature/2026-08-29-safety-agent-drive-library.md) — capability boundary, preview plan, security posture, and phased delivery.
 - [Delivery TODO](../../BUDDY_DRIVE_TODO.md) — requirement ledger, acceptance evidence, and current implementation status.
 

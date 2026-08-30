@@ -11,6 +11,15 @@ English | [中文](README.zh.md)
 
 `@sospink/dsh-buddy-drive-local` implements `ctx.drive` on one Host. It commits the complete metadata relation through the `buddy_drive` Storage Domain global and stores immutable source bytes under a private SHA-256 object tree. It admits Markdown, PDF, and DOCX on the Host, enforces quotas and sibling-name/tree invariants, records mutation audits, durably replays new-file imports by their idempotency key, verifies every referenced blob during startup, and removes temporary or unreferenced provider-owned objects.
 
+## Table of Contents
+
+- [Use this package](#use-this-package)
+- [Understand the implementation](#understand-the-implementation)
+- [Further Exploration](#further-exploration)
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
+
 ## Use this package
 
 Mount the Storage hub and Domain data form first, then mount `LocalDriveStore` with a private root outside every Agent Workspace:

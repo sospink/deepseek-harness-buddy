@@ -1152,6 +1152,9 @@ importers:
 
   packages/buddy/drive-app:
     dependencies:
+      '@deepseek-ai/dsh-agent-presets':
+        specifier: workspace:^
+        version: link:../../preset/agent-presets
       '@sospink/dsh-buddy-api-drive':
         specifier: workspace:^
         version: link:../api-drive

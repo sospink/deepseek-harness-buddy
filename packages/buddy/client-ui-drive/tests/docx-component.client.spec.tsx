@@ -154,7 +154,7 @@ describe('DocxPreview', () => {
       expect(screen.queryByText('DOCX 预览失败')).toBeNull()
       mocks.parse.mockReturnValueOnce({ channel: DOCX_FRAME_CHANNEL, nonce: 'n', type: 'failure', ...(message === undefined ? {} : { message }) })
       messages.listener(new MessageEvent('message', { source: contentWindow, data: {} }))
-      expect(await screen.findByText(message ?? 'DOCX rendering failed.')).not.toBeNull()
+      expect(await screen.findByText(message ?? t('docx.renderFailed'))).not.toBeNull()
       cleanup()
     }
   })
@@ -183,7 +183,7 @@ describe('DocxPreview', () => {
     const timed = render(<DocxPreview url="/content/timeout" t={t} />)
     await screen.findByTitle('隔离 DOCX 文档预览')
     await vi.advanceTimersByTimeAsync(15_000)
-    expect(screen.getByText('DOCX rendering timed out.')).not.toBeNull()
+    expect(screen.getByText(t('docx.timeout'))).not.toBeNull()
     timed.unmount()
 
     successfulLoad()
@@ -198,6 +198,6 @@ describe('DocxPreview', () => {
     }))
     expect(await screen.findByText('已在无网络的隔离环境中渲染')).not.toBeNull()
     await vi.advanceTimersByTimeAsync(20_000)
-    expect(screen.queryByText('DOCX rendering timed out.')).toBeNull()
+    expect(screen.queryByText(t('docx.timeout'))).toBeNull()
   })
 })

@@ -10,6 +10,7 @@ export const DRIVE_UPLOAD_QUEUE_CONCURRENCY = 2
 /** One upload request wall-clock budget. */
 export const DRIVE_UPLOAD_TIMEOUT_MS = 120_000
 
+/** File and metadata submitted to the Drive upload route. */
 export interface UploadDriveFileInput {
   readonly file: File
   readonly parentId?: DriveFolderId
@@ -17,20 +18,24 @@ export interface UploadDriveFileInput {
   readonly tags?: readonly string[]
 }
 
+/** Upload input augmented with the idempotency key sent to the Host. */
 export interface UploadTransportInput extends UploadDriveFileInput {
   readonly uploadId: string
 }
 
+/** Byte progress reported by an upload transport. */
 export interface UploadProgress {
   readonly loaded: number
   readonly total: number
 }
 
+/** Promise and cancellation handle for one upload request. */
 export interface UploadRequest {
   readonly promise: Promise<DriveFile>
   abort(): void
 }
 
+/** Transport abstraction used by the queue and its browser XHR implementation. */
 export type UploadTransport = (
   input: UploadTransportInput,
   onProgress: (progress: UploadProgress) => void,
@@ -62,7 +67,12 @@ function uploadFailure(value: unknown): Error {
   return new Error(`${failure?.error?.code ?? 'upload-failed'}: ${failure?.error?.message ?? 'Upload failed.'}`)
 }
 
-/** Start one authenticated same-origin upload; Host `201` is the only success boundary. */
+/** Start one authenticated same-origin upload; Host `201` is the only success boundary.
+ * @param input - File, metadata, and upload id sent to the Host.
+ * @param onProgress - Callback receiving bounded byte progress.
+ * @param createXhr - Injectable XHR factory used by browser code and tests.
+ * @returns A promise and abort handle for the upload.
+ */
 export function startDriveUpload(
   input: UploadTransportInput,
   onProgress: (progress: UploadProgress) => void,

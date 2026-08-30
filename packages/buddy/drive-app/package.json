@@ -36,6 +36,7 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@deepseek-ai/dsh-agent-presets": "workspace:^",
     "@sospink/dsh-buddy-api-drive": "workspace:^",
     "@sospink/dsh-buddy-client-ui-drive": "workspace:^",
     "@sospink/dsh-buddy-drive-local": "workspace:^",

@@ -153,7 +153,7 @@ function PdfReadyView({ ready, t }: { ready: PdfReadyState; t: DriveOverlayProps
       {ready.document.numPages > PDF_SEARCH_MAX_PAGES && <small className={css.pdfNotice}>{t('pdf.searchLimited')}</small>}
       {searchResult !== undefined && <small className={css.pdfNotice}>{searchResult === 'found' ? t('pdf.found') : t('pdf.notFound')}</small>}
       {scriptsBlocked && <small className={css.pdfBlocked}>{t('pdf.scriptsBlocked')}</small>}
-      <PdfPageCanvas document={ready.document} pageNumber={pageNumber} zoom={zoom} onFailure={failPage} />
+      <PdfPageCanvas document={ready.document} pageNumber={pageNumber} zoom={zoom} onFailure={failPage} t={t} />
       {links.length > 0 && (
         <div className={css.pdfLinks}>
           <strong>{t('pdf.links')}</strong>
@@ -164,11 +164,12 @@ function PdfReadyView({ ready, t }: { ready: PdfReadyState; t: DriveOverlayProps
   )
 }
 
-function PdfPageCanvas({ document, pageNumber, zoom, onFailure }: {
+function PdfPageCanvas({ document, pageNumber, zoom, onFailure, t }: {
   document: PDFDocumentProxy
   pageNumber: number
   zoom: number
   onFailure: (message: string) => void
+  t: DriveOverlayProps['t']
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
@@ -203,5 +204,5 @@ function PdfPageCanvas({ document, pageNumber, zoom, onFailure }: {
       page?.cleanup()
     }
   }, [document, onFailure, pageNumber, zoom])
-  return <div className={css.pdfCanvasViewport}><canvas ref={canvasRef} aria-label={`PDF page ${String(pageNumber)}`} /></div>
+  return <div className={css.pdfCanvasViewport}><canvas ref={canvasRef} aria-label={t('pdf.pageLabel').replace('{page}', String(pageNumber))} /></div>
 }

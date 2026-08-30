@@ -24,6 +24,7 @@ kind: "package-group"
 
 ## 相关文档
 
+- [Buddy Drive 子系统](../../docs/subsystems/buddy-drive.zh.md)——Provider、浏览器适配器和只读模型 Consumer 的边界。
 - [定位安全 Agent 云盘提案](../../.agents/notes/proposed/feature/2026-08-29-safety-agent-drive-library.zh.md)——能力边界、预览方案、安全策略和阶段交付。
 - [开发 TODO](../../BUDDY_DRIVE_TODO.md)——需求台账、验收证据和当前实现状态。
 

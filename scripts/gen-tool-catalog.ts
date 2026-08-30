@@ -68,6 +68,8 @@ import * as ToolWeb from '@deepseek-ai/dsh-tool-web'
 import VmWorkflowEngine from '@deepseek-ai/dsh-workflow-worker-thread'
 import * as ToolRalph from '@deepseek-ai/dsh-tool-ralph'
 import * as ToolWorkflow from '@deepseek-ai/dsh-tool-workflow'
+import * as ToolBuddyDrive from '@sospink/dsh-buddy-tool-drive'
+import type { DriveStore } from '@sospink/dsh-buddy-drive'
 import { githubSlug } from './verify-md-links.ts'
 
 /** Attachment seam marker that makes the attachments-conditional `read_image` schema harvestable. */
@@ -188,6 +190,21 @@ export interface ToolPackage {
  * guard proves it is exhaustive against the on-disk glob.
  */
 const TOOL_PACKAGES: ToolPackage[] = [
+  {
+    pkg: '@sospink/dsh-buddy-tool-drive',
+    dir: 'tool-drive',
+    source: 'packages/buddy/tool-drive/src/index.ts',
+    requires: ['ctx.drive', 'ctx.tools', 'ctx.systemPrompt'],
+    writes: ['tool/call', 'tool/result'],
+    async mount(ctx) {
+      // Schema registration does not read the Drive. The harvest only needs
+      // the injected seam to be present; execution is covered by the package.
+      ctx.provide('drive', {} as DriveStore)
+      await ctx.plugin(ToolBuddyDrive)
+    },
+    note:
+      'Registers only read-only `drive_list`, `drive_search`, and `drive_read` for a governed local Drive. The Positioning Safety preset adds an inherited-tool deny policy; this catalog entry harvests the consumer outside that scope so its schemas remain visible to documentation tooling.',
+  },
   {
     pkg: '@deepseek-ai/dsh-tool-ask-user',
     dir: 'tool-ask-user',

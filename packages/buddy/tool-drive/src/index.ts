@@ -119,6 +119,10 @@ function positive(name: string, value: number, minimum = 1): number {
   return value
 }
 
+/** Resolve and validate model-facing catalog, extraction, and result limits.
+ * @param config - Optional deployment overrides.
+ * @returns Complete validated tool configuration.
+ */
 export function resolveConfig(config: Config): ResolvedConfig {
   const resolved: ResolvedConfig = {
     maxCatalogFolders: positive('maxCatalogFolders', config.maxCatalogFolders ?? DEFAULTS.maxCatalogFolders),

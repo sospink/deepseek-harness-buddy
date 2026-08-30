@@ -7,6 +7,7 @@ import type {} from '@deepseek-ai/dsh-tools'
 export const name = 'buddy-drive-read-only-policy'
 export const inject = ['tools']
 
+/** Tool names permitted by the Positioning Safety Agent Drive policy. */
 export const DRIVE_TOOL_NAMES = ['drive_list', 'drive_search', 'drive_read'] as const
 const driveNames = new Set<string>(DRIVE_TOOL_NAMES)
 

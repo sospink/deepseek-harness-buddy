@@ -11,6 +11,15 @@ English | [中文](README.zh.md)
 
 `@sospink/dsh-buddy-api-drive` is the Host browser adapter for `ctx.drive`. It exposes metadata commands and a reconnect-safe full-snapshot stream through generated Typert Remote namespace `drive`, then registers authenticated binary routes for raw uploads, immutable content reads, and pinned PDF.js and DOCX preview assets. The package owns browser transport and failure mapping only; the Drive provider remains the authority for admission, metadata, blobs, quotas, audit, and recovery.
 
+## Table of Contents
+
+- [Use this package](#use-this-package)
+- [Understand the implementation](#understand-the-implementation)
+- [Further Exploration](#further-exploration)
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
+
 ## Use this package
 
 Mount it after Typert, the Drive provider, WebServer, and the Host Connection service. The Connection service supplies the same Host/Origin DNS-rebinding fence and persistent browser-session authentication used by `/api`; every WebServer route calls `ctx.connection.requestRejection()` before reading or serving bytes.

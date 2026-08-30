@@ -72,6 +72,12 @@ export const zh = {
   'docx.isolated': '已在无网络的隔离环境中渲染',
   'docx.pages': '页',
   'docx.frameTitle': '隔离 DOCX 文档预览',
+  'media.markdown': 'Markdown',
+  'media.pdf': 'PDF',
+  'media.docx': 'DOCX',
+  'pdf.pageLabel': 'PDF 第 {page} 页',
+  'docx.timeout': 'DOCX 渲染超时。',
+  'docx.renderFailed': 'DOCX 渲染失败。',
   kind: '资料分类',
   tags: '标签',
   sizeUnknown: '大小将在版本详情中显示',
@@ -159,6 +165,12 @@ export const en: Record<keyof typeof zh, string> = {
   'docx.isolated': 'Rendered in a network-disabled isolated context',
   'docx.pages': 'pages',
   'docx.frameTitle': 'Isolated DOCX document preview',
+  'media.markdown': 'Markdown',
+  'media.pdf': 'PDF',
+  'media.docx': 'DOCX',
+  'pdf.pageLabel': 'PDF page {page}',
+  'docx.timeout': 'DOCX rendering timed out.',
+  'docx.renderFailed': 'DOCX rendering failed.',
   kind: 'Classification',
   tags: 'Tags',
   sizeUnknown: 'Size is available from version details',
@@ -173,4 +185,5 @@ export const en: Record<keyof typeof zh, string> = {
   'kind.general': 'General',
 }
 
+/** Translation keys used by the Buddy Drive browser surface. */
 export type BuddyDriveKey = keyof typeof zh

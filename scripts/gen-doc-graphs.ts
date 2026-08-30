@@ -99,6 +99,23 @@ const GROUP_ORDER = [
 
 const SERVICE_ROLES: ServiceRole[] = [
   {
+    key: 'drive',
+    pkg: 'drive',
+    title: 'Governed document-drive capability seam',
+    mode: 'seam',
+    implementations: ['drive-local'],
+    consumers: ['api-drive', 'tool-drive'],
+    note: 'The provider-neutral Drive service owns library, immutable-version, audit, and verified-content contracts; the local provider supplies durable metadata and content while browser and model adapters consume only the seam.',
+  },
+  {
+    key: 'buddyDriveController',
+    pkg: 'api-drive',
+    title: 'Buddy Drive browser Remote controller',
+    mode: 'core',
+    consumers: ['client-ui-drive'],
+    note: 'The browser adapter projects committed Drive state through generated Remote commands and authenticated binary routes; it does not own Drive metadata, blobs, or model-facing tools.',
+  },
+  {
     key: 'attachments',
     pkg: 'attachment',
     title: 'Durable binary attachment storage',

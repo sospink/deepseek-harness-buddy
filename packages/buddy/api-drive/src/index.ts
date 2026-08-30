@@ -55,51 +55,109 @@ export class BuddyDriveController extends TypertRemoteService {
     ctx.effect(() => ctx.webServer.register(createDriveDocxRuntimeRoute(ctx)), 'buddy-api-drive: DOCX runtime route')
   }
 
+  /**
+   * Return the current complete Drive projection.
+   * @returns The current Drive baseline.
+   */
   @Remote('baseline')
   baseline(): DriveBaseline { return this.commands.baseline() }
 
+  /**
+   * Create a folder through the browser Remote.
+   * @param request - Folder creation request.
+   * @returns The committed folder value.
+   */
   @Remote('createFolder')
   createFolder(request: DriveCreateFolderRequest): Promise<DriveFolderValue> {
     return this.commands.createFolder(request)
   }
 
+  /**
+   * Rename a folder through the browser Remote.
+   * @param request - Folder rename request.
+   * @returns The committed folder value.
+   */
   @Remote('renameFolder')
   renameFolder(request: DriveRenameFolderRequest): Promise<DriveFolderValue> {
     return this.commands.renameFolder(request)
   }
 
+  /**
+   * Move a folder through the browser Remote.
+   * @param request - Folder move request.
+   * @returns The committed folder value.
+   */
   @Remote('moveFolder')
   moveFolder(request: DriveMoveFolderRequest): Promise<DriveFolderValue> {
     return this.commands.moveFolder(request)
   }
 
+  /**
+   * Rename a file through the browser Remote.
+   * @param request - File rename request.
+   * @returns The committed file value.
+   */
   @Remote('renameFile')
   renameFile(request: DriveRenameFileRequest): Promise<DriveFileValue> {
     return this.commands.renameFile(request)
   }
 
+  /**
+   * Move a file through the browser Remote.
+   * @param request - File move request.
+   * @returns The committed file value.
+   */
   @Remote('moveFile')
   moveFile(request: DriveMoveFileRequest): Promise<DriveFileValue> {
     return this.commands.moveFile(request)
   }
 
+  /**
+   * Update file classification and tags through the browser Remote.
+   * @param request - Metadata update request.
+   * @returns The committed file value.
+   */
   @Remote('updateFileMetadata')
   updateFileMetadata(request: DriveUpdateFileMetadataRequest): Promise<DriveFileValue> {
     return this.commands.updateFileMetadata(request)
   }
 
+  /**
+   * Soft-delete a file through the browser Remote.
+   * @param request - File identity request.
+   * @returns The committed file value.
+   */
   @Remote('deleteFile')
   deleteFile(request: DriveFileRequest): Promise<DriveFileValue> { return this.commands.deleteFile(request) }
 
+  /**
+   * Restore a soft-deleted file through the browser Remote.
+   * @param request - File identity request.
+   * @returns The committed file value.
+   */
   @Remote('restoreFile')
   restoreFile(request: DriveFileRequest): Promise<DriveFileValue> { return this.commands.restoreFile(request) }
 
+  /**
+   * Return immutable versions through the browser Remote.
+   * @param request - File identity request.
+   * @returns The file's version values.
+   */
   @Remote('versions')
   versions(request: DriveFileRequest): Promise<DriveVersionsValue> { return this.commands.versions(request) }
 
+  /**
+   * Return recent Drive audit events.
+   * @returns The recent audit projection.
+   */
   @Remote('audit')
   audit(): Promise<DriveAuditValue> { return this.commands.audit() }
 
+  /**
+   * Follow committed Drive projections.
+   * @param signal - Cancellation signal for the stream.
+   * @returns A reconnectable Drive frame stream.
+   */
   @Remote({ mode: 'stream' })
   follow(signal: AbortSignal): AsyncIterable<DriveFollowFrame> { return this.feed.follow(signal) }
 }

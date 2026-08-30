@@ -42,10 +42,10 @@ function folderDepth(folder: DriveFolder, byId: ReadonlyMap<DriveFolderId, Drive
   return depth
 }
 
-function mediaLabel(mediaType: DriveFile['mediaType']): string {
-  if (mediaType === 'text/markdown') return 'Markdown'
-  if (mediaType === 'application/pdf') return 'PDF'
-  return 'DOCX'
+function mediaLabel(mediaType: DriveFile['mediaType'], t: DriveOverlayProps['t']): string {
+  if (mediaType === 'text/markdown') return t('media.markdown')
+  if (mediaType === 'application/pdf') return t('media.pdf')
+  return t('media.docx')
 }
 
 /** Full-window standalone drive workspace. */
@@ -236,7 +236,7 @@ export function DriveOverlay({ client, t }: DriveOverlayProps) {
                 className={clsx(css.fileRow, selectedId === file.id && css.selected)}
                 onClick={() => { setSelectedId(file.id) }}
               >
-                <span className={css.fileType}>{mediaLabel(file.mediaType)}</span>
+                <span className={css.fileType}>{mediaLabel(file.mediaType, t)}</span>
                 <span className={css.fileName}>{file.name}</span>
                 <span className={css.fileKind}>{t(`kind.${file.kind}`)}</span>
                 {file.deletedAt !== undefined && <span className={css.deleted}>{t('deleted')}</span>}
@@ -275,7 +275,7 @@ function FileDetails({ client, file, run, t }: {
       </PreviewBoundary>
       <h2>{file.name}</h2>
       <dl>
-        <div><dt>{t('fileType')}</dt><dd>{mediaLabel(file.mediaType)}</dd></div>
+        <div><dt>{t('fileType')}</dt><dd>{mediaLabel(file.mediaType, t)}</dd></div>
         <div><dt>{t('updatedAt')}</dt><dd>{new Date(file.updatedAt).toLocaleString()}</dd></div>
         <div><dt>{t('tags')}</dt><dd>{file.tags.join(', ') || '—'}</dd></div>
       </dl>

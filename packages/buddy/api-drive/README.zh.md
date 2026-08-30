@@ -7,9 +7,18 @@ kind: "package-reference"
 
 [English](README.md) | 中文
 
-## 摘要
+## 概述
 
 `@sospink/dsh-buddy-api-drive` 是 `ctx.drive` 的 Host 浏览器 Adapter。它通过生成的 Typert Remote `drive` Namespace 暴露元数据命令和可重连完整快照流，并注册认证二进制路由，处理原始上传、不可变内容读取和固定版本 PDF.js 与 DOCX 预览资源。本包只拥有浏览器传输和失败映射；Drive Provider 仍然是准入、元数据、Blob、配额、审计和恢复的权威。
+
+## 目录
+
+- [使用本包](#use-this-package)
+- [实现说明](#understand-the-implementation)
+- [进一步阅读](#further-exploration)
+- [模型体验](#model-experience)
+- [已知限制与延期工作](#known-limitations-and-deferred-work)
+- [开发备注](#dev-note)
 
 ## 使用本包
 

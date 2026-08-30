@@ -11,6 +11,15 @@ English | [中文](README.zh.md)
 
 `@sospink/dsh-buddy-tool-drive` is the optional model-facing Consumer of `ctx.drive`. It registers only `drive_list`, `drive_search`, and `drive_read`, adds prompt-injection guidance, and ships the Positioning Safety Agent preset that mounts those tools under a scope-only inherited-tool deny policy. The package exposes no mutation tool and never accepts a filesystem path.
 
+## Table of Contents
+
+- [Use this package](#use-this-package)
+- [Understand the implementation](#understand-the-implementation)
+- [Further Exploration](#further-exploration)
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
+
 ## Use this package
 
 Mount the main entry only inside an Agent preset. `drive_list` returns current non-deleted metadata without reading document content. `drive_search` searches metadata first, then inspects a bounded number of current immutable versions. `drive_read` requires both an exact File ID and Version ID from list/search, verifies ownership, and returns a line-addressed window.

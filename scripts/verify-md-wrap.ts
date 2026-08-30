@@ -22,7 +22,9 @@ const PATTERNS = [
   'docs/**/*.md',
   'packages/*/*.md',
   'packages/*/*/*.md',
-  'snapshots/**/system-prompt.expected.md',
+  // Snapshot scenarios live at snapshots/<owner>/<scenario>; using an explicit
+  // depth avoids Node's recursive glob following the ACP source symlink as a directory.
+  'snapshots/*/*/system-prompt.expected.md',
   'packages/**/system-prompt.expected.md',
   'AGENTS.md',
   'packages/AGENTS.md',

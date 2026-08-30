@@ -11,6 +11,15 @@ English | [中文](README.zh.md)
 
 `@sospink/dsh-buddy-drive-app` is the optional Bundle layer for the complete Buddy document-drive stack. Apply it after `@deepseek-ai/dsh-web-app`; its patch mounts the local Drive provider under `$DSH_HOME/buddy-drive`, the generated Remote and authenticated binary API, the standalone browser UI, and the read-only Positioning Safety Agent preset/tool package. Removing this Bundle removes the Buddy Drive rows without changing upstream packages.
 
+## Table of Contents
+
+- [Use this package](#use-this-package)
+- [Understand the implementation](#understand-the-implementation)
+- [Further Exploration](#further-exploration)
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
+
 ## Use this package
 
 Add the Bundle to a Web profile after the base and Web bundles:

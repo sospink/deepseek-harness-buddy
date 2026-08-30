@@ -15,6 +15,7 @@ This table connects model-visible tool names to the plugin package and service s
 
 | Tool package | Model-visible names | Requires | Writes / affects | Shipped aliases | Deployment note |
 | --- | --- | --- | --- | --- | --- |
+| `@sospink/dsh-buddy-tool-drive` | `drive_list`, `drive_read`, `drive_search` | `ctx.drive`, `ctx.tools`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | Registers only read-only `drive_list`, `drive_search`, and `drive_read` for a governed local Drive. The Positioning Safety preset adds an inherited-tool deny policy; this catalog entry harvests the consumer outside that scope so its schemas remain visible to documentation tooling. |
 | `@deepseek-ai/dsh-tool-ask-user` | `ask_user_question` | `ctx.tools`, `ctx.userQuestions` | `tool/call`, `tool/result after a UI/provider answers the question` | - | ask_user_question pauses the tool call until the active UI provider returns a human answer. |
 | `@deepseek-ai/dsh-tools` | `run_code` | `ctx.tools`, `ctx.codeRuntime (execution time)`, `ctx.systemPrompt` | `tool/call`, `one tool/code-dispatch-start + tool/code-dispatch pair per bridged sub-call`, `tool/result` | - | Owned by the tool registry as a reserved transport outside filterable capability layers under `mode: ptc` / `mode: both` (see the PTC mode Agent Note). Under `ptc` it is the registry's only wire contribution; the other visible capabilities are declared in a generated SDK section in the loaded runtime's language, and a program calls them through bindings scheduled under the native concurrency contract (submission-ordered starts and policy; concurrency-safe bodies overlap up to `maxParallelSubCalls`) that re-enter the complete guarded tool pipeline and link each nested execution to this outer result. |
 | `@deepseek-ai/dsh-plan-mode` | `exit_plan_mode` | `ctx.tools`, `ctx.systemPrompt`, `ctx.userQuestions (execution time, opportunistic)` | `tool/call`, `plan/mode inactive on an approved review`, `tool/result` | - | exit_plan_mode stays in the model-facing schema while planning is inactive so transitions add no tool-catalog churn on top of the plan-policy change. Its execute path rejects calls outside plan mode; in plan mode it presents the plan over the user-questions seam (approve / keep planning with feedback), and approval logs plan mode inactive at the step boundary. |
@@ -41,6 +42,111 @@ This table connects model-visible tool names to the plugin package and service s
 | `@deepseek-ai/dsh-tool-todo` | `todo_write` | `ctx.tools`, `owning Agent session` | `tool/call`, `todo/write`, `tool/result` | - | todo_write is session-owned state; UIs render the latest todo/write event as a checklist. `allowParallelInProgress` is required with no default, so the catalog states its choice: `true`, whose description invites several `in_progress` items. A deployment choosing `false` receives the same tool with a description asking for exactly one active task. |
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`, `ctx.workflowEngine`, `ctx.systemPrompt`, `a calling Agent (exec.agent parents the script children)` | `tool/call`, `tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`, `web_search` | `ctx.tools`, `ctx.web`, `ctx.systemPrompt` | `tool/call`, `tool/result` | - | web_search and web_fetch keep provider selection behind ctx.web so model-visible schemas stay stable across backend swaps. |
+
+<a id="sospinkdsh-buddy-tool-drive"></a>
+
+## `@sospink/dsh-buddy-tool-drive`
+
+### `drive_list`
+
+List current non-deleted governed Drive files and immutable current-version provenance. This reads metadata only, never document contents.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "description": "Optional classification filter.",
+      "enum": [
+        "role-assignment",
+        "safety-protocol",
+        "operating-rule",
+        "reference",
+        "general"
+      ]
+    },
+    "max_results": {
+      "type": "integer",
+      "description": "Optional result cap; cannot exceed the deployment maximum."
+    }
+  }
+}
+```
+
+Source: [`packages/buddy/tool-drive/src/index.ts`](../packages/buddy/tool-drive/src/index.ts)
+
+### `drive_read`
+
+Read a line-addressed window from one explicit immutable Drive version. Both file_id and version_id are required; paths and implicit current-version reads are not accepted.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "file_id": {
+      "type": "string",
+      "description": "Exact File-ID from drive_list or drive_search."
+    },
+    "version_id": {
+      "type": "string",
+      "description": "Exact immutable Version-ID from drive_list or drive_search."
+    },
+    "start_line": {
+      "type": "integer",
+      "description": "1-based first extracted text line. Defaults to 1."
+    },
+    "line_count": {
+      "type": "integer",
+      "description": "Maximum lines to return. Defaults to and cannot exceed the deployment maximum."
+    }
+  },
+  "required": [
+    "file_id",
+    "version_id"
+  ]
+}
+```
+
+Source: [`packages/buddy/tool-drive/src/index.ts`](../packages/buddy/tool-drive/src/index.ts)
+
+### `drive_search`
+
+Search current governed Drive metadata and extractable document text. Returns snippets with exact current File-ID and Version-ID provenance; follow a hit with drive_read.
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "query": {
+      "type": "string",
+      "description": "Case-insensitive text to search."
+    },
+    "kind": {
+      "type": "string",
+      "description": "Optional classification filter.",
+      "enum": [
+        "role-assignment",
+        "safety-protocol",
+        "operating-rule",
+        "reference",
+        "general"
+      ]
+    },
+    "max_results": {
+      "type": "integer",
+      "description": "Optional hit cap; cannot exceed the deployment maximum."
+    }
+  },
+  "required": [
+    "query"
+  ]
+}
+```
+
+Source: [`packages/buddy/tool-drive/src/index.ts`](../packages/buddy/tool-drive/src/index.ts)
+
+Registers only read-only `drive_list`, `drive_search`, and `drive_read` for a governed local Drive. The Positioning Safety preset adds an inherited-tool deny policy; this catalog entry harvests the consumer outside that scope so its schemas remain visible to documentation tooling.
 
 <a id="deepseek-aidsh-tool-ask-user"></a>
 

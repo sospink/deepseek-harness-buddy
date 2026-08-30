@@ -11,6 +11,15 @@ English | [中文](README.zh.md)
 
 `@sospink/dsh-buddy-client-ui-drive` is the browser application surface for Buddy Drive. It mounts the generated `drive` Remote contribution into `ctx.remote`, follows complete reconnect snapshots, exposes a React-free `ctx.buddyDriveUi` state and command service, registers a Document Drive action in `sidebar.footer.action`, and renders a standalone three-column workspace in `shell.overlay`. All writes and uploads use real Host APIs; the UI contains no demo data or fixed-success path.
 
+## Table of Contents
+
+- [Use this package](#use-this-package)
+- [Understand the implementation](#understand-the-implementation)
+- [Further Exploration](#further-exploration)
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
+
 ## Use this package
 
 Mount it beside the stock Web Client modules after API Gateway, Connection, Locale, Layout, Sidebar, and UI Renderer. Its Client module mounts `@sospink/dsh-buddy-api-drive/remote` itself, so the fork does not modify the upstream `api-remotes` assembly.

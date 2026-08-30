@@ -543,6 +543,85 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'buddyDriveController',
+    summary: 'Host service backing the generated `ctx.remote.drive` namespace.',
+    description: 'Host service backing the generated `ctx.remote.drive` namespace.',
+    methods: [
+      {
+        signature: '@Remote(\'baseline\') baseline(): DriveBaseline',
+        description: 'Return the current complete Drive projection.',
+        parameters: [],
+        returns: 'The current Drive baseline.',
+      },
+      {
+        signature: '@Remote(\'createFolder\') createFolder(request: DriveCreateFolderRequest): Promise<DriveFolderValue>',
+        description: 'Create a folder through the browser Remote.',
+        parameters: [{ name: 'request', description: 'Folder creation request.' }],
+        returns: 'The committed folder value.',
+      },
+      {
+        signature: '@Remote(\'renameFolder\') renameFolder(request: DriveRenameFolderRequest): Promise<DriveFolderValue>',
+        description: 'Rename a folder through the browser Remote.',
+        parameters: [{ name: 'request', description: 'Folder rename request.' }],
+        returns: 'The committed folder value.',
+      },
+      {
+        signature: '@Remote(\'moveFolder\') moveFolder(request: DriveMoveFolderRequest): Promise<DriveFolderValue>',
+        description: 'Move a folder through the browser Remote.',
+        parameters: [{ name: 'request', description: 'Folder move request.' }],
+        returns: 'The committed folder value.',
+      },
+      {
+        signature: '@Remote(\'renameFile\') renameFile(request: DriveRenameFileRequest): Promise<DriveFileValue>',
+        description: 'Rename a file through the browser Remote.',
+        parameters: [{ name: 'request', description: 'File rename request.' }],
+        returns: 'The committed file value.',
+      },
+      {
+        signature: '@Remote(\'moveFile\') moveFile(request: DriveMoveFileRequest): Promise<DriveFileValue>',
+        description: 'Move a file through the browser Remote.',
+        parameters: [{ name: 'request', description: 'File move request.' }],
+        returns: 'The committed file value.',
+      },
+      {
+        signature: '@Remote(\'updateFileMetadata\') updateFileMetadata(request: DriveUpdateFileMetadataRequest): Promise<DriveFileValue>',
+        description: 'Update file classification and tags through the browser Remote.',
+        parameters: [{ name: 'request', description: 'Metadata update request.' }],
+        returns: 'The committed file value.',
+      },
+      {
+        signature: '@Remote(\'deleteFile\') deleteFile(request: DriveFileRequest): Promise<DriveFileValue>',
+        description: 'Soft-delete a file through the browser Remote.',
+        parameters: [{ name: 'request', description: 'File identity request.' }],
+        returns: 'The committed file value.',
+      },
+      {
+        signature: '@Remote(\'restoreFile\') restoreFile(request: DriveFileRequest): Promise<DriveFileValue>',
+        description: 'Restore a soft-deleted file through the browser Remote.',
+        parameters: [{ name: 'request', description: 'File identity request.' }],
+        returns: 'The committed file value.',
+      },
+      {
+        signature: '@Remote(\'versions\') versions(request: DriveFileRequest): Promise<DriveVersionsValue>',
+        description: 'Return immutable versions through the browser Remote.',
+        parameters: [{ name: 'request', description: 'File identity request.' }],
+        returns: 'The file\'s version values.',
+      },
+      {
+        signature: '@Remote(\'audit\') audit(): Promise<DriveAuditValue>',
+        description: 'Return recent Drive audit events.',
+        parameters: [],
+        returns: 'The recent audit projection.',
+      },
+      {
+        signature: '@Remote({ mode: \'stream\' }) follow(signal: AbortSignal): AsyncIterable<DriveFollowFrame>',
+        description: 'Follow committed Drive projections.',
+        parameters: [{ name: 'signal', description: 'Cancellation signal for the stream.' }],
+        returns: 'A reconnectable Drive frame stream.',
+      },
+    ],
+  },
+  {
     key: 'clientModules',
     summary: 'The web plugin table service: incremental `dsh.client` scan + wire composition + bundle route + index injection rows.',
     description: 'The web plugin table service: incremental `dsh.client` scan + wire composition + bundle route + index injection rows. Construction runs the activation scan synchronously — a malformed declaration or missing bundle among the already-loaded entries aggregates into one loud throw (FAILED fiber; the boot activation audit reports it).',
@@ -804,6 +883,126 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Create one child directory for a Remote caller\'s in-app browser.',
         parameters: [{ name: 'path', description: 'absolute existing parent directory.' }, { name: 'name', description: 'single non-blank path segment.' }],
         returns: 'the created directory\'s absolute path.',
+      },
+    ],
+  },
+  {
+    key: 'drive',
+    summary: 'Provider-neutral document library service.',
+    description: 'Provider-neutral document library service. Implementations own media and durable metadata together.',
+    methods: [
+      {
+        signature: 'abstract readonly limits: DriveLimits',
+        description: 'Deployment-resolved admission, retention, and audit limits.',
+        parameters: [],
+      },
+      {
+        signature: 'abstract library(): DriveLibrary',
+        description: 'Return the one default library.',
+        parameters: [],
+        returns: 'The current library snapshot.',
+      },
+      {
+        signature: 'abstract listFolders(parentId?: DriveFolderIdBrand): readonly DriveFolder[]',
+        description: 'Return folders in stable name/id order, optionally scoped to one parent.',
+        parameters: [{ name: 'parentId', description: 'Parent folder, or the library root when omitted.' }],
+        returns: 'Matching folder snapshots.',
+      },
+      {
+        signature: 'abstract listFiles(parentId?: DriveFolderIdBrand, includeDeleted?: boolean): readonly DriveFile[]',
+        description: 'Return files in stable name/id order, excluding soft-deleted rows unless requested.',
+        parameters: [{ name: 'parentId', description: 'Parent folder, or the library root when omitted.' }, { name: 'includeDeleted', description: 'Whether to include soft-deleted files.' }],
+        returns: 'Matching file snapshots.',
+      },
+      {
+        signature: 'abstract getFile(fileId: DriveFileIdBrand): DriveFile | undefined',
+        description: 'Look up one logical file.',
+        parameters: [{ name: 'fileId', description: 'File identity.' }],
+        returns: 'The file, or undefined when absent.',
+      },
+      {
+        signature: 'abstract getVersion(versionId: DriveVersionIdBrand): DriveVersion | undefined',
+        description: 'Look up one immutable version.',
+        parameters: [{ name: 'versionId', description: 'Version identity.' }],
+        returns: 'The version, or undefined when absent.',
+      },
+      {
+        signature: 'abstract listVersions(fileId: DriveFileIdBrand): readonly DriveVersion[]',
+        description: 'Return all immutable versions of one file, newest first.',
+        parameters: [{ name: 'fileId', description: 'File identity.' }],
+        returns: 'Immutable versions belonging to the file.',
+      },
+      {
+        signature: 'abstract listAudit(query?: DriveAuditQuery): readonly DriveAuditEvent[]',
+        description: 'Return recent immutable audit events, newest first.',
+        parameters: [{ name: 'query', description: 'Optional result and time filters.' }],
+        returns: 'Matching audit events.',
+      },
+      {
+        signature: 'abstract createFolder(input: CreateDriveFolderInput): Promise<DriveFolder>',
+        description: 'Create one folder.',
+        parameters: [{ name: 'input', description: 'Folder creation request.' }],
+        returns: 'The committed folder.',
+      },
+      {
+        signature: 'abstract renameFolder(input: RenameDriveFolderInput): Promise<DriveFolder>',
+        description: 'Rename one folder.',
+        parameters: [{ name: 'input', description: 'Folder rename request.' }],
+        returns: 'The committed folder.',
+      },
+      {
+        signature: 'abstract moveFolder(input: MoveDriveFolderInput): Promise<DriveFolder>',
+        description: 'Move one folder while preserving an acyclic tree.',
+        parameters: [{ name: 'input', description: 'Folder move request.' }],
+        returns: 'The committed folder.',
+      },
+      {
+        signature: 'abstract importFile(input: ImportDriveFileInput): Promise<DriveFile>',
+        description: 'Import one file and its first immutable version.',
+        parameters: [{ name: 'input', description: 'File import request.' }],
+        returns: 'The committed file.',
+      },
+      {
+        signature: 'abstract createVersion(input: CreateDriveVersionInput): Promise<DriveVersion>',
+        description: 'Append one immutable version and advance the logical file.',
+        parameters: [{ name: 'input', description: 'Version creation request.' }],
+        returns: 'The committed version.',
+      },
+      {
+        signature: 'abstract renameFile(input: RenameDriveFileInput): Promise<DriveFile>',
+        description: 'Rename one logical file.',
+        parameters: [{ name: 'input', description: 'File rename request.' }],
+        returns: 'The committed file.',
+      },
+      {
+        signature: 'abstract moveFile(input: MoveDriveFileInput): Promise<DriveFile>',
+        description: 'Move one logical file.',
+        parameters: [{ name: 'input', description: 'File move request.' }],
+        returns: 'The committed file.',
+      },
+      {
+        signature: 'abstract updateFileMetadata(input: UpdateDriveFileMetadataInput): Promise<DriveFile>',
+        description: 'Replace one logical file\'s classification and tags.',
+        parameters: [{ name: 'input', description: 'Metadata update request.' }],
+        returns: 'The committed file.',
+      },
+      {
+        signature: 'abstract deleteFile(input: DeleteDriveFileInput): Promise<DriveFile>',
+        description: 'Soft-delete one logical file; repeated deletion is idempotent.',
+        parameters: [{ name: 'input', description: 'File deletion request.' }],
+        returns: 'The committed file.',
+      },
+      {
+        signature: 'abstract restoreFile(input: RestoreDriveFileInput): Promise<DriveFile>',
+        description: 'Restore one soft-deleted logical file; repeated restoration is idempotent.',
+        parameters: [{ name: 'input', description: 'File restore request.' }],
+        returns: 'The committed file.',
+      },
+      {
+        signature: 'abstract readVersion(versionId: DriveVersionIdBrand, signal?: AbortSignal): Promise<StoredDriveContent>',
+        description: 'Read and verify one immutable version.',
+        parameters: [{ name: 'versionId', description: 'Version identity.' }, { name: 'signal', description: 'Optional cancellation signal.' }],
+        returns: 'Verified immutable content.',
       },
     ],
   },
@@ -3107,6 +3306,14 @@ export const EVENT_API: readonly EventApiEntry[] = [
     parameters: [{ name: 'change', description: 'domain, table (`\'\'` for global), key (`\'\'` for global), operation discriminant, and on `put` the new snapshot.' }],
   },
   {
+    name: 'drive/changed',
+    mode: 'emit',
+    signature: '\'drive/changed\'(): void',
+    summary: 'One accepted Drive mutation became durable and visible through `ctx.drive`.',
+    description: 'One accepted Drive mutation became durable and visible through `ctx.drive`. Listeners may refresh projections that derive from the committed snapshot.',
+    parameters: [],
+  },
+  {
     name: 'fs/edit-intent',
     mode: 'waterfall',
     signature: '\'fs/edit-intent\'(target: FsTarget, actor: object | undefined, next: () => { version: FsVersion } | undefined | Promise<{ version: FsVersion } | undefined>): Promise<{ version: FsVersion } | undefined>',
@@ -3795,6 +4002,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface CreateAgentOptions {\n    readonly sessionId: SessionId;\n    readonly meta?: {\n        readonly cwd?: string;\n        readonly parentSession?: SessionId;\n        readonly seedLength?: number;\n        readonly origin?: \'subagent\';\n        readonly delegationDepth?: number;\n        readonly agentPreset?: string;\n    };\n    readonly seed?: readonly SessionEvent[];\n    readonly agentOptions?: AgentOptions;\n    readonly signal?: AbortSignal;\n    readonly setup?: AgentSetup;\n}',
   },
   {
+    name: 'CreateDriveFolderInput',
+    declaration: 'export interface CreateDriveFolderInput {\n    readonly libraryId: DriveLibraryId;\n    readonly parentId?: DriveFolderId;\n    readonly name: string;\n    readonly mutation?: DriveMutationContext;\n}',
+  },
+  {
+    name: 'CreateDriveVersionInput',
+    declaration: 'export interface CreateDriveVersionInput {\n    readonly fileId: DriveFileId;\n    readonly declaredMediaType?: string;\n    readonly data: Uint8Array;\n    readonly source?: DriveVersionSource;\n    readonly mutation?: DriveMutationContext;\n}',
+  },
+  {
     name: 'CreateGoalRequest',
     declaration: 'export interface CreateGoalRequest {\n    readonly objective: string;\n    readonly maxGoalRounds?: number;\n}',
   },
@@ -3849,6 +4064,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'DeepSeekLlmApiJson',
     declaration: 'export type DeepSeekLlmApiJson = null | boolean | number | string | DeepSeekLlmApiJson[] | {\n    [key: string]: DeepSeekLlmApiJson;\n};',
+  },
+  {
+    name: 'DeleteDriveFileInput',
+    declaration: 'export interface DeleteDriveFileInput {\n    readonly fileId: DriveFileId;\n    readonly mutation?: DriveMutationContext;\n}',
   },
   {
     name: 'DiffCallView',
@@ -3929,6 +4148,122 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'DomainTableSpec',
     declaration: 'export interface DomainTableSpec<K extends string = string, V = unknown> {\n    readonly valueSchema: ZodType<V>;\n    readonly __key?: K;\n}',
+  },
+  {
+    name: 'DriveActor',
+    declaration: 'export type DriveActor = \'human\' | \'agent\';',
+  },
+  {
+    name: 'DriveAuditEvent',
+    declaration: 'export interface DriveAuditEvent {\n    readonly id: DriveAuditId;\n    readonly correlationId: DriveCorrelationId;\n    readonly actor: DriveActor;\n    readonly operation: DriveAuditOperation;\n    readonly targetType: \'library\' | \'folder\' | \'file\' | \'version\';\n    readonly targetId: string;\n    readonly createdAt: string;\n    readonly previousVersionId?: DriveVersionId;\n    readonly versionId?: DriveVersionId;\n}',
+  },
+  {
+    name: 'DriveAuditOperation',
+    declaration: 'export type DriveAuditOperation = \'library/create\' | \'library/restore\' | \'folder/create\' | \'folder/rename\' | \'folder/move\' | \'file/import\' | \'file/version\' | \'file/rename\' | \'file/move\' | \'file/metadata\' | \'file/delete\' | \'file/restore\';',
+  },
+  {
+    name: 'DriveAuditQuery',
+    declaration: 'export interface DriveAuditQuery {\n    readonly limit?: number;\n    readonly targetId?: string;\n}',
+  },
+  {
+    name: 'DriveAuditValue',
+    declaration: 'export interface DriveAuditValue {\n    readonly events: readonly DriveAuditEvent[];\n}',
+  },
+  {
+    name: 'DriveBaseline',
+    declaration: 'export interface DriveBaseline {\n    readonly library: DriveLibrary;\n    readonly folders: readonly DriveFolder[];\n    readonly files: readonly DriveFile[];\n}',
+  },
+  {
+    name: 'DriveCreateFolderRequest',
+    declaration: 'export interface DriveCreateFolderRequest {\n    readonly parentId?: DriveFolderId;\n    readonly name: string;\n}',
+  },
+  {
+    name: 'DriveDigest',
+    declaration: 'export type DriveDigest = `sha256:${string}`;',
+  },
+  {
+    name: 'DriveFile',
+    declaration: 'export interface DriveFile {\n    readonly id: DriveFileId;\n    readonly libraryId: DriveLibraryId;\n    readonly parentId?: DriveFolderId;\n    readonly name: string;\n    readonly kind: DriveFileKind;\n    readonly mediaType: DriveMediaType;\n    readonly currentVersionId: DriveVersionId;\n    readonly tags: readonly string[];\n    readonly createdAt: string;\n    readonly updatedAt: string;\n    readonly deletedAt?: string;\n}',
+  },
+  {
+    name: 'DriveFileKind',
+    declaration: 'export type DriveFileKind = \'role-assignment\' | \'safety-protocol\' | \'operating-rule\' | \'reference\' | \'general\';',
+  },
+  {
+    name: 'DriveFileRequest',
+    declaration: 'export interface DriveFileRequest {\n    readonly fileId: DriveFileId;\n}',
+  },
+  {
+    name: 'DriveFileValue',
+    declaration: 'export interface DriveFileValue {\n    readonly file: DriveFile;\n}',
+  },
+  {
+    name: 'DriveFolder',
+    declaration: 'export interface DriveFolder {\n    readonly id: DriveFolderId;\n    readonly libraryId: DriveLibraryId;\n    readonly parentId?: DriveFolderId;\n    readonly name: string;\n    readonly createdAt: string;\n    readonly updatedAt: string;\n}',
+  },
+  {
+    name: 'DriveFolderValue',
+    declaration: 'export interface DriveFolderValue {\n    readonly folder: DriveFolder;\n}',
+  },
+  {
+    name: 'DriveFollowFrame',
+    declaration: 'export type DriveFollowFrame = {\n    readonly type: \'baseline\';\n    readonly value: DriveBaseline;\n} | {\n    readonly type: \'snapshot\';\n    readonly value: DriveBaseline;\n};',
+  },
+  {
+    name: 'DriveLibrary',
+    declaration: 'export interface DriveLibrary {\n    readonly id: DriveLibraryId;\n    readonly title: string;\n    readonly createdAt: string;\n    readonly updatedAt: string;\n}',
+  },
+  {
+    name: 'DriveLimits',
+    declaration: 'export interface DriveLimits {\n    readonly maxFileBytes: number;\n    readonly maxLibraryBytes: number;\n    readonly maxDocxEntries: number;\n    readonly maxDocxExpandedBytes: number;\n    readonly maxDocxCompressionRatio: number;\n    readonly maxAuditEvents: number;\n}',
+  },
+  {
+    name: 'DriveMediaType',
+    declaration: 'export type DriveMediaType = \'text/markdown\' | \'application/pdf\' | \'application/vnd.openxmlformats-officedocument.wordprocessingml.document\';',
+  },
+  {
+    name: 'DriveMoveFileRequest',
+    declaration: 'export interface DriveMoveFileRequest {\n    readonly fileId: DriveFileId;\n    readonly parentId?: DriveFolderId;\n}',
+  },
+  {
+    name: 'DriveMoveFolderRequest',
+    declaration: 'export interface DriveMoveFolderRequest {\n    readonly folderId: DriveFolderId;\n    readonly parentId?: DriveFolderId;\n}',
+  },
+  {
+    name: 'DriveMutationContext',
+    declaration: 'export interface DriveMutationContext {\n    readonly actor?: DriveActor;\n    readonly correlationId?: DriveCorrelationId;\n}',
+  },
+  {
+    name: 'DrivePreviewStatus',
+    declaration: 'export type DrivePreviewStatus = \'pending\' | \'ready\' | \'unsupported\' | \'failed\';',
+  },
+  {
+    name: 'DriveRenameFileRequest',
+    declaration: 'export interface DriveRenameFileRequest {\n    readonly fileId: DriveFileId;\n    readonly name: string;\n}',
+  },
+  {
+    name: 'DriveRenameFolderRequest',
+    declaration: 'export interface DriveRenameFolderRequest {\n    readonly folderId: DriveFolderId;\n    readonly name: string;\n}',
+  },
+  {
+    name: 'DriveUpdateFileMetadataRequest',
+    declaration: 'export interface DriveUpdateFileMetadataRequest {\n    readonly fileId: DriveFileId;\n    readonly kind: DriveFileKind;\n    readonly tags?: readonly string[];\n}',
+  },
+  {
+    name: 'DriveVersion',
+    declaration: 'export interface DriveVersion {\n    readonly id: DriveVersionId;\n    readonly fileId: DriveFileId;\n    readonly digest: DriveDigest;\n    readonly bytes: number;\n    readonly createdAt: string;\n    readonly actor: DriveActor;\n    readonly source: DriveVersionSource;\n    readonly preview: DrivePreviewStatus;\n}',
+  },
+  {
+    name: 'DriveVersionSource',
+    declaration: 'export type DriveVersionSource = \'upload\' | \'agent-publication\';',
+  },
+  {
+    name: 'DriveVersionsValue',
+    declaration: 'export interface DriveVersionsValue {\n    readonly versions: readonly DriveVersionView[];\n}',
+  },
+  {
+    name: 'DriveVersionView',
+    declaration: 'export interface DriveVersionView {\n    readonly id: DriveVersion[\'id\'];\n    readonly fileId: DriveVersion[\'fileId\'];\n    readonly digest: string;\n    readonly bytes: number;\n    readonly createdAt: string;\n    readonly actor: DriveVersion[\'actor\'];\n    readonly source: DriveVersion[\'source\'];\n    readonly preview: DriveVersion[\'preview\'];\n}',
   },
   {
     name: 'DshEnvironment',
@@ -4105,6 +4440,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ImageVariantId',
     declaration: 'export type ImageVariantId = Branded<\'ImageVariantId\'>;',
+  },
+  {
+    name: 'ImportDriveFileInput',
+    declaration: 'export interface ImportDriveFileInput {\n    readonly libraryId: DriveLibraryId;\n    readonly idempotencyKey?: string;\n    readonly parentId?: DriveFolderId;\n    readonly name: string;\n    readonly kind: DriveFileKind;\n    readonly tags?: readonly string[];\n    readonly declaredMediaType?: string;\n    readonly data: Uint8Array;\n    readonly mutation?: DriveMutationContext;\n}',
   },
   {
     name: 'IndexInjection',
@@ -4471,6 +4810,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface ModelReasoningEffort {\n    readonly id: string;\n    readonly name: string;\n    readonly description?: string;\n}',
   },
   {
+    name: 'MoveDriveFileInput',
+    declaration: 'export interface MoveDriveFileInput {\n    readonly fileId: DriveFileId;\n    readonly parentId?: DriveFolderId;\n    readonly mutation?: DriveMutationContext;\n}',
+  },
+  {
+    name: 'MoveDriveFolderInput',
+    declaration: 'export interface MoveDriveFolderInput {\n    readonly folderId: DriveFolderId;\n    readonly parentId?: DriveFolderId;\n    readonly mutation?: DriveMutationContext;\n}',
+  },
+  {
     name: 'ObjectJsonSchema',
     declaration: 'export type ObjectJsonSchema = JsonSchemaNode & {\n    type: \'object\';\n};',
   },
@@ -4607,6 +4954,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface RemoteEventHostInfo {\n    readonly home: string;\n}',
   },
   {
+    name: 'RenameDriveFileInput',
+    declaration: 'export interface RenameDriveFileInput {\n    readonly fileId: DriveFileId;\n    readonly name: string;\n    readonly mutation?: DriveMutationContext;\n}',
+  },
+  {
+    name: 'RenameDriveFolderInput',
+    declaration: 'export interface RenameDriveFolderInput {\n    readonly folderId: DriveFolderId;\n    readonly name: string;\n    readonly mutation?: DriveMutationContext;\n}',
+  },
+  {
     name: 'ReplayEnvelope',
     declaration: 'export interface ReplayEnvelope {\n    response: unknown;\n    blocks?: readonly unknown[];\n}',
   },
@@ -4653,6 +5008,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'ResolvedSubagentStartRequest',
     declaration: 'export interface ResolvedSubagentStartRequest extends SubagentStartRequest {\n    readonly descriptor: SubagentDescriptorData;\n}',
+  },
+  {
+    name: 'RestoreDriveFileInput',
+    declaration: 'export interface RestoreDriveFileInput {\n    readonly fileId: DriveFileId;\n    readonly mutation?: DriveMutationContext;\n}',
   },
   {
     name: 'RestoredSessionOptions',
@@ -5339,6 +5698,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface StorageForms {\n}',
   },
   {
+    name: 'StoredDriveContent',
+    declaration: 'export interface StoredDriveContent {\n    readonly version: DriveVersion;\n    readonly data: Uint8Array;\n}',
+  },
+  {
     name: 'StoredImageAttachment',
     declaration: 'export interface StoredImageAttachment {\n    ref: ImageAttachmentRef;\n    data: Uint8Array;\n}',
   },
@@ -5877,6 +6240,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'TypertTypeModel',
     declaration: 'export interface TypertTypeModel {\n    readonly name: string;\n    readonly declaration: string;\n}',
+  },
+  {
+    name: 'UpdateDriveFileMetadataInput',
+    declaration: 'export interface UpdateDriveFileMetadataInput {\n    readonly fileId: DriveFileId;\n    readonly kind: DriveFileKind;\n    readonly tags?: readonly string[];\n    readonly mutation?: DriveMutationContext;\n}',
   },
   {
     name: 'UpdateTeamTaskRequest',

@@ -7,9 +7,18 @@ kind: "package-reference"
 
 [English](README.md) | 中文
 
-## 摘要
+## 概述
 
 `@sospink/dsh-buddy-client-ui-drive` 是 Buddy Drive 的浏览器应用界面。它把生成的 `drive` Remote Contribution 挂载到 `ctx.remote`，跟随完整重连 Snapshot，提供 React-free 的 `ctx.buddyDriveUi` 状态与命令 Service，在 `sidebar.footer.action` 注册资料云盘入口，并在 `shell.overlay` 渲染独立三栏工作区。所有写入和上传都调用真实 Host API；UI 不包含演示数据或固定成功路径。
+
+## 目录
+
+- [使用本包](#use-this-package)
+- [实现说明](#understand-the-implementation)
+- [进一步阅读](#further-exploration)
+- [模型体验](#model-experience)
+- [已知限制与延期工作](#known-limitations-and-deferred-work)
+- [开发备注](#dev-note)
 
 ## 使用本包
 

@@ -7,9 +7,18 @@ kind: "package-reference"
 
 [English](README.md) | 中文
 
-## 摘要
+## 概述
 
 `@sospink/dsh-buddy-drive` 是 Buddy 资料云盘能力的 Service Definition。它拥有提供方无关的词汇和 `ctx.drive` 契约，包括一个资料库、无环文件夹树、逻辑文件、不可变版本、修改审计、准入限制和经过校验的版本读取。它不执行 IO，也不选择文件系统、数据库、对象存储、HTTP 传输、浏览器预览、Agent 工具、留存周期、身份模型或分享策略。
+
+## 目录
+
+- [使用本包](#use-this-package)
+- [实现说明](#understand-the-implementation)
+- [进一步阅读](#further-exploration)
+- [模型体验](#model-experience)
+- [已知限制与延期工作](#known-limitations-and-deferred-work)
+- [开发备注](#dev-note)
 
 ## 使用本包
 

@@ -81,7 +81,10 @@ const DEFAULT_COMPRESSION_LEVEL = 1
 const DEFAULT_COMPRESSION_THRESHOLD_BYTES = 1024
 const DEFAULT_DEPLOYMENT_MODE = 'loopback-only' as const
 
-/** Normalize and validate the public origin used by a TLS reverse proxy. */
+/** Normalize and validate the public origin used by a TLS reverse proxy.
+ * @param value - Candidate absolute HTTPS origin.
+ * @returns Canonical origin without credentials, path, query, or fragment.
+ */
 export function normalizePublicOrigin(value: string): string {
   let origin: URL
   try {

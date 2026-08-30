@@ -19,6 +19,7 @@
 
 | 工具包 | 模型可见名称 | 依赖 | 写入／影响 | 随产品发布的别名 | 部署说明 |
 | --- | --- | --- | --- | --- | --- |
+| `@sospink/dsh-buddy-tool-drive` | `drive_list`、`drive_read`、`drive_search` | `ctx.drive`、`ctx.tools`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | 仅为受治理的本地 Drive 注册只读的 `drive_list`、`drive_search` 和 `drive_read`。定位安全 Agent preset 增加继承工具拒绝策略；本目录在该作用域之外收集此 Consumer，使其 schema 仍对文档工具可见。 |
 | `@deepseek-ai/dsh-tool-ask-user` | `ask_user_question` | `ctx.tools`、`ctx.userQuestions` | `tool/call`、`tool/result after a UI/provider answers the question` | - | ask_user_question 会暂停工具调用，直到当前 UI 提供方返回人类答案。 |
 | `@deepseek-ai/dsh-tools` | `run_code` | `ctx.tools`、`ctx.codeRuntime (execution time)`、`ctx.systemPrompt` | `tool/call`、`one tool/code-dispatch-start + tool/code-dispatch pair per bridged sub-call`、`tool/result` | - | 在 `mode: ptc`／`mode: both` 下，它由工具注册表所有，作为可过滤能力层之外的保留传输机制（参见 PTC mode Agent Note）。在 `ptc` 下，它是注册表对协议格式（wire format）的唯一贡献；其他可见能力在使用已加载运行时语言生成的 SDK 章节中声明。程序通过 binding 调用这些能力，调用按照原生并发约定调度：启动顺序和策略遵循提交顺序，并发安全的函数体最多重叠执行 `maxParallelSubCalls` 个。调用会重新进入完整且受守卫保护的工具流水线，并将每个嵌套执行关联到此外层结果。 |
 | `@deepseek-ai/dsh-plan-mode` | `exit_plan_mode` | `ctx.tools`、`ctx.systemPrompt`、`ctx.userQuestions (execution time, opportunistic)` | `tool/call`、`plan/mode inactive on an approved review`、`tool/result` | - | 规划未激活时，exit_plan_mode 仍保留在面向模型的 schema 中，这样状态转换不会在规划策略变更之外额外造成工具目录变动。其执行路径会拒绝规划模式之外的调用；在规划模式下，它通过用户交互 seam 提交计划（批准／根据反馈继续规划），批准后会在步骤边界记录规划模式已停用。 |
@@ -45,6 +46,111 @@
 | `@deepseek-ai/dsh-tool-todo` | `todo_write` | `ctx.tools`、`owning Agent session` | `tool/call`、`todo/write`、`tool/result` | - | todo_write 是会话所有的状态；UI 将最新的 todo/write 事件渲染为检查清单。`allowParallelInProgress` 是没有默认值的必填项，因此本目录明确选择 `true`，对应描述允许同时存在多个 `in_progress` 项。选择 `false` 的部署会获得同一工具，但描述会要求只能有 1 个活动任务。 |
 | `@deepseek-ai/dsh-tool-workflow` | `workflow` | `ctx.tools`、`ctx.workflowEngine`、`ctx.systemPrompt`、`a calling Agent (exec.agent parents the script children)` | `tool/call`、`tool/result` | - | - |
 | `@deepseek-ai/dsh-tool-web` | `web_fetch`、`web_search` | `ctx.tools`、`ctx.web`、`ctx.systemPrompt` | `tool/call`、`tool/result` | - | web_search 和 web_fetch 将提供方选择置于 ctx.web 之后，使模型可见 schema 在更换后端时保持稳定。 |
+
+<a id="sospinkdsh-buddy-tool-drive"></a>
+
+## `@sospink/dsh-buddy-tool-drive`
+
+### `drive_list`
+
+列出当前未删除的受治理 Drive 文件及其不可变当前版本来源信息。此操作只读取元数据，不读取文档内容。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "kind": {
+      "type": "string",
+      "description": "Optional classification filter.",
+      "enum": [
+        "role-assignment",
+        "safety-protocol",
+        "operating-rule",
+        "reference",
+        "general"
+      ]
+    },
+    "max_results": {
+      "type": "integer",
+      "description": "Optional result cap; cannot exceed the deployment maximum."
+    }
+  }
+}
+```
+
+来源：[`packages/buddy/tool-drive/src/index.ts`](../packages/buddy/tool-drive/src/index.ts)
+
+### `drive_read`
+
+读取一个明确指定的不可变 Drive 版本的按行窗口。`file_id` 和 `version_id` 都是必需的；不接受路径，也不接受隐式读取当前版本。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "file_id": {
+      "type": "string",
+      "description": "Exact File-ID from drive_list or drive_search."
+    },
+    "version_id": {
+      "type": "string",
+      "description": "Exact immutable Version-ID from drive_list or drive_search."
+    },
+    "start_line": {
+      "type": "integer",
+      "description": "1-based first extracted text line. Defaults to 1."
+    },
+    "line_count": {
+      "type": "integer",
+      "description": "Maximum lines to return. Defaults to and cannot exceed the deployment maximum."
+    }
+  },
+  "required": [
+    "file_id",
+    "version_id"
+  ]
+}
+```
+
+来源：[`packages/buddy/tool-drive/src/index.ts`](../packages/buddy/tool-drive/src/index.ts)
+
+### `drive_search`
+
+搜索当前受治理 Drive 的元数据和可提取文档文本。结果包含准确的当前 File-ID 和 Version-ID 来源信息；应使用 `drive_read` 继续读取命中内容。
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "query": {
+      "type": "string",
+      "description": "Case-insensitive text to search."
+    },
+    "kind": {
+      "type": "string",
+      "description": "Optional classification filter.",
+      "enum": [
+        "role-assignment",
+        "safety-protocol",
+        "operating-rule",
+        "reference",
+        "general"
+      ]
+    },
+    "max_results": {
+      "type": "integer",
+      "description": "Optional hit cap; cannot exceed the deployment maximum."
+    }
+  },
+  "required": [
+    "query"
+  ]
+}
+```
+
+来源：[`packages/buddy/tool-drive/src/index.ts`](../packages/buddy/tool-drive/src/index.ts)
+
+仅为受治理的本地 Drive 注册只读的 `drive_list`、`drive_search` 和 `drive_read`。定位安全 Agent preset 增加继承工具拒绝策略；本目录在该作用域之外收集此 Consumer，使其 schema 仍对文档工具可见。
 
 <a id="deepseek-aidsh-tool-ask-user"></a>
 

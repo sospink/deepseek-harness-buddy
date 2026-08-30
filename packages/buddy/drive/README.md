@@ -11,6 +11,15 @@ English | [中文](README.zh.md)
 
 `@sospink/dsh-buddy-drive` is the Service Definition for the Buddy document-drive capability. It owns the provider-neutral vocabulary and `ctx.drive` contract for one library, an acyclic folder tree, logical files, immutable versions, mutation audits, admission limits, and verified version reads. It performs no IO and chooses no filesystem, database, object store, HTTP transport, browser preview, Agent tool, retention schedule, identity model, or sharing policy.
 
+## Table of Contents
+
+- [Use this package](#use-this-package)
+- [Understand the implementation](#understand-the-implementation)
+- [Further Exploration](#further-exploration)
+- [Model Experience](#model-experience)
+- [Known Limitations and Deferred Work](#known-limitations-and-deferred-work)
+- [Dev Note](#dev-note)
+
 ## Use this package
 
 Consumers inject `drive` and operate only through `ctx.drive`. They never receive a provider path or blob URL. The first-release contract supports folder creation/rename/move, file import/version/rename/move, soft delete/restore, stable listings, version history, recent audit reads, and verified immutable content reads.

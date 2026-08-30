@@ -7,9 +7,18 @@ kind: "package-reference"
 
 [English](README.md) | 中文
 
-## 摘要
+## 概述
 
 `@sospink/dsh-buddy-drive-local` 在单个 Host 上实现 `ctx.drive`。它通过 `buddy_drive` Storage Domain Global 一次提交完整元数据关系，并把不可变源文件保存到私有 SHA-256 对象树。它在 Host 侧准入 Markdown、PDF 和 DOCX，执行配额、同级名称和文件夹树不变量，记录修改审计，按幂等 Key 持久化重放新文件导入，在启动时校验所有被引用 Blob，并删除临时或无引用的 Provider 自有对象。
+
+## 目录
+
+- [使用本包](#use-this-package)
+- [实现说明](#understand-the-implementation)
+- [进一步阅读](#further-exploration)
+- [模型体验](#model-experience)
+- [已知限制与延期工作](#known-limitations-and-deferred-work)
+- [开发备注](#dev-note)
 
 ## 使用本包
 

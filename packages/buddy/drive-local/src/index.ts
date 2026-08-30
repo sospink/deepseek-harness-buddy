@@ -205,6 +205,7 @@ export class LocalDriveStore extends DriveStore {
     maxAuditEvents: z.number().step(1).min(1).default(DEFAULT_LIMITS.maxAuditEvents),
   })
 
+  /** Resolved provider-owned root containing Drive blobs and metadata. */
   readonly root: string
   readonly limits: DriveLimits
   private global?: DomainGlobal<DriveState>
@@ -560,17 +561,26 @@ export class LocalDriveStore extends DriveStore {
     return Object.freeze({ version: versionSnapshot(version), data })
   }
 
-  /** Create an immutable, owner-only backup outside the provider root. */
+  /** Create an immutable, owner-only backup outside the provider root.
+   * @param destination - New backup directory path outside the Drive root.
+   * @returns The created backup summary.
+   */
   createBackup(destination: string): Promise<DriveBackupSummary> {
     return this.enqueue(() => createDriveBackup(this.root, this.requireState(), this.limits, destination))
   }
 
-  /** Verify a backup without changing the provider or its metadata. */
+  /** Verify a backup without changing the provider or its metadata.
+   * @param source - Backup directory to inspect.
+   * @returns The verified backup summary.
+   */
   async inspectBackup(source: string): Promise<DriveBackupSummary> {
     return (await inspectDriveBackup(source, this.limits)).summary
   }
 
-  /** Restore a verified backup, optionally replacing a non-empty library. */
+  /** Restore a verified backup, optionally replacing a non-empty library.
+   * @param input - Backup source and explicit replacement request.
+   * @returns The restore summary, including whether existing data was replaced.
+   */
   restoreBackup(input: RestoreDriveBackupInput): Promise<DriveRestoreSummary> {
     return this.enqueue(async () => {
       const mutation = mutationContext(input.mutation)

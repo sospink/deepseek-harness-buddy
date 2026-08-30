@@ -7,9 +7,18 @@ kind: "package-bundle"
 
 [English](README.md) | 中文
 
-## 摘要
+## 概述
 
 `@sospink/dsh-buddy-drive-app` 是完整 Buddy 资料云盘栈的可选 Bundle 层。在 `@deepseek-ai/dsh-web-app` 之后应用；Patch 会在 `$DSH_HOME/buddy-drive` 挂载本地 Drive Provider、生成式 Remote 与认证二进制 API、独立浏览器 UI，以及只读定位安全 Agent Preset/Tool 包。移除本 Bundle 即可移除 Buddy Drive Row，无需修改上游 Package。
+
+## 目录
+
+- [使用本包](#use-this-package)
+- [实现说明](#understand-the-implementation)
+- [进一步阅读](#further-exploration)
+- [模型体验](#model-experience)
+- [已知限制与延期工作](#known-limitations-and-deferred-work)
+- [开发备注](#dev-note)
 
 ## 使用本包
 

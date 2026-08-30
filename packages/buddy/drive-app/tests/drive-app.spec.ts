@@ -27,7 +27,7 @@ describe('Buddy Drive application bundle', () => {
       maxLibraryBytes: 2_147_483_648,
     })
     expect(Object.keys(manifest.dependencies ?? {}).sort()).toEqual([
-      ...rows.map(row => row.name), '@sospink/dsh-buddy-tool-drive',
+      ...rows.map(row => row.name), '@deepseek-ai/dsh-agent-presets', '@sospink/dsh-buddy-tool-drive',
     ].sort())
     expect(patches[1]).toMatchObject({
       id: 'agent-presets',

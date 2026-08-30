@@ -68,7 +68,7 @@ export function DocxPreview({ url, t }: { url: string; t: DriveOverlayProps['t']
     if (frame === undefined) return
     let sent = false
     const timeout = setTimeout(() => {
-      setView({ state: 'failed', message: 'DOCX rendering timed out.' })
+      setView({ state: 'failed', message: t('docx.timeout') })
     }, DOCX_RENDER_TIMEOUT_MS)
     const message = (event: MessageEvent<unknown>): void => {
       const iframe = iframeRef.current
@@ -86,7 +86,7 @@ export function DocxPreview({ url, t }: { url: string; t: DriveOverlayProps['t']
         setRendering({ state: 'ready', ...(received.pages === undefined ? {} : { pages: received.pages }) })
       } else if (received.type === 'failure') {
         clearTimeout(timeout)
-        setView({ state: 'failed', message: received.message ?? 'DOCX rendering failed.' })
+        setView({ state: 'failed', message: received.message ?? t('docx.renderFailed') })
       }
     }
     window.addEventListener('message', message)
@@ -94,7 +94,7 @@ export function DocxPreview({ url, t }: { url: string; t: DriveOverlayProps['t']
       clearTimeout(timeout)
       window.removeEventListener('message', message)
     }
-  }, [frame])
+  }, [frame, t])
 
   return (
     <section className={css.docxPreview} aria-label={t('docx.title')}>

@@ -27,8 +27,10 @@ import {
   type UploadTransportInput,
 } from './upload.ts'
 
+/** Lifecycle state of one browser upload queue entry. */
 export type DriveUploadStatus = 'queued' | 'uploading' | 'succeeded' | 'failed' | 'cancelled'
 
+/** Browser-visible progress and result state for one upload. */
 export interface DriveUploadItem {
   readonly id: string
   readonly name: string
@@ -50,6 +52,7 @@ export interface BuddyDriveSnapshot {
   uploadQueue: readonly DriveUploadItem[]
 }
 
+/** Read-only subscription source exposed to Drive UI components. */
 export interface BuddyDriveSource {
   getSnapshot(): BuddyDriveSnapshot
   subscribe(listener: () => void): () => void
@@ -78,6 +81,7 @@ export interface BuddyDriveClientOptions {
 
 /** Browser state, Remote mutations, upload, and content-URL facade. */
 export class BuddyDriveClient extends Service {
+  /** Snapshot source consumed by React or other browser presenters. */
   readonly source: BuddyDriveSource
   private readonly store: SnapshotStore<BuddyDriveSnapshot>
   private opener: HTMLElement | undefined
@@ -105,11 +109,15 @@ export class BuddyDriveClient extends Service {
     this.source = this.store
   }
 
+  /** Open the Drive surface and remember an optional focus-restoration target.
+   * @param opener - Element to focus when the surface closes.
+   */
   open(opener?: HTMLElement): void {
     this.opener = opener
     this.store.update((state) => { state.open = true })
   }
 
+  /** Close the Drive surface and restore focus to its opener on the next microtask. */
   close(): void {
     this.store.update((state) => { state.open = false })
     const opener = this.opener
@@ -117,6 +125,9 @@ export class BuddyDriveClient extends Service {
     queueMicrotask(() => { opener?.focus() })
   }
 
+  /** Replace the browser projection with a committed Drive baseline.
+   * @param data - Committed Drive baseline.
+   */
   replace(data: DriveBaseline): void {
     this.store.update((state) => {
       state.data = data
@@ -125,6 +136,9 @@ export class BuddyDriveClient extends Service {
     })
   }
 
+  /** Publish a stream or Remote failure to the browser projection.
+   * @param error - Failure value to expose in the browser state.
+   */
   failed(error: unknown): void {
     this.store.update((state) => {
       state.state = 'failed'
@@ -132,36 +146,56 @@ export class BuddyDriveClient extends Service {
     })
   }
 
+  /** Fetch and publish the current Drive baseline. */
   async refresh(): Promise<void> {
     const result = await this.remote.baseline()
     if (!result.ok) throw failureMessage(result.error)
     this.replace(result.value)
   }
 
+  /** Create a folder through the authenticated Remote and refresh the projection.
+   * @param name - Folder name.
+   * @param parentId - Optional parent folder id.
+   */
   async createFolder(name: string, parentId?: DriveFolderId): Promise<void> {
     const result = await this.remote.createFolder({ name, ...(parentId === undefined ? {} : { parentId }) })
     if (!result.ok) throw failureMessage(result.error)
     await this.refresh()
   }
 
+  /** Replace a file's classification and tags through the Remote.
+   * @param fileId - File identity.
+   * @param kind - New file classification.
+   * @param tags - New file tags.
+   */
   async updateMetadata(fileId: DriveFileId, kind: DriveFileKind, tags: readonly string[]): Promise<void> {
     const result = await this.remote.updateFileMetadata({ fileId, kind, tags })
     if (!result.ok) throw failureMessage(result.error)
     await this.refresh()
   }
 
+  /** Soft-delete a file through the Remote and refresh the projection.
+   * @param fileId - File identity.
+   */
   async deleteFile(fileId: DriveFileId): Promise<void> {
     const result = await this.remote.deleteFile({ fileId })
     if (!result.ok) throw failureMessage(result.error)
     await this.refresh()
   }
 
+  /** Restore a soft-deleted file through the Remote and refresh the projection.
+   * @param fileId - File identity.
+   */
   async restoreFile(fileId: DriveFileId): Promise<void> {
     const result = await this.remote.restoreFile({ fileId })
     if (!result.ok) throw failureMessage(result.error)
     await this.refresh()
   }
 
+  /** Add files to the bounded upload queue and start available requests.
+   * @param inputs - Files and metadata to enqueue.
+   * @returns Generated upload ids in input order.
+   */
   enqueueUploads(inputs: readonly UploadDriveFileInput[]): readonly string[] {
     if (inputs.length === 0) return []
     const retained = this.store.getSnapshot().uploadQueue.length
@@ -192,6 +226,9 @@ export class BuddyDriveClient extends Service {
     return ids
   }
 
+  /** Cancel a queued or active upload without removing its terminal queue row.
+   * @param id - Upload queue entry id.
+   */
   cancelUpload(id: string): void {
     const item = this.uploadItem(id)
     const job = this.uploadJobs.get(id)
@@ -205,6 +242,9 @@ export class BuddyDriveClient extends Service {
     this.pumpUploads()
   }
 
+  /** Requeue one failed or cancelled upload.
+   * @param id - Upload queue entry id.
+   */
   retryUpload(id: string): void {
     const item = this.uploadItem(id)
     const job = this.uploadJobs.get(id)
@@ -215,6 +255,7 @@ export class BuddyDriveClient extends Service {
     this.pumpUploads()
   }
 
+  /** Remove successful and cancelled entries from the upload queue. */
   clearFinishedUploads(): void {
     const removable = new Set(this.store.getSnapshot().uploadQueue
       .filter(item => item.status === 'succeeded' || item.status === 'cancelled')
@@ -338,12 +379,20 @@ export class BuddyDriveClient extends Service {
   }
 
 
+  /** Build the authenticated content URL for an immutable current version.
+   * @param file - File-like value carrying the current version id.
+   * @returns Same-origin content URL for the version.
+   */
   contentUrl(file: Pick<DriveFile, 'currentVersionId'>): string {
     return `${DRIVE_CONTENT_PATH}/${encodeURIComponent(file.currentVersionId)}`
   }
 }
 
-/** Create the reconnecting full-snapshot stream for the Client service. */
+/** Create the reconnecting full-snapshot stream for the Client service.
+ * @param remote - Client transport and Drive Remote namespace.
+ * @param client - Browser state service receiving baseline frames and failures.
+ * @returns A stream adapter that requires a baseline before accepting updates.
+ */
 export function createBuddyDriveStream(
   remote: StreamOwner,
   client: BuddyDriveClient,

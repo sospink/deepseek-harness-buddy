@@ -20,6 +20,7 @@ export interface DriveListItem extends DriveToolSource {
   readonly bytes: number
 }
 
+/** Bounded output returned by drive_list. */
 export interface DriveListValue {
   readonly libraryId: string
   readonly libraryTitle: string
@@ -34,6 +35,7 @@ export interface DriveSearchHit extends DriveToolSource {
   readonly snippet: string
 }
 
+/** Bounded output returned by drive_search. */
 export interface DriveSearchValue {
   readonly query: string
   readonly hits: DriveSearchHit[]

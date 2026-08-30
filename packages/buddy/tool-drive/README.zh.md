@@ -7,9 +7,18 @@ kind: "package-reference"
 
 [English](README.md) | 中文
 
-## 摘要
+## 概述
 
 `@sospink/dsh-buddy-tool-drive` 是 `ctx.drive` 的可选模型侧 Consumer。它只注册 `drive_list`、`drive_search` 和 `drive_read`，增加 Prompt Injection 指引，并随包提供定位安全 Agent Preset；该 Preset 在 Scope 内通过继承工具拒绝策略挂载这些工具。本包不暴露修改工具，也不接受文件系统路径。
+
+## 目录
+
+- [使用本包](#use-this-package)
+- [实现说明](#understand-the-implementation)
+- [进一步阅读](#further-exploration)
+- [模型体验](#model-experience)
+- [已知限制与延期工作](#known-limitations-and-deferred-work)
+- [开发备注](#dev-note)
 
 ## 使用本包
 
