@@ -30,7 +30,7 @@ export const en = {
   'collapse': 'Collapse',
   'expand': 'Expand',
   'back': 'Back',
-  'brand.localBuild': 'DSH Local Build',
+  'brand.localBuild': 'Low-Altitude Safety Agent',
   'unknown': 'Unknown',
   'none': 'None',
   'truncated': 'Truncated',

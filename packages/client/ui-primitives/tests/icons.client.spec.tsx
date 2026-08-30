@@ -67,6 +67,19 @@ describe('FishLogo', () => {
   })
 })
 
+describe('LowAltitudeSafetyLogo', () => {
+  it('renders the shield and flight path in currentColor at a square ratio', () => {
+    const { container } = render(<primitives.LowAltitudeSafetyLogo size={32} className="safety-mark" />)
+    const svg = container.querySelector('svg')!
+    expect(svg.getAttribute('width')).toBe('32')
+    expect(svg.getAttribute('height')).toBe('32')
+    expect(svg.getAttribute('viewBox')).toBe('0 0 24 24')
+    expect(svg.classList.contains('safety-mark')).toBe(true)
+    expect(container.querySelectorAll('circle')).toHaveLength(2)
+    expect(container.innerHTML).toContain('currentColor')
+  })
+})
+
 describe('BrandWordmark', () => {
   it('can render the name artwork with or without its leading mark', () => {
     const view = render(<primitives.BrandWordmark />)

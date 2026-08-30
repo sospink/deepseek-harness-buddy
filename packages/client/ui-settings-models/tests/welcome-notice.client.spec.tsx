@@ -100,7 +100,7 @@ describe('WelcomeNotice', () => {
   it('uses the exact owner copy in both GUI locales', () => {
     expect(WELCOME_NOTICE_COPY.en).toEqual({
       title: 'Internal Testing Notice',
-      body: "DeepSeek Harness 0.1 remains in testing for Harness developers. Many areas need further improvement, and we welcome feedback from the developer community. DeepSeek Harness's core plugins and foundational APIs will continue to evolve rapidly over the coming months.\n\nWe look forward to exploring the limits of intelligence with developers around the world, building on open-source, open, reusable, and composable infrastructure. We welcome Harness developers everywhere to join the DSH plugin ecosystem.",
+      body: 'Low-Altitude Safety Agent is currently in internal testing. The experience focuses on governed document access, low-altitude safety analysis, and traceable Agent collaboration. Features and workflows will continue to evolve during product validation.\n\nUse only authorized documents and verified safety protocols. Agent output supports analysis and coordination; it does not replace operational approval or authoritative safety conclusions.',
       continueLabel: 'Continue',
     })
     expect(en.welcomeBody).toBe(WELCOME_NOTICE_COPY.en.body)

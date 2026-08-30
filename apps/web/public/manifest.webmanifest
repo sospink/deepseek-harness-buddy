@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "DeepSeek Harness",
-  "short_name": "DSH",
+  "name": "低空安全Agent",
+  "short_name": "低空安全",
   "start_url": "/",
   "scope": "/",
   "display": "fullscreen",

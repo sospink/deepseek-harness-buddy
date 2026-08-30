@@ -2,7 +2,7 @@
 export const zh = {
   trigger: '资料云盘',
   title: '资料云盘',
-  subtitle: '定位安全 Agent 的受控文档资料库',
+  subtitle: '低空安全Agent 的受控文档资料库',
   close: '关闭资料云盘',
   search: '搜索文件',
   root: '全部文件',

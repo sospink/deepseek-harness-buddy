@@ -151,7 +151,7 @@ describe('Positioning Safety Agent preset', () => {
   it('ships healthy metadata and a composition without mutation/team/workspace rows', async () => {
     const metadata = readFileSync(join(presetRoot, 'positioning-safety/preset.yml'), 'utf8')
     const composition = readFileSync(join(presetRoot, 'positioning-safety/agent.cordis.yml'), 'utf8')
-    expect(metadata).toContain('定位安全 Agent')
+    expect(metadata).toContain('低空安全Agent')
     const rowNames = [...composition.matchAll(/^\s*name:\s*['"]?([^'"\s]+)['"]?\s*$/gmu)]
       .map(match => match[1])
     expect(rowNames).toEqual([
@@ -168,7 +168,7 @@ describe('Positioning Safety Agent preset', () => {
     const ctx = await harness()
     const listed = await ctx.agentPresets.list()
     expect(listed).toEqual([expect.objectContaining({
-      id: 'positioning-safety', trust: 'system', name: '定位安全 Agent',
+      id: 'positioning-safety', trust: 'system', name: '低空安全Agent',
     })])
     expect('broken' in listed[0]!).toBe(false)
     const agent = await createAgent(ctx)
