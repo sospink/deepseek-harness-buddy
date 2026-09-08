@@ -1,29 +1,40 @@
-/* Agent-preset chip on the new-session screen, beside the workspace picker.
-   Geometry mirrors HeroShell's .workspace so the two read as one row. */
+/* Agent-preset control inside the new-session glass tool group. Geometry and
+   interaction mirror HeroShell's workspace selector. */
 
 .seat {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 7px;
   max-width: min(100%, 240px);
-  min-height: 28px;
-  padding: 0 8px;
+  height: 34px;
+  padding: 0 11px;
   border: none;
-  border-radius: 16px;
+  border-radius: 17px;
+  outline: none;
   background: transparent;
-  color: var(--dsw-alias-label-primary);
-  font-size: 13px;
+  color: rgb(242 246 255 / 88%);
+  font-size: 14px;
   line-height: 20px;
-  font-weight: 500;
+  font-weight: 540;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   cursor: pointer;
+  transition:
+    color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
 }
 
 .seat:not(:disabled):hover,
 .seat[aria-expanded='true'] {
-  background: var(--dsw-alias-interactive-bg-hover);
+  color: #fff;
+  background: rgb(255 255 255 / 9%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 5%);
+}
+
+.seat:focus-visible {
+  box-shadow: 0 0 0 2px rgb(118 164 255 / 78%);
 }
 
 .seat:disabled {
@@ -33,7 +44,7 @@
 
 .seatIcon {
   flex: none;
-  color: var(--dsw-alias-label-primary);
+  color: #9cbcff;
 }
 
 /* Introduce cue: the icon eases in on an overshoot-free expo curve (duration
@@ -83,17 +94,26 @@
   }
 }
 
+.chevron {
+  flex: none;
+  color: rgb(217 226 243 / 58%);
+  transition: transform 180ms ease, color 160ms ease;
+}
+
+.seat[aria-expanded='true'] .chevron {
+  color: #b8ccff;
+  transform: rotate(180deg);
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .seat,
+  .chevron,
   .introIcon,
   .introChar {
     animation: none;
+    transition: none;
     opacity: 1;
   }
-}
-
-.chevron {
-  flex: none;
-  color: var(--dsw-alias-label-caption);
 }
 
 /* Menu rows carry the name over its description: the id alone never said what

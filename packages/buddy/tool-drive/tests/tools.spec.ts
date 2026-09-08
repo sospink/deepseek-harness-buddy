@@ -25,10 +25,12 @@ async function execute(ctx: Context, name: string, args: unknown): Promise<ToolE
 afterEach(() => { vi.restoreAllMocks() })
 
 describe('Buddy Drive tool registration and config', () => {
-  it('registers only the three read-only tools and prompt guidance without document content', async () => {
+  it('registers the three read-only Drive tools plus controlled prototype tools', async () => {
     const secret = 'DO-NOT-INJECT-THIS-DOCUMENT'
     const { ctx } = await toolHarness([fixtureFile({ id: 'role', name: 'role.md', text: secret })])
-    expect(ctx.tools.schemas().map(schema => schema.name).sort()).toEqual(['drive_list', 'drive_read', 'drive_search'])
+    expect(ctx.tools.schemas().map(schema => schema.name).sort()).toEqual([
+      'drive_list', 'drive_read', 'drive_search', 'generate_prototype', 'update_prototype',
+    ])
     const list = ctx.tools.get('drive_list')!
     const search = ctx.tools.get('drive_search')!
     const read = ctx.tools.get('drive_read')!
@@ -47,6 +49,28 @@ describe('Buddy Drive tool registration and config', () => {
     expect(prompt).toContain('untrusted evidence')
     expect(prompt).toContain('No document is loaded automatically')
     expect(prompt).not.toContain(secret)
+    await ctx.fiber.dispose()
+  })
+
+  it('presents the packaged prototype and validates controlled edits', async () => {
+    const { ctx } = await toolHarness([])
+    const generated = await execute(ctx, 'generate_prototype', {
+      prototype_id: 'zhiyu-city', pages: ['home', 'user-management'], brief: '城市治理工作台',
+    })
+    expect(generated).toMatchObject({ isError: false })
+    expect(!generated.isError && generated.value).toMatchObject({
+      prototypeId: 'zhiyu-city', pages: ['home', 'user-management'], brief: '城市治理工作台',
+    })
+    const updated = await execute(ctx, 'update_prototype', {
+      canvas_id: 'canvas-1', operations: [{ type: 'set-text', node_id: 'canvas-title', value: '智御全城' }],
+    })
+    expect(updated).toMatchObject({ isError: false })
+    expect(await execute(ctx, 'generate_prototype', {
+      prototype_id: 'zhiyu-city', pages: [], brief: 'x',
+    })).toMatchObject({ isError: true })
+    expect(await execute(ctx, 'update_prototype', {
+      canvas_id: 'canvas-1', operations: [{ type: 'set-color', node_id: 'canvas-accent', value: '' }],
+    })).toMatchObject({ isError: true })
     await ctx.fiber.dispose()
   })
 

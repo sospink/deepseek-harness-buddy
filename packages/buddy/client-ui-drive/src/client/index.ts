@@ -14,6 +14,14 @@ import { DriveOverlay } from './DriveOverlay.tsx'
 import { DriveTrigger } from './DriveTrigger.tsx'
 import { en, zh, type BuddyDriveKey } from './locales.ts'
 import { BuddyDriveClient, createBuddyDriveStream } from './service.ts'
+import type {} from '@deepseek-ai/dsh-client-ui-conversation/client'
+import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
+import type { SessionId } from '@deepseek-ai/dsh-session/types'
+import { PrototypeCanvas } from './PrototypeCanvas.tsx'
+import { PrototypeToolRow, type PrototypeToolRowInjected } from './PrototypeToolRow.tsx'
+import { en as prototypeEn, zh as prototypeZh, type PrototypeKey } from './prototype-locales.ts'
+
+interface PrototypeConversation { openView(view: string, focus: string): void }
 
 export { DriveOverlay } from './DriveOverlay.tsx'
 export { DriveTrigger } from './DriveTrigger.tsx'
@@ -27,13 +35,14 @@ export type { BuddyDriveKey } from './locales.ts'
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
     'buddy-drive': BuddyDriveKey
+    'buddy-prototype': PrototypeKey
   }
 }
 
 const NS = 'buddy-drive'
 
 /** Required Client services; target slots are resolved declaration-safely through slots.inject. */
-export const inject = ['remote', 'slots', 'locale']
+export const inject = ['remote', 'slots', 'locale', 'sessions']
 
 /** Mount the generated Drive Remote namespace and its standalone browser surface. */
 export async function apply(ctx: ClientContext): Promise<() => Promise<void>> {
@@ -51,6 +60,23 @@ export async function apply(ctx: ClientContext): Promise<() => Promise<void>> {
     stream.start()
     const mountedClient = client
     ctx.effect(() => ctx.locale.register(NS, { zh, en }), 'buddy-client-ui-drive: dictionaries')
+    ctx.effect(() => ctx.locale.register('buddy-prototype', { zh: prototypeZh, en: prototypeEn }), 'buddy-prototype: dictionaries')
+    ctx.slots.inject('conversation.view', () => ctx.slots.register({
+      name: 'conversation.view', id: 'prototype', order: 20,
+      label: () => ctx.locale.bind('buddy-prototype')('view'), locale: 'buddy-prototype',
+    }, PrototypeCanvas))
+    for (const key of ['generate_prototype', 'update_prototype']) {
+      ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({
+        name: 'tool.call.toolview', key, locale: 'buddy-prototype',
+        inject: (sessionId: SessionId): PrototypeToolRowInjected => ({
+          openPrototype: (focus) => {
+            const conversation = ctx.sessions.scope(sessionId)?.get('conversation') as PrototypeConversation | undefined
+            if (conversation === undefined) throw new Error(`buddy-prototype: conversation unavailable for session "${sessionId}"`)
+            conversation.openView('prototype', focus)
+          },
+        }),
+      }, PrototypeToolRow))
+    }
     ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({
       name: 'sidebar.footer.action',
       id: 'buddy-drive',

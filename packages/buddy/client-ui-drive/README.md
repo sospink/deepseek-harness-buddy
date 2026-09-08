@@ -11,6 +11,8 @@ English | [中文](README.zh.md)
 
 `@sospink/dsh-buddy-client-ui-drive` is the browser application surface for Buddy Drive. It mounts the generated `drive` Remote contribution into `ctx.remote`, follows complete reconnect snapshots, exposes a React-free `ctx.buddyDriveUi` state and command service, registers a Document Drive action in `sidebar.footer.action`, and renders a standalone three-column workspace in `shell.overlay`. All writes and uploads use real Host APIs; the UI contains no demo data or fixed-success path.
 
+The same Client package provides the controlled HTML prototype canvas. Edit mode directly selects, drags, and resizes DOM elements through eight handles, supports inline text editing, and exposes dimensions, typography, colors, fill, radius, and opacity in the property inspector. Structured operations persist per Session in the browser with reload replay, undo, redo, parent selection, element hiding, and full reset while packaged HTML source files remain unchanged.
+
 ## Table of Contents
 
 - [Use this package](#use-this-package)

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ISession } from '@deepseek-ai/dsh-api-session-controller/client'
 import { LocaleRuntime } from '@deepseek-ai/dsh-client-locale/client'
 import type { ObservableSnapshot } from '@deepseek-ai/dsh-client-store'
@@ -16,6 +16,8 @@ import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import { createConversationStore } from '../src/client/stores.ts'
 
 usePinnedBrowserLanguages('zh-CN')
+
+beforeEach(() => { localStorage.clear() })
 
 const ROOT = 'root-1' as SessionId
 
@@ -82,6 +84,19 @@ async function bench() {
 }
 
 describe('Conversation inject API', () => {
+  it('publishes and persists welcome visibility through the shared service', async () => {
+    const b = await bench()
+    const resident = b.residentApi(ROOT)
+    expect(resident.hooks.welcome.getSnapshot()).toBe(true)
+    resident.dismissWelcome()
+    expect(resident.hooks.welcome.getSnapshot()).toBe(false)
+    expect(localStorage.getItem('dsh.conversation.welcomeDismissed.v1')).toBe('1')
+    b.runtime.ctx.uiConversation.showWelcome()
+    expect(resident.hooks.welcome.getSnapshot()).toBe(true)
+    expect(localStorage.getItem('dsh.conversation.welcomeDismissed.v1')).toBeNull()
+    await b.runtime.dispose()
+  })
+
   it('assembles the target-neutral read face without Session side effects', async () => {
     const b = await bench()
     const { injected } = b.conversationApi(ROOT)

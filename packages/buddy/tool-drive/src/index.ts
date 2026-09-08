@@ -12,6 +12,7 @@ import { renderDriveList, renderDriveRead, renderDriveSearch } from './render.ts
 import type {
   DriveListItem, DriveListValue, DriveReadValue, DriveSearchHit, DriveSearchValue,
 } from './types.ts'
+import { registerPrototypeTools } from './prototype.ts'
 
 export const name = 'buddy-tool-drive'
 export const inject = ['drive', 'tools', 'systemPrompt']
@@ -189,6 +190,7 @@ export function apply(ctx: Context, config: Config): void {
     order: FIRST_PARTY_SECTION_ORDER.TOOL_SESSION_QUERY + 10,
     text: PROMPT,
   })
+  registerPrototypeTools(ctx)
 
   ctx.tools.register(defineTool({
     name: 'drive_list',

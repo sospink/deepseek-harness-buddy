@@ -28,6 +28,10 @@
       "types": "./lib/types/paths.d.ts",
       "default": "./lib/types/paths.js"
     },
+    "./prototype-assets": {
+      "types": "./lib/types/prototype-assets.d.ts",
+      "default": "./lib/types/prototype-assets.js"
+    },
     "./typert": {
       "types": "./lib/typert.host.d.ts",
       "default": "./lib/typert.host.js"
@@ -46,7 +50,9 @@
     "lib/typert.host.js",
     "lib/typert.host.d.ts",
     "lib/typert.remote-client.js",
-    "lib/typert.remote-client.d.ts"
+    "lib/typert.remote-client.d.ts",
+    "assets/prototypes/**/*.png",
+    "assets/prototypes/**/*.html"
   ],
   "license": "MIT",
   "dependencies": {

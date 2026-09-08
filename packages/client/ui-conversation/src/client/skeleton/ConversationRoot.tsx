@@ -7,7 +7,8 @@ import clsx from 'clsx'
 import type { WorkspaceId } from '@deepseek-ai/dsh-workspace/types'
 import type { ConversationSlotProps, InputZone } from '../contract/slots.ts'
 import { conversationPhase } from '../contract/snapshot.ts'
-import { HeroGlow, HeroShell, WorkspaceChip, workspaceLabel } from './EmptyHero.tsx'
+import { HeroShell, WorkspaceChip, workspaceLabel } from './EmptyHero.tsx'
+import { SecurityAsciiBackground } from './SecurityAsciiBackground.tsx'
 import css from './ConversationRoot.module.css'
 
 /** Full props composed from the slot contract. */
@@ -130,8 +131,8 @@ function WidthHandle(props: {
 
 export function ConversationRoot({
   sessionId, useSession, useSessions, useSessionPendingInteraction,
-  useWorkspaces, useConversation, useInput, useComposerBlock,
-  renderSlot, renderSlotChain, selectWorkspace, t,
+  useWorkspaces, useConversation, useInput, useComposerBlock, useWelcome,
+  renderSlot, renderSlotChain, dismissWelcome, selectWorkspace, t,
 }: ConversationRootProps) {
   const session = useSession(s => s)
   const pendingInteraction = useSessionPendingInteraction(snapshot =>
@@ -148,6 +149,7 @@ export function ConversationRoot({
   // A plugin this package cannot import (ui-model-selection) says this session cannot
   // send; its reason is already localized by whoever raised it.
   const composerBlock = useComposerBlock(block => block)
+  const welcomeVisible = useWelcome(visible => visible)
 
   const [pickerOpen, setPickerOpen] = useState(false)
   const [pendingWorkspaceId, setPendingWorkspaceId] = useState<WorkspaceId | undefined>()
@@ -313,6 +315,7 @@ export function ConversationRoot({
         onClose: () => { setPickerOpen(false) },
       })}
       {renderSlot('conversation.hero.agentPreset', {})}
+      {renderSlot('conversation.hero.agentRole', {})}
     </div>
   )
 
@@ -350,8 +353,13 @@ export function ConversationRoot({
 
   const composerBar = (
     <div className={clsx(css.composerStack, hero && css.composerHero)}>
-      {hero && <HeroGlow className={css.heroGlow} />}
-      {hero && <HeroShell t={t} renderSlot={renderSlot} />}
+      {hero && !welcomeVisible && <div className={css.heroFocusScrim} aria-hidden="true" />}
+      {hero && welcomeVisible && <HeroShell t={t} renderSlot={renderSlot} onGetStarted={() => {
+        dismissWelcome()
+        requestAnimationFrame(() => {
+          document.querySelector<HTMLElement>('[data-composer-input]')?.focus()
+        })
+      }} />}
       {hero && heroWorkspaceRow}
       {zone !== undefined && renderSlot('conversation.input.dock', zone)}
       {inputBar}
@@ -376,7 +384,8 @@ export function ConversationRoot({
   )
 
   return (
-    <div ref={rootResizeRef} className={css.root} data-phase={phase}>
+    <div ref={rootResizeRef} className={css.root} data-phase={phase} data-welcome={hero && welcomeVisible || undefined}>
+      {phase === 'hero' && !welcomeVisible && <SecurityAsciiBackground />}
       {sessionId === undefined ? null : renderSlot('conversation.session.header', {})}
       <div className={css.scrollBody} data-conversation-scroll="">
         {sessionId === undefined ? null : renderSlot('conversation.session', {})}

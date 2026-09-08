@@ -1,0 +1,7 @@
+.row { display:flex; align-items:center; gap:8px; width:100%; min-height:34px; padding:3px 6px; border:0; background:transparent; color:var(--dsw-alias-label-secondary); font:inherit; font-size:13px; text-align:left; cursor:pointer; }
+.icon { display:grid; place-items:center; width:18px; color:var(--dsw-alias-state-business-primary); }
+.title { color:var(--dsw-alias-label-primary); font-weight:500; }
+.status { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.row[data-state='running'] .icon { animation:pulse 1.5s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity:.4; transform:scale(.9); } }
+@media (prefers-reduced-motion:reduce) { .row[data-state='running'] .icon { animation:none; } }

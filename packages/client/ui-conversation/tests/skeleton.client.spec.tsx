@@ -282,6 +282,7 @@ function mount(
       )
       : (opts?.fallback ?? null)
   )) as ConversationRootProps['renderSlotChain']
+  const welcome = createSnapshotStore(localStorage.getItem('dsh.conversation.welcomeDismissed.v1') !== '1')
   const props: ConversationRootProps = {
     sessionId: SID,
     SessionProvider: ({ children }) => children,
@@ -292,10 +293,15 @@ function mount(
     useWorkspaces: bindSnapshotSelector(workspaces),
     useProjection: (() => undefined),
     useComposerBlock: select => select(options.composerBlock),
+    useWelcome: bindSnapshotSelector(welcome),
     useInput,
     inputActions,
     renderSlot,
     renderSlotChain,
+    dismissWelcome: () => {
+      localStorage.setItem('dsh.conversation.welcomeDismissed.v1', '1')
+      welcome.set(false)
+    },
     selectWorkspace: retargetWorkspace,
     t,
   }
@@ -308,18 +314,20 @@ function mount(
 }
 
 describe('Hero chrome', () => {
-  it('renders the English preview badge through the hero locale seat', () => {
+  it('renders the English cinematic welcome through the hero locale seat', () => {
     const renderSlot = vi.fn<HeroShellProps['renderSlot']>(() => null)
     const view = render(<HeroShell t={makeTranslate(en, commonEn)} renderSlot={renderSlot} />)
-    expect(view.getByText('Low-Altitude Safety Agent')).toBeTruthy()
-    expect(view.queryByText('Preview')).toBeNull()
+    expect(view.getByText('Intelligence')).toBeTruthy()
+    expect(view.getByText('Designed To Evolve')).toBeTruthy()
+    expect(view.getByText('基于国产DeepSeek Harness自研的低空安全协作开发Agent平台')).toBeTruthy()
+    expect(view.getByRole('button', { name: 'Get Started' })).toBeTruthy()
     expect(renderSlot).toHaveBeenCalledOnce()
     expect(renderSlot.mock.calls[0]?.[0]).toBe('conversation.hero.brand.mark')
     const brandMarkOwner = renderSlot.mock.calls[0]?.[1]
     if (brandMarkOwner === undefined || !('size' in brandMarkOwner) || !('className' in brandMarkOwner)) {
       throw new Error('hero brand-mark owner must provide size and className')
     }
-    expect(brandMarkOwner.size).toBe(34)
+    expect(brandMarkOwner.size).toBe(52)
     expect(brandMarkOwner.className).toBeTypeOf('string')
     expect(renderSlot.mock.calls[0]?.[2]?.fallback).toBeTruthy()
   })
@@ -439,8 +447,8 @@ describe('ConversationRoot resident composer', () => {
     const header = b.view.container.querySelector('header')
     expect(host).not.toBeNull()
     expect(header?.getAttribute('aria-hidden')).toBe('true')
-    expect(b.view.getByText('低空安全Agent')).toBeTruthy()
-    expect(b.view.queryByText('预览版')).toBeNull()
+    expect(b.view.getByText('智能驱动')).toBeTruthy()
+    expect(b.view.getByText('持续进化')).toBeTruthy()
     expect(b.view.queryByTestId('view-chat')).toBeNull()
     // The same machine-backed textarea is live in the hero, and the
     // persistence mirror stays bound (ConversationSession mounts chrome-hidden
@@ -459,6 +467,26 @@ describe('ConversationRoot resident composer', () => {
     expect(b.view.getByText('Selected Folder')).toBeTruthy()
   })
 
+  it('persists the welcome handoff and restores the security workspace after refresh', () => {
+    const b = mount(
+      sessionSnapshotOf({ blank: true }),
+      [{ ...workspace('one'), sessionIds: [SID] }],
+    )
+    expect(b.view.container.querySelector('[data-security-ascii-background]')).toBeNull()
+    fireEvent.click(b.view.getByRole('button', { name: '开始使用' }))
+    expect(localStorage.getItem('dsh.conversation.welcomeDismissed.v1')).toBe('1')
+    expect(b.view.container.querySelector('[data-security-ascii-background]')).not.toBeNull()
+    expect(b.view.getByRole('textbox')).toBeTruthy()
+
+    b.view.unmount()
+    const refreshed = mount(
+      sessionSnapshotOf({ blank: true }),
+      [{ ...workspace('one'), sessionIds: [SID] }],
+    )
+    expect(refreshed.view.queryByRole('button', { name: '开始使用' })).toBeNull()
+    expect(refreshed.view.container.querySelector('[data-security-ascii-background]')).not.toBeNull()
+  })
+
   it('keeps a rejected first prompt engaging instead of returning to the Hero', () => {
     const failed = sessionSnapshotOf({
       blank: true,
@@ -473,14 +501,14 @@ describe('ConversationRoot resident composer', () => {
     expect(conversationPhase(failed, EMPTY_CONVERSATION_SNAPSHOT)).toBe('engaging')
     const b = mount(failed, undefined, undefined, { summaryBlank: true })
     expect(b.view.container.querySelector('[data-phase]')?.getAttribute('data-phase')).toBe('active')
-    expect(b.view.queryByText('低空安全Agent')).toBeNull()
+    expect(b.view.queryByText('智能驱动')).toBeNull()
   })
 
   it('settling phase: a summary that does not prove the session blank hides the composer while it opens', () => {
     const b = mount(sessionSnapshotOf({ blank: true, openState: 'loading' }))
     const root = b.view.container.querySelector('[data-phase]')
     expect(root?.getAttribute('data-phase')).toBe('settling')
-    expect(b.view.queryByText('低空安全Agent')).toBeNull()
+    expect(b.view.queryByText('智能驱动')).toBeNull()
   })
 
   it('settling phase: a session the list has no row for settles conservatively', () => {
@@ -505,7 +533,7 @@ describe('ConversationRoot resident composer', () => {
     // blank the column for the history round-trip.
     const root = b.view.container.querySelector('[data-phase]')
     expect(root?.getAttribute('data-phase')).toBe('hero')
-    expect(b.view.getByText('低空安全Agent')).toBeTruthy()
+    expect(b.view.getByText('智能驱动')).toBeTruthy()
     expect(b.view.getByRole('textbox')).toBeTruthy()
   })
 
@@ -523,7 +551,7 @@ describe('ConversationRoot resident composer', () => {
     expect(b.wiring.snapshot.draft).toBe('kept across flip')
     expect(b.store.store.getSnapshot().draft).toBe('kept across flip')
     expect(b.view.container.querySelector('[data-conversation-scroll]')?.contains(after)).toBe(true)
-    expect(b.view.queryByText('低空安全Agent')).toBeNull()
+    expect(b.view.queryByText('智能驱动')).toBeNull()
     expect(b.view.getByTestId('view-chat')).toBeTruthy()
   })
 
@@ -573,6 +601,7 @@ describe('ConversationRoot resident composer', () => {
     // The agent-preset chip sits in the same row, for the same reason: both
     // choices are only open before the first message.
     expect(b.slotCalls).toContain('conversation.hero.agentPreset')
+    expect(b.slotCalls).toContain('conversation.hero.agentRole')
   })
 
   it('prompt failure renders the promptError strip (ordinary failure, no transaction UI)', () => {

@@ -185,11 +185,14 @@ export function apply(ctx: Context): void {
       'conversation.hero.brand.mark': { kind: 'single', scope: 'root' },
       'conversation.hero.workspace': { kind: 'single', scope: 'root' },
       'conversation.hero.agentPreset': { kind: 'single', scope: 'root' },
+      'conversation.hero.agentRole': { kind: 'single', scope: 'root' },
     },
     inject: (sessionId: SessionId | undefined): ConversationInjected => ({
       hooks: {
         composerBlock: sessionId === undefined ? ABSENT_BLOCK : composerBlocks.storeFor(sessionId),
+        welcome: uiConversation.welcome,
       },
+      dismissWelcome: () => { uiConversation.dismissWelcome() },
       selectWorkspace: async (workspaceId) => {
         const nextId = await workspaceNavigation.connectWorkspace(workspaceId)
         if (sessionId !== undefined && nextId !== sessionId) {
@@ -218,10 +221,13 @@ export function apply(ctx: Context): void {
       'conversation.view': { kind: 'list', scope: 'session' },
     },
     store: conversationStore,
-    inject: (sessionId: SessionId, _actions: BoundActions<typeof conversationStore>): ConversationSessionInjected => ({
-      hooks: { conversationViews },
-      bindDraftMirror: write => inputHub.shell(sessionId).bindMirror(write),
-    }),
+    inject: (sessionId: SessionId, actions: BoundActions<typeof conversationStore>): ConversationSessionInjected => {
+      concreteConversation(ctx).attachViewOpener(sessionId, actions.openView)
+      return {
+        hooks: { conversationViews },
+        bindDraftMirror: write => inputHub.shell(sessionId).bindMirror(write),
+      }
+    },
   }, ConversationSession)
 
   const registerConversationHeader = () => slots.register({

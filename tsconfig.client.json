@@ -102,6 +102,8 @@
     { "path": "./packages/client/web" },
     { "path": "./packages/context/file-reference" },
     { "path": "./apps/web" },
-    { "path": "./packages/buddy/client-ui-drive" }
+    { "path": "./packages/buddy/client-ui-drive" },
+    { "path": "./packages/buddy/client-ui-agent-role" },
+    { "path": "./packages/buddy/client-ui-development-management" }
   ]
 }

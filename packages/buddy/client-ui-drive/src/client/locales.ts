@@ -1,6 +1,6 @@
 /** Buddy Drive browser copy. */
 export const zh = {
-  trigger: '资料云盘',
+  trigger: '资料库',
   title: '资料云盘',
   subtitle: '低空安全Agent 的受控文档资料库',
   close: '关闭资料云盘',

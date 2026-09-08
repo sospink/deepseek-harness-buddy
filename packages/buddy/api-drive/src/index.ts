@@ -8,6 +8,7 @@ import {
   createDriveContentRoute, createDriveDocxRuntimeRoute, createDriveDocxWorkerRoute,
   createDrivePdfCMapRoute, createDrivePdfWorkerRoute, createDriveUploadRoute,
 } from './http.ts'
+import { createPrototypeAssetRoute } from './prototype-assets.ts'
 import type {
   DriveAuditValue,
   DriveBaseline,
@@ -30,6 +31,7 @@ export {
   DRIVE_CONTENT_PATH, DRIVE_DOCX_RUNTIME_PATH, DRIVE_DOCX_WORKER_PATH, DRIVE_PDF_CMAP_PATH,
   DRIVE_PDF_WORKER_PATH, DRIVE_UPLOAD_PATH,
 } from './paths.ts'
+export { PROTOTYPE_ASSET_PATH } from './prototype-assets.ts'
 
 declare module '@deepseek-ai/cordis' {
   interface Context {
@@ -54,6 +56,7 @@ export class BuddyDriveController extends TypertRemoteService {
     ctx.effect(() => ctx.webServer.register(createDrivePdfCMapRoute(ctx)), 'buddy-api-drive: PDF CMap route')
     ctx.effect(() => ctx.webServer.register(createDriveDocxWorkerRoute(ctx)), 'buddy-api-drive: DOCX Worker route')
     ctx.effect(() => ctx.webServer.register(createDriveDocxRuntimeRoute(ctx)), 'buddy-api-drive: DOCX runtime route')
+    ctx.effect(() => ctx.webServer.register(createPrototypeAssetRoute(ctx)), 'buddy-api-drive: prototype asset route')
   }
 
   /**

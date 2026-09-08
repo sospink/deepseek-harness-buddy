@@ -105,7 +105,7 @@ exports[`sidebar shell snapshots > renders the expanded column (wordmark, capsul
       class="logoRow"
     >
       <button
-        aria-label="New session"
+        aria-label="Open welcome page"
         class="brand wide"
         type="button"
       >
@@ -235,7 +235,7 @@ exports[`sidebar shell snapshots > renders the expanded column in the default lo
       class="logoRow"
     >
       <button
-        aria-label="新建会话"
+        aria-label="打开欢迎页"
         class="brand wide"
         type="button"
       >

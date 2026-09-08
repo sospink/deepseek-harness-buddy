@@ -122,6 +122,12 @@
   background: transparent;
   color: inherit;
   cursor: pointer;
+  transition: color 180ms var(--ds-ease-in-out), transform 180ms var(--ds-ease-in-out);
+}
+
+.brand:hover {
+  color: rgb(255 255 255);
+  transform: translateX(2px);
 }
 
 /* Mark and name are independent slots; the shell owns their shared baseline,
@@ -256,7 +262,7 @@
   margin: 0 2px 8px;
   box-sizing: border-box;
   border: 1px solid var(--dsw-alias-border-l2);
-  border-radius: 12px;
+  border-radius: 999px;
   background: var(--dsw-alias-button-elevated-fill);
   color: var(--dsw-alias-label-primary);
   font-size: 14px;
@@ -268,6 +274,8 @@
 
 .newSession:hover {
   background: var(--dsw-alias-button-floating-hover);
+  border-color: rgb(24 144 255 / 48%);
+  box-shadow: 0 0 24px rgb(24 144 255 / 12%);
 }
 
 .collapsed .newSession {
@@ -323,6 +331,14 @@
   flex-direction: column;
 }
 
+/* Footer actions stay inside the sidebar's single acrylic plane. Spacing,
+   rather than a second fill or divider, separates utilities from sessions. */
+.root:not(.collapsed) .footArea {
+  margin-top: 10px;
+  padding: 4px 0 6px;
+  --dsw-alias-interactive-bg-hover: rgb(255 255 255 / 5%);
+}
+
 .settingsArea,
 .footerActions {
   flex: none;
@@ -332,6 +348,7 @@
 
 .footerActions {
   display: flex;
+  flex-direction: column;
 }
 
 .collapsed .footArea {
@@ -341,6 +358,8 @@
 .collapsed .settingsArea,
 .collapsed .footerActions {
   display: flex;
+  flex-direction: column;
+  align-items: center;
   justify-content: center;
   width: auto;
 }

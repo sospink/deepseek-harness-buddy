@@ -52,7 +52,7 @@ describe('ui-layout client apply', () => {
     const fiber = ctx.plugin({ inject: [...inject], apply })
     await fiber.await()
     const actions = {
-      setSidebar: vi.fn(), setDetails: vi.fn(), toggleSidebar: vi.fn(), openDetails: vi.fn(), closeDetails: vi.fn(),
+      setSidebar: vi.fn(), setDetails: vi.fn(), toggleSidebar: vi.fn(), setBlank: vi.fn(), openDetails: vi.fn(), closeDetails: vi.fn(),
     }
     const injected = (slots.entries('root')[0]!.inject as (actions: never) => object)(actions as never)
     expect(injected).toEqual({})
@@ -65,9 +65,9 @@ describe('ui-layout client apply', () => {
     const { ctx } = await bench()
     const fiber = ctx.plugin({ inject: [...inject], apply })
     await fiber.await()
-    // Initial getter application: jsdom has no matchMedia, system resolves light.
-    expect(document.documentElement.style.colorScheme).toBe('light')
-    expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
+    // Initial getter application: the product palette is fixed to dark.
+    expect(document.documentElement.style.colorScheme).toBe('dark')
+    expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(true)
     const themeColorMeta = document.head.querySelector<HTMLMetaElement>('meta[name="theme-color"]')
     expect(themeColorMeta).not.toBeNull()
     const theme = ctx.get('theme') as ThemeRuntime
@@ -79,9 +79,8 @@ describe('ui-layout client apply', () => {
     expect(document.documentElement.style.colorScheme).toBe('')
     expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
     expect(themeColorMeta?.isConnected).toBe(false)
-    // Listener is off: further theme changes no longer reach the document.
-    theme.setTheme('light')
-    theme.setTheme('dark')
+    // Listener is off: later font-size changes no longer reach the document.
+    theme.setFontSize(15)
     expect(document.documentElement.style.colorScheme).toBe('')
     expect(document.body.hasAttribute('data-ds-dark-theme')).toBe(false)
   })

@@ -427,6 +427,12 @@ export interface ConnectionConfig {
   cookieMaxAgeDays?: number
   /** Maximum buffered JSON body for every `/api` request. Default: 300 MiB. */
   maxRequestBodyBytes?: number
+  /**
+   * Permit clean-URL access without a launch token or browser cookie when the
+   * request Host is loopback. Host/Origin trust checks still apply. Default:
+   * false. Intended only for attended local product distributions.
+   */
+  allowUnauthenticatedLoopback?: boolean
 }
 ```
 
@@ -3407,6 +3413,42 @@ export interface Config {
 
 Source: [`packages/workflow/workflow-worker-thread/src/index.ts:32`](../packages/workflow/workflow-worker-thread/src/index.ts)
 
+<a id="sospinkdsh-buddy-development-management"></a>
+
+## `@sospink/dsh-buddy-development-management`
+
+Requires: `typert` · `webServer` · `connection` · `subprocess`
+
+```ts config-catalog
+/** Plugin configuration for private persistence, repository policy, checks, and optional remote integration. */
+export interface Config {
+  /** Private directory containing state and uploaded artifacts. */
+  readonly root: string
+  /** Canonical parent directories from which delivery repositories may be selected. */
+  readonly repositoryRoots: string[]
+  /** Maximum accepted bytes for one streamed artifact. */
+  readonly maxFileBytes?: number
+  /** Maximum aggregate artifact bytes retained for one task. */
+  readonly maxTaskBytes?: number
+  /** Maximum stdout or stderr bytes retained for each command. */
+  readonly maxCommandOutputBytes?: number
+  /** Maximum duration in milliseconds for each Git or check command. */
+  readonly commandTimeoutMs?: number
+  /** Shell commands run in order as delivery checks, tests, and builds. */
+  readonly checkCommands?: string[]
+  /** Remote integration used after Product Manager confirmation. */
+  readonly integrationProvider?: 'none' | 'gitlab' | 'github'
+  /** GitLab-compatible server base URL. */
+  readonly integrationBaseUrl?: string
+  /** GitLab project path or numeric project identifier. */
+  readonly integrationProject?: string
+  /** Private GitLab token used only by the Host integration. */
+  readonly integrationToken?: string
+}
+```
+
+Source: [`packages/buddy/development-management/src/index.ts:39`](../packages/buddy/development-management/src/index.ts)
+
 <a id="sospinkdsh-buddy-drive-local"></a>
 
 ## `@sospink/dsh-buddy-drive-local`
@@ -3475,7 +3517,7 @@ export interface Config {
 }
 ```
 
-Source: [`packages/buddy/tool-drive/src/index.ts:40`](../packages/buddy/tool-drive/src/index.ts)
+Source: [`packages/buddy/tool-drive/src/index.ts:41`](../packages/buddy/tool-drive/src/index.ts)
 
 ## Loadable plugins with no config
 
@@ -3556,7 +3598,10 @@ These load from a `cordis.yml` entry with no `config:` block; they declare no co
 - `@deepseek-ai/dsh-user-questions` ([`packages/interaction/user-questions/src/index.ts`](../packages/interaction/user-questions/src/index.ts))
 - `@deepseek-ai/dsh-webhook` — requires `agents` · `agentDefaultModel` · `agentPresets` · `permissionPresets` · `sessionTitle` · `workspaceRegistry` ([`packages/webhook/webhook/src/index.ts`](../packages/webhook/webhook/src/index.ts))
 - `@deepseek-ai/dsh-workspace` — requires `storageDomain` · `sessionPersistence` ([`packages/workspace/workspace/src/index.ts`](../packages/workspace/workspace/src/index.ts))
+- `@sospink/dsh-buddy-agent-role` — requires `sessions` · `systemPrompt` · `sessionProjections` ([`packages/buddy/agent-role/src/index.ts`](../packages/buddy/agent-role/src/index.ts))
 - `@sospink/dsh-buddy-api-drive` — requires `typert` · `drive` · `webServer` · `connection` ([`packages/buddy/api-drive/src/index.ts`](../packages/buddy/api-drive/src/index.ts))
+- `@sospink/dsh-buddy-client-ui-agent-role` ([`packages/buddy/client-ui-agent-role/src/index.ts`](../packages/buddy/client-ui-agent-role/src/index.ts))
+- `@sospink/dsh-buddy-client-ui-development-management` ([`packages/buddy/client-ui-development-management/src/index.ts`](../packages/buddy/client-ui-development-management/src/index.ts))
 - `@sospink/dsh-buddy-client-ui-drive` ([`packages/buddy/client-ui-drive/src/index.ts`](../packages/buddy/client-ui-drive/src/index.ts))
 - `@sospink/dsh-buddy-drive-app` ([`packages/buddy/drive-app/src/index.ts`](../packages/buddy/drive-app/src/index.ts))
 

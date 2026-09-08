@@ -35,29 +35,25 @@ describe('theme bootstrap row', () => {
     expect(document.body.hasAttribute(DARK_ATTRIBUTE)).toBe(true)
   })
 
-  it('lets durable light override a dark OS and clears stale dark state', () => {
-    document.body.setAttribute(DARK_ATTRIBUTE, '')
+  it('ignores a durable light preference and stays dark', () => {
     mockSystemDark(true)
     executeBootstrap('light')
-    expect(document.documentElement.style.colorScheme).toBe('light')
-    expect(document.body.hasAttribute(DARK_ATTRIBUTE)).toBe(false)
+    expect(document.documentElement.style.colorScheme).toBe('dark')
+    expect(document.body.hasAttribute(DARK_ATTRIBUTE)).toBe(true)
   })
 
-  it.each([
-    [true, 'dark', true],
-    [false, 'light', false],
-  ] as const)('resolves system=%s to %s', (matches, colorScheme, dark) => {
+  it.each([true, false])('ignores system=%s and stays dark', (matches) => {
     mockSystemDark(matches)
     executeBootstrap('system')
-    expect(document.documentElement.style.colorScheme).toBe(colorScheme)
-    expect(document.body.hasAttribute(DARK_ATTRIBUTE)).toBe(dark)
+    expect(document.documentElement.style.colorScheme).toBe('dark')
+    expect(document.body.hasAttribute(DARK_ATTRIBUTE)).toBe(true)
   })
 
-  it('defaults to system and falls back to light when matchMedia is unavailable', () => {
+  it('defaults to dark when matchMedia is unavailable', () => {
     vi.stubGlobal('matchMedia', undefined)
     executeBootstrap()
-    expect(document.documentElement.style.colorScheme).toBe('light')
-    expect(document.body.hasAttribute(DARK_ATTRIBUTE)).toBe(false)
+    expect(document.documentElement.style.colorScheme).toBe('dark')
+    expect(document.body.hasAttribute(DARK_ATTRIBUTE)).toBe(true)
   })
 
   it('writes the durable content font size and defaults it to 14px', () => {

@@ -618,6 +618,24 @@ Types: [ScopeKey](scope.zh.md)
 
 Source: [`packages/preset/agent-presets/src/index.ts`](../../packages/preset/agent-presets/src/index.ts)
 
+<a id="ctxagentroles--agentroleservice"></a>
+
+### `ctx.agentRoles` — `AgentRoleService`
+
+Host service owning role selection, projection, and request-time context.
+
+```ts cordis-catalog
+/**
+ * Select a role for a blank Session and record the committed value.
+ * @param agent - Blank-session Agent whose identity becomes fixed.
+ * @param agentRole - Requested stable role identifier.
+ * @returns The validated and durably selected role identifier.
+ */
+@Remote('select') select(agent: Agent, agentRole: string): AgentRoleId
+```
+
+Source: [`packages/buddy/agent-role/src/index.ts`](../../packages/buddy/agent-role/src/index.ts)
+
 <a id="ctxagents--agentregistry"></a>
 
 ### `ctx.agents` — `AgentRegistry`

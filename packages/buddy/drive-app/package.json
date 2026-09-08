@@ -37,9 +37,14 @@
   "license": "MIT",
   "dependencies": {
     "@deepseek-ai/dsh-agent-presets": "workspace:^",
+    "@deepseek-ai/dsh-client-connection": "workspace:^",
+    "@sospink/dsh-buddy-agent-role": "workspace:^",
     "@sospink/dsh-buddy-api-drive": "workspace:^",
+    "@sospink/dsh-buddy-client-ui-agent-role": "workspace:^",
+    "@sospink/dsh-buddy-client-ui-development-management": "workspace:^",
     "@sospink/dsh-buddy-client-ui-drive": "workspace:^",
     "@sospink/dsh-buddy-drive-local": "workspace:^",
+    "@sospink/dsh-buddy-development-management": "workspace:^",
     "@sospink/dsh-buddy-tool-drive": "workspace:^"
   },
   "peerDependencies": {

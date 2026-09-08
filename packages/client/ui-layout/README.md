@@ -25,7 +25,7 @@ This package provides the shell layout of the Web GUI: a three-column AppFrame w
 <a id="use-this-package"></a>
 ## Use this package
 
-Mount this plugin at the root slot; it then renders the app frame around whatever occupies the sidebar, conversation, and details columns. Users resize the sidebar by dragging its invisible hit strip and the details panel by dragging its floating pill; when the window narrows, only details shrinks, then auto-closes. A closed sidebar retains a 56px control rail; details closes to zero width.
+Mount this plugin at the root slot; it then renders the app frame around whatever occupies the sidebar, conversation, and details columns. Users resize the sidebar by dragging its invisible hit strip and the details panel by dragging its floating pill; when the window narrows, only details shrinks, then auto-closes. A closed sidebar retains a 56px control rail; details closes to zero width. Across blank and active Sessions, the sidebar uses the same borderless deep-blue task card: a near-black lower-left plane blends diagonally into navy at the upper-right, while its oversized radius, acrylic material, and deep shadow define the shell without an outline. Footer utilities stay on the same uninterrupted surface and are grouped through spacing. The blank canvas floats this card over the full-bleed field, while active conversations reserve its twelve-pixel outer breathing space in the three-column grid.
 
 ### Theme presentation
 

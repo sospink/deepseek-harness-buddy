@@ -124,6 +124,22 @@ Source: [`packages/core/agent/src/types.ts:38`](../packages/core/agent/src/types
 
 Source: [`packages/preset/agent-presets/src/session.ts:28`](../packages/preset/agent-presets/src/session.ts)
 
+### `agent-role/*`
+
+<a id="agent-roleselected--log-only"></a>
+
+#### `agent-role/selected` — log-only
+
+```ts persistence-catalog
+/**
+ * Selects the Session's professional working method. Log-only: prompt
+ * assembly folds this event, so resume and fork reproduce the same role.
+ */
+'agent-role/selected': { agentRole: AgentRoleId }
+```
+
+Source: [`packages/buddy/agent-role/src/index.ts:25`](../packages/buddy/agent-role/src/index.ts)
+
 ### `approval/*`
 
 <a id="approvalasked--log-only"></a>

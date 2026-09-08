@@ -123,6 +123,8 @@ declare module '@deepseek-ai/dsh-client-ui-slots' {
     'conversation.hero.brand.mark': { kind: 'single'; scope: 'root'; owner: HeroBrandMarkOwnerProps }
     /** Agent-preset control staged for a New Session. */
     'conversation.hero.agentPreset': { kind: 'single'; scope: 'root'; owner: HeroAgentPresetOwnerProps }
+    /** Professional working-role control staged for a New Session. */
+    'conversation.hero.agentRole': { kind: 'single'; scope: 'root'; owner: HeroAgentRoleOwnerProps }
     /** Full-width entries above the composer card. */
     'conversation.input.dock': { kind: 'list'; scope: 'session'; owner: InputZone }
     /** Floating entries rendered inside the resident composer card. */
@@ -177,6 +179,12 @@ export interface HeroAgentPresetOwnerProps {
   children?: never
 }
 
+/** Owner share of the Hero professional-role control. */
+export interface HeroAgentRoleOwnerProps {
+  /** Marker field: the occupant owns its catalog and staged selection. */
+  children?: never
+}
+
 /** Header actions derive their state from standard Session props. */
 export interface ConversationHeaderActionOwnerProps {
   /** Marker field: entries receive no owner-specific values. */
@@ -217,7 +225,12 @@ export interface ConversationInjected {
   /** Connect and open a blank Session in the selected Workspace. */
   selectWorkspace: (workspaceId: WorkspaceId) => Promise<void>
   /** Session-addressed composer block source, or the stable absent source. */
-  hooks: { composerBlock: ObservableSnapshot<ComposerBlock | undefined> }
+  hooks: {
+    composerBlock: ObservableSnapshot<ComposerBlock | undefined>
+    welcome: ObservableSnapshot<boolean>
+  }
+  /** Leave the cinematic welcome and reveal the resident creation workspace. */
+  dismissWelcome: () => void
 }
 
 /** Business callbacks injected into the strict Session body. */
@@ -327,6 +340,7 @@ export type ConversationSlotProps =
     | 'conversation.hero.brand.mark'
     | 'conversation.hero.workspace'
     | 'conversation.hero.agentPreset'
+    | 'conversation.hero.agentRole'
   >
   & InjectFace<ConversationInjected>
   & PropsLocale<'conversation'>

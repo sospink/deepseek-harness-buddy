@@ -1001,6 +1001,26 @@ describe('running and lock semantics', () => {
     expect(onDocumentPointerDown).not.toHaveBeenCalled()
   })
 
+  it('tracks the pointer glow with CSS variables without changing composer state', () => {
+    const { view } = bench({ variant: 'hero' })
+    const card = view.container.querySelector('[data-composer-card]') as HTMLElement
+    const glow = view.container.querySelector('[data-composer-edge-glow]')
+    expect(glow?.getAttribute('aria-hidden')).toBe('true')
+    card.getBoundingClientRect = () => ({
+      left: 100, top: 50, width: 400, height: 100,
+      right: 500, bottom: 150, x: 100, y: 50, toJSON: () => ({}),
+    })
+
+    fireEvent.pointerMove(card, { clientX: 420, clientY: 75 })
+    expect(card.style.getPropertyValue('--dsh-composer-pointer-x')).toBe('80%')
+    expect(card.style.getPropertyValue('--dsh-composer-pointer-y')).toBe('25%')
+    expect(card.getAttribute('data-expanded')).toBe('true')
+
+    fireEvent.pointerLeave(card)
+    expect(card.style.getPropertyValue('--dsh-composer-pointer-x')).toBe('50%')
+    expect(card.style.getPropertyValue('--dsh-composer-pointer-y')).toBe('50%')
+  })
+
   it('the plan projection swaps the placeholder while its effective target is plan mode', () => {
     const active = bench({ plan: { active: true, pending: false } })
     expect(active.placeholder).toBe('描述你的任务以生成计划')
@@ -1017,7 +1037,7 @@ describe('running and lock semantics', () => {
 })
 
 describe('machine pending lock', () => {
-  it('submitting renders read-only textarea, pending dot, and a disabled primary', () => {
+  it('submitting renders a read-only textarea and a disabled loading primary', () => {
     const { view, shell } = bench()
     // Drive the machine into submitting through a claim + enter.
     act(() => {
@@ -1034,7 +1054,10 @@ describe('machine pending lock', () => {
     expect(shell.snapshot.phase).toBe('submitting')
     const textarea = view.container.querySelector<HTMLDivElement>('[data-composer-input]')!
     expect(editableOf(textarea)).toBe(false)
-    expect(view.container.querySelector<HTMLButtonElement>('button[aria-label="发送消息"]')!.disabled).toBe(true)
+    const primary = view.container.querySelector<HTMLButtonElement>('button[aria-label="发送消息"]')!
+    expect(primary.disabled).toBe(true)
+    expect(primary.getAttribute('aria-busy')).toBe('true')
+    expect(primary.querySelector('[data-loading-indicator]')).not.toBeNull()
   })
 })
 

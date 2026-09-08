@@ -19,7 +19,14 @@ beforeEach(() => { localStorage.clear() })
 describe('createLayoutStore', () => {
   it('initializes the sidebar at its default width, details closed, wide viewport assumed', () => {
     const { store } = createLayoutStore().create()
-    expect(store.getSnapshot()).toEqual({ sidebar: SIDEBAR_DEFAULT, details: 0, narrow: false, narrowExpanded: false })
+    expect(store.getSnapshot()).toEqual({
+      sidebar: SIDEBAR_DEFAULT,
+      details: 0,
+      narrow: false,
+      narrowExpanded: false,
+      blank: false,
+      blankExpanded: false,
+    })
   })
 
   it('each create() is an independent instance (factory is not a singleton)', () => {
@@ -55,7 +62,7 @@ describe('createLayoutStore', () => {
     actions.setSidebar(400)
     actions.setNarrow(true)
     actions.toggleSidebar()
-    expect(store.getSnapshot()).toEqual({ sidebar: 400, details: 0, narrow: true, narrowExpanded: true })
+    expect(store.getSnapshot()).toMatchObject({ sidebar: 400, narrow: true, narrowExpanded: true })
     actions.toggleSidebar()
     expect(store.getSnapshot().narrowExpanded).toBe(false)
     expect(store.getSnapshot().sidebar).toBe(400)
@@ -72,6 +79,17 @@ describe('createLayoutStore', () => {
     expect(store.getSnapshot()).toMatchObject({ narrow: false, narrowExpanded: false })
     actions.setNarrow(true)
     expect(store.getSnapshot().narrowExpanded).toBe(false)
+  })
+
+  it('blank mode starts collapsed, accepts a temporary expand, and preserves the wide preference', () => {
+    const { store, actions } = createLayoutStore().create()
+    actions.setSidebar(400)
+    actions.setBlank(true)
+    expect(store.getSnapshot()).toMatchObject({ sidebar: 400, blank: true, blankExpanded: false })
+    actions.toggleSidebar()
+    expect(store.getSnapshot()).toMatchObject({ sidebar: 400, blank: true, blankExpanded: true })
+    actions.setBlank(false)
+    expect(store.getSnapshot()).toMatchObject({ sidebar: 400, blank: false, blankExpanded: false })
   })
 
   it('openDetails uses the contract default, preserves an open width, and closeDetails zeroes', () => {
@@ -98,6 +116,8 @@ describe('createLayoutStore', () => {
       details: 0,
       narrow: false,
       narrowExpanded: false,
+      blank: false,
+      blankExpanded: false,
     })
   })
 })

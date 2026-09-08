@@ -55,6 +55,8 @@ export { REGION_BEGIN, REGION_END }
  */
 export const SERVICE_PAGE: Record<string, string> = {
   buddyDriveController: 'buddy-drive.md',
+  developmentManagement: 'development-management.md',
+  agentRoles: 'core.md',
   agentLoop: 'core.md',
   agentDefaultModel: 'core.md',
   agentPresets: 'core.md',
@@ -193,6 +195,7 @@ export const EVENT_SCOPE_PAGE: Record<string, string> = {
   'commands': 'commands.md',
   'cordis': 'extensions.md',
   'drive': 'buddy-drive.md',
+  'development-management': 'development-management.md',
   'authorization': 'credentials.md',
   'credentials': 'credentials.md',
   'domain': 'storage.md',
@@ -240,6 +243,19 @@ export const EVENT_WALK_EXEMPTIONS: Record<string, string> = {
  * appear on more than one page.
  */
 export const LINK_MAP: Readonly<Record<string, string>> = {
+  AgentRoleId: 'core.md',
+  AddDevelopmentNoteRequest: 'development-management.md',
+  AssignDevelopmentTaskRequest: 'development-management.md',
+  ConfigureDeliveryRequest: 'development-management.md',
+  ConfirmMergeRequestRequest: 'development-management.md',
+  CreateDevelopmentTaskRequest: 'development-management.md',
+  DeliveryReview: 'development-management.md',
+  DeliveryTaskAndReview: 'development-management.md',
+  DevelopmentBaseline: 'development-management.md',
+  DevelopmentTask: 'development-management.md',
+  DevelopmentTaskRequest: 'development-management.md',
+  MergeDevelopmentRequest: 'development-management.md',
+  SelectDevelopmentRoleRequest: 'development-management.md',
   DriveAuditEvent: 'buddy-drive.md',
   DriveAuditIdBrand: 'buddy-drive.md',
   DriveAuditQuery: 'buddy-drive.md',

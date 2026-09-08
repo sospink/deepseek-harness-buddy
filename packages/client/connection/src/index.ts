@@ -82,12 +82,19 @@ export interface ConnectionConfig {
   cookieMaxAgeDays?: number
   /** Maximum buffered JSON body for every `/api` request. Default: 300 MiB. */
   maxRequestBodyBytes?: number
+  /**
+   * Permit clean-URL access without a launch token or browser cookie when the
+   * request Host is loopback. Host/Origin trust checks still apply. Default:
+   * false. Intended only for attended local product distributions.
+   */
+  allowUnauthenticatedLoopback?: boolean
 }
 
 export const Config: z<ConnectionConfig> = z.object({
   trustedHosts: z.array(String).default([]),
   cookieMaxAgeDays: z.natural().min(1).default(30),
   maxRequestBodyBytes: z.natural().min(1).default(DEFAULT_MAX_REQUEST_BODY_BYTES),
+  allowUnauthenticatedLoopback: z.boolean().default(false),
 })
 
 /**
@@ -102,6 +109,7 @@ export async function apply(ctx: Context, config?: ConnectionConfig): Promise<vo
   const trustedHosts = config?.trustedHosts ?? []
   const cookieMaxAgeDays = config?.cookieMaxAgeDays ?? 30
   const maxRequestBodyBytes = config?.maxRequestBodyBytes ?? DEFAULT_MAX_REQUEST_BODY_BYTES
+  const allowUnauthenticatedLoopback = config?.allowUnauthenticatedLoopback ?? false
   // Config boundary: a malformed entry fails the load loudly here rather than
   // silently authorizing its hostname prefix at request time.
   for (const entry of trustedHosts) assertTrustedAuthority(entry)
@@ -120,6 +128,7 @@ export async function apply(ctx: Context, config?: ConnectionConfig): Promise<vo
     effectiveTrustedHosts,
     await BrowserAuth.create(ctx.root, ctx.credentials, cookieMaxAgeDays, deploymentMode === 'proxy-fronted'),
     publicOrigin,
+    allowUnauthenticatedLoopback,
   )
   const fetchHandler = connection.createSharedFetchHandler(API_PATH)
   const route: WebRoute = {

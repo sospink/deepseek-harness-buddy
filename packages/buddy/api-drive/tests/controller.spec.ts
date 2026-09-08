@@ -32,7 +32,7 @@ describe('BuddyDriveController', () => {
     expect([...value.routes.keys()].sort()).toEqual([
       '/api/buddy-drive/assets/cmaps', '/api/buddy-drive/assets/docx-preflight-0.4.0.js',
       '/api/buddy-drive/assets/docx-runtime-0.4.0.js', '/api/buddy-drive/assets/pdf.worker-6.2.108.mjs',
-      '/api/buddy-drive/content', '/api/buddy-drive/upload',
+      '/api/buddy-drive/content', '/api/buddy-drive/upload', '/api/buddy-prototype/assets',
     ])
     expect(value.controller.baseline()).toMatchObject({ library: { id: 'default' }, folders: [], files: [] })
     const root = (await value.controller.createFolder({ name: 'Root' })).folder
@@ -61,6 +61,6 @@ describe('BuddyDriveController', () => {
 
     await value.fiber.dispose()
     expect(value.routes.size).toBe(0)
-    expect(value.dispose).toHaveBeenCalledTimes(6)
+    expect(value.dispose).toHaveBeenCalledTimes(7)
   })
 })

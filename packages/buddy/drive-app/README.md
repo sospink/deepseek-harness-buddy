@@ -9,7 +9,7 @@ English | [中文](README.zh.md)
 
 ## Summary
 
-`@sospink/dsh-buddy-drive-app` is the optional Bundle layer for the complete Buddy document-drive stack. Apply it after `@deepseek-ai/dsh-web-app`; its patch mounts the local Drive provider under `$DSH_HOME/buddy-drive`, the generated Remote and authenticated binary API, the standalone browser UI, and the read-only Positioning Safety Agent preset/tool package. Removing this Bundle removes the Buddy Drive rows without changing upstream packages.
+`@sospink/dsh-buddy-drive-app` is the optional Bundle layer for the Buddy product stack. Apply it after `@deepseek-ai/dsh-web-app`; its patch mounts the local Drive provider under `$DSH_HOME/buddy-drive`, the generated Remote and authenticated binary API, the standalone browser UI, the professional Agent-role selector, the Development Management delivery workflow, and the read-only Positioning Safety Agent preset/tool package. Removing this Bundle removes the Buddy rows without changing upstream packages.
 
 ## Table of Contents
 
@@ -42,12 +42,15 @@ The layer uses the stage-one default limits: 50 MiB per file, 2 GiB retained log
 
 ## Understand the implementation
 
-The package contains one `cordis.patch.yml` and a marker Loader plugin. The patch inserts three Drive rows and replaces the complete `agent-presets` config to add the tool package's `presets/` directory. The root resolves through `@sospink/dsh-buddy-drive-app/package.json` and its package-local dependency, so it works whether pnpm nests or hoists `tool-drive`. Cordis injection orders the Drive rows behind Storage Domain, WebServer, Connection, Typert, Remote, Locale, and Slot services from the preceding stock layers.
+The package contains one `cordis.patch.yml` and a marker Loader plugin. The patch inserts the Drive rows, the Host and Client professional-role rows, and the Host and Client Development Management rows. It also replaces the complete `agent-presets` config to add the tool package's `presets/` directory. Cordis injection orders the Buddy rows behind Storage Domain, WebServer, Connection, Typert, Subprocess, Remote, Locale, and Slot services from the preceding stock layers.
+
+Development Management persists below `$DSH_HOME/development-management`, admits repositories only below `DSH_BUDDY_REPOSITORY_ROOT` (or the launch directory), and runs the configured typecheck, test, and build commands before recommending a merge. The default remote provider is `none`, so a real manually created MR/PR URL remains mandatory until a deployment explicitly configures GitLab.
 
 ## Further Exploration
 
 - [Buddy package map](../README.md) — packages mounted by this layer.
 - [Delivery TODO](../../../BUDDY_DRIVE_TODO.md) — staged acceptance evidence.
+- [Development Management ledger](../../../docs/buddy-development-management-ledger.md) — role workflow and delivery acceptance evidence.
 
 ## Model Experience
 
@@ -55,7 +58,7 @@ The package contains one `cordis.patch.yml` and a marker Loader plugin. The patc
 
 #### What the model sees
 
-The Bundle adds a selectable Positioning Safety Agent preset. Ordinary/default sessions remain `standard`; only sessions explicitly choosing `positioning-safety` receive the fixed untrusted-evidence persona and three read-only Drive tools.
+The Bundle adds a selectable Positioning Safety Agent preset, a separate professional-role selector, and an attended Development Management delivery Agent. Ordinary/default sessions remain `standard`; only sessions explicitly choosing `positioning-safety` receive the fixed untrusted-evidence persona and three read-only Drive tools. A professional role changes the working method without changing that tool composition. Development Management invokes managed Git and configured checks only when an assigned engineer explicitly requests delivery review.
 
 #### Token effect
 
@@ -70,6 +73,7 @@ Ordinary presets are unchanged. The Positioning Safety Agent has a stable comple
 - **Local-provider bundle** — this layer selects the local disk provider; remote object-storage deployments need a different bundle or a later row override.
 - **Not a shipped upstream profile template** — the Bundle is intentionally optional until the Buddy product profile and branding are accepted.
 - **Preview and Agent tools are separate boundaries** — this layer only composes them; browser viewer safety/performance budgets belong to Client UI, while read-only model tools and provenance/replay belong to Tool Drive.
+- **Remote merge integration is deployment-owned** — the default layer generates MR content and requires manual URL evidence; automatic GitLab creation/merge requires explicit server, project, and token configuration.
 
 ### Dev Note
 

@@ -1,0 +1,438 @@
+<!DOCTYPE html><html class="dark" lang="zh-CN" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>智御全城 - 用户管理</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist.min.css" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-secondary": "#003548",
+                        "surface": "#131313",
+                        "outline": "#849586",
+                        "inverse-primary": "#006d3a",
+                        "on-primary": "#00391b",
+                        "inverse-on-surface": "#303030",
+                        "surface-dim": "#131313",
+                        "surface-variant": "#353535",
+                        "primary-fixed-dim": "#00e380",
+                        "inverse-surface": "#e2e2e2",
+                        "secondary": "#8fd8ff",
+                        "on-tertiary-fixed": "#2a1700",
+                        "on-secondary-fixed": "#001e2b",
+                        "secondary-fixed-dim": "#75d1ff",
+                        "surface-bright": "#393939",
+                        "on-error": "#690005",
+                        "on-background": "#e2e2e2",
+                        "on-error-container": "#ffdad6",
+                        "primary": "#8cffb1",
+                        "on-secondary-fixed-variant": "#004d67",
+                        "tertiary-fixed-dim": "#f9bb6b",
+                        "surface-container-high": "#2a2a2a",
+                        "on-secondary-container": "#004b65",
+                        "surface-tint": "#00e380",
+                        "on-tertiary": "#462a00",
+                        "tertiary-fixed": "#ffddb7",
+                        "surface-container": "#1f1f1f",
+                        "on-primary-fixed": "#00210e",
+                        "error": "#ffb4ab",
+                        "background": "#000000",
+                        "on-primary-fixed-variant": "#00522a",
+                        "on-tertiary-container": "#794c01",
+                        "primary-container": "#01e983",
+                        "error-container": "#93000a",
+                        "on-surface-variant": "#bacbbb",
+                        "surface-container-highest": "#353535",
+                        "on-primary-container": "#006334",
+                        "tertiary": "#ffe3c6",
+                        "secondary-container": "#00c1fd",
+                        "on-tertiary-fixed-variant": "#653e00",
+                        "tertiary-container": "#ffc070",
+                        "surface-container-lowest": "#0e0e0e",
+                        "surface-container-low": "#1b1b1b",
+                        "secondary-fixed": "#c2e8ff",
+                        "primary-fixed": "#5dff9e",
+                        "outline-variant": "#3b4a3e",
+                        "on-surface": "#e2e2e2",
+                        "canvas-accent": "#101826",
+                        "primary-glow": "rgba(1,233,131,0.35)",
+                        "mute": "#64748B",
+                        "ink": "#F8FAFC",
+                        "hairline": "rgba(255,255,255,0.08)"
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        full: "9999px"
+                    },
+                    spacing: {
+                        xxs: "4px",
+                        md: "16px",
+                        gutter: "24px",
+                        xl: "32px",
+                        "3xl": "48px",
+                        section: "160px",
+                        "4xl": "64px",
+                        lg: "24px",
+                        sm: "12px",
+                        "max-width": "1440px",
+                        xs: "8px",
+                        base: "4px",
+                        "2xl": "40px"
+                    },
+                    fontFamily: {
+                        headline: ["Geist"],
+                        display: ["Geist"],
+                        body: ["Geist"],
+                        label: ["geistMono"],
+                        "label-mono": ["Geist Mono"]
+                    },
+                    fontSize: {
+                        "body-md": ["16px", {lineHeight: "24px", letterSpacing: "0px", fontWeight: "400"}],
+                        "display-hero": ["72px", {lineHeight: "80px", letterSpacing: "-4px", fontWeight: "600"}],
+                        caption: ["12px", {lineHeight: "16px", letterSpacing: "0px", fontWeight: "400"}],
+                        "display-md": ["24px", {lineHeight: "32px", letterSpacing: "-0.5px", fontWeight: "600"}],
+                        "body-lg": ["18px", {lineHeight: "28px", letterSpacing: "0px", fontWeight: "400"}],
+                        "display-lg": ["32px", {lineHeight: "40px", letterSpacing: "-1px", fontWeight: "600"}],
+                        "display-xl": ["48px", {lineHeight: "56px", letterSpacing: "-2px", fontWeight: "600"}],
+                        "label-mono": ["12px", {lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "500"}],
+                        "body-sm": ["14px", {lineHeight: "20px", letterSpacing: "0px", fontWeight: "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #000000;
+            color: #e2e2e2;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .aspect-16-9-container {
+            aspect-ratio: 16 / 9;
+            width: 100%;
+            max-width: 1920px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .primary-hover-glow:hover {
+            box-shadow: 0 0 32px rgba(1, 233, 131, 0.12);
+            border-color: rgba(1, 233, 131, 0.3);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .scan-line {
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(to right, transparent, #8cffb1, transparent);
+            position: absolute;
+            top: 0;
+            animation: scan 3s linear infinite;
+            opacity: 0.2;
+        }
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+        /* Ensure layout takes up appropriate space for 16:9 feel on larger screens */
+        main {
+            flex-grow: 1;
+        }
+    </style>
+</head>
+<body class="font-body text-body-md overflow-x-hidden">
+<!-- Top Navigation Bar -->
+<nav class="fixed top-0 w-full z-50 bg-black/50 backdrop-blur-xl border-b border-white/10 h-16">
+<div class="flex justify-between items-center h-full px-gutter max-w-max-width mx-auto">
+<div class="flex items-center gap-xl flex-grow">
+<div class="flex items-center gap-xs">
+<div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-black" style="font-variation-settings: &quot;FILL&quot; 1;">deployed_code</span>
+</div>
+<span class="text-display-md font-bold text-on-surface font-extrabold">智御全城</span>
+</div>
+<div class="hidden md:flex items-center gap-lg ml-auto text-lg">
+<a class="text-mute font-medium hover:text-primary transition-colors duration-200" href="#">首页</a>
+<a class="text-mute font-medium hover:text-primary transition-colors duration-200" href="#">航迹监控</a>
+<a class="text-mute font-medium hover:text-primary transition-colors duration-200" href="#">城市治理大模型</a>
+<a class="text-mute font-medium hover:text-primary transition-colors duration-200" href="#">无人机注册中心</a>
+<a class="text-mute font-medium hover:text-primary transition-colors duration-200" href="#">区块链数据中心</a>
+<a class="text-primary font-bold border-b-2 border-primary pb-1" href="#">用户管理</a>
+</div>
+</div>
+<div class="flex items-center gap-md ml-lg">
+<button class="material-symbols-outlined text-on-surface hover:text-primary transition-transform active:scale-90" data-icon="notifications" style="font-size: 28px;">notifications</button>
+<button class="material-symbols-outlined text-on-surface hover:text-primary transition-transform active:scale-90" data-icon="account_circle" style="font-size: 28px;">account_circle</button>
+</div>
+</div>
+</nav>
+<!-- Main Content Wrapper optimized for wide layout -->
+<main class="px-gutter max-w-max-width mx-auto w-full pt-6 mt-10">
+<!-- Hero Title Section -->
+<header class="flex flex-col gap-sm py-8"><div class="relative p-8 rounded-2xl overflow-hidden border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent group shadow-[0_0_40px_rgba(1,233,131,0.05)] backdrop-blur-xl"><div class="absolute -top-32 -left-32 w-64 h-64 bg-primary/20 blur-[120px] rounded-full group-hover:bg-primary/30 transition-all duration-700"></div><div class="absolute -bottom-32 -right-32 w-64 h-64 bg-secondary/10 blur-[120px] rounded-full group-hover:bg-secondary/20 transition-all duration-700"></div>
+
+    <div class="absolute -top-24 -left-24 w-48 h-48 bg-primary/10 blur-[100px] rounded-full group-hover:bg-primary/20 transition-all duration-700"></div>
+    <div class="relative z-10">
+        <div class="flex items-center gap-xs mb-sm">
+            <span class="text-label-mono text-[10px] tracking-[0.2em] text-primary bg-primary/10 px-xs py-0.5 rounded border border-primary/20">USER MANAGEMENT</span>
+            <div class="h-px w-8 bg-primary/30"></div>
+        </div>
+        <div class="flex flex-col md:flex-row justify-between items-end gap-md">
+            <div>
+                <h1 class="text-display-xl tracking-tight font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-primary-fixed to-secondary">用户管理</h1>
+                <p class="text-body-lg mt-xs font-light tracking-wide max-w-2xl italic text-zinc-300">全城低空资源用户权限管理底座，实现权限一键溯源与角色精准控制</p>
+            </div>
+            <div class="hidden lg:flex items-center gap-md">
+                <div class="text-right">
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div></header>
+<!-- Filters Row -->
+
+<!-- Drone Grid -->
+<section class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div class="glass-panel rounded-2xl p-6 flex flex-col gap-2 relative overflow-hidden group hover:bg-white/5 transition-all duration-300">
+        <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
+            <span class="material-symbols-outlined" style="font-size: 80px;">group</span>
+        </div>
+        <div class="flex justify-between items-start">
+            <span class="text-mute text-sm font-medium">总用户</span>
+            <span class="material-symbols-outlined text-primary" style="font-variation-settings: &quot;FILL&quot; 1;">group</span>
+        </div>
+        <div class="text-display-lg font-bold text-on-surface">5</div>
+    </div>
+
+    <div class="glass-panel rounded-2xl p-6 flex flex-col gap-2 relative overflow-hidden group hover:bg-white/5 transition-all duration-300">
+        <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
+            <span class="material-symbols-outlined" style="font-size: 80px;">rocket_launch</span>
+        </div>
+        <div class="flex justify-between items-start">
+            <span class="text-mute text-sm font-medium">无人机运营商</span>
+            <span class="material-symbols-outlined text-secondary" style="font-variation-settings: &quot;FILL&quot; 1;">rocket_launch</span>
+        </div>
+        <div class="text-display-lg font-bold text-on-surface">2</div>
+    </div>
+
+    <div class="glass-panel rounded-2xl p-6 flex flex-col gap-2 relative overflow-hidden group hover:bg-white/5 transition-all duration-300">
+        <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
+            <span class="material-symbols-outlined" style="font-size: 80px;">admin_panel_settings</span>
+        </div>
+        <div class="flex justify-between items-start">
+            <span class="text-mute text-sm font-medium">管理员</span>
+            <span class="material-symbols-outlined text-tertiary-container" style="font-variation-settings: &quot;FILL&quot; 1;">admin_panel_settings</span>
+        </div>
+        <div class="text-display-lg font-bold text-on-surface">1</div>
+    </div>
+
+    <div class="glass-panel rounded-2xl p-6 flex flex-col gap-2 relative overflow-hidden group hover:bg-white/5 transition-all duration-300">
+        <div class="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500">
+            <span class="material-symbols-outlined" style="font-size: 80px;">check_circle</span>
+        </div>
+        <div class="flex justify-between items-start">
+            <span class="text-mute text-sm font-medium">启用用户</span>
+            <span class="material-symbols-outlined text-primary" style="font-variation-settings: &quot;FILL&quot; 1;">check_circle</span>
+        </div>
+        <div class="text-display-lg font-bold text-on-surface">5</div>
+    </div>
+</section><section class="glass-panel rounded-2xl p-6 mb-8 border border-white/5 shadow-lg">
+    <div class="flex flex-wrap items-center gap-4">
+        <!-- Search Input -->
+        <div class="flex-grow min-w-[240px] relative">
+            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-mute text-sm">search</span>
+            <input type="text" placeholder="输入用户名或ID搜索" class="w-full bg-white/5 border border-white/10 rounded-lg py-2 pl-10 pr-4 text-sm focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all placeholder:text-mute">
+        </div>
+
+        <!-- Role Dropdown -->
+        <div class="relative min-w-[140px]">
+            <select class="w-full appearance-none bg-white/5 border border-white/10 rounded-lg py-2 pl-4 pr-10 text-sm focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all">
+                <option value="">所有角色</option>
+                <option value="operator">运营商</option>
+                <option value="monitor">监控员</option>
+                <option value="regulator">监管</option>
+                <option value="admin">管理员</option>
+            </select>
+            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-mute text-sm pointer-events-none">keyboard_arrow_down</span>
+        </div>
+
+        <!-- Status Dropdown -->
+        <div class="relative min-w-[140px]">
+            <select class="w-full appearance-none bg-white/5 border border-white/10 rounded-lg py-2 pl-4 pr-10 text-sm focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 transition-all">
+                <option value="">所有状态</option>
+                <option value="enabled">已启用</option>
+                <option value="disabled">已禁用</option>
+            </select>
+            <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-mute text-sm pointer-events-none">keyboard_arrow_down</span>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex items-center gap-3">
+
+            <button class="bg-white/5 text-on-surface hover:bg-white/10 font-medium text-sm px-6 py-2 rounded-lg border border-white/10 active:scale-95 transition-all">
+                重置
+            </button><button class="bg-primary text-black font-bold text-sm px-6 py-2 hover:brightness-110 active:scale-95 transition-all shadow-[0_0_15px_rgba(1,233,131,0.2)] flex items-center gap-1.5 rounded-lg"><span class="material-symbols-outlined text-[18px]" style="font-variation-settings: &quot;wght&quot; 600;">add</span>添加用户</button>
+        </div>
+    </div>
+</section><section class="glass-panel rounded-2xl overflow-hidden mb-xl shadow-2xl border border-white/5">
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="bg-white/5 border-b border-white/10">
+                    <th class="px-6 py-4 text-sm font-bold text-primary tracking-wider">用户ID</th>
+                    <th class="px-6 py-4 text-sm font-bold text-primary tracking-wider">用户名</th>
+                    <th class="px-6 py-4 text-sm font-bold text-primary tracking-wider">账号</th>
+                    <th class="px-6 py-4 text-sm font-bold text-primary tracking-wider">区块链地址</th>
+                    <th class="px-6 py-4 text-sm font-bold text-primary tracking-wider">角色</th>
+                    <th class="px-6 py-4 text-sm font-bold text-primary tracking-wider text-center">状态</th>
+                    <th class="px-6 py-4 text-sm font-bold text-primary tracking-wider text-right">操作</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-white/5">
+                <tr class="hover:bg-white/[0.02] transition-colors">
+                    <td class="px-6 py-4 text-sm font-medium text-on-surface">2050869590000984064</td>
+                    <td class="px-6 py-4 text-sm text-on-surface/80">运营2</td>
+                    <td class="px-6 py-4 text-sm text-on-surface/80">yunying2</td>
+                    <td class="px-6 py-4 text-sm font-label-mono text-mute">0x0f084e7a...d00bb187</td>
+                    <td class="px-6 py-4 text-sm text-on-surface/80">运营商</td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">已启用</span>
+                    </td>
+                    <td class="px-6 py-4 text-right space-x-4">
+                        <button class="text-xs text-primary hover:underline">编辑</button>
+                        <button class="text-xs text-secondary hover:underline">禁用</button>
+                        <button class="text-xs text-error hover:underline">删除</button>
+                    </td>
+                </tr>
+                <tr class="hover:bg-white/[0.02] transition-colors">
+                    <td class="px-6 py-4 text-sm font-medium text-on-surface">1953056440559312896</td>
+                    <td class="px-6 py-4 text-sm text-on-surface/80">监控员001</td>
+                    <td class="px-6 py-4 text-sm text-on-surface/80">jiankongyuan</td>
+                    <td class="px-6 py-4 text-sm font-label-mono text-mute">0xdbdb5606...b9d0c8aa</td>
+                    <td class="px-6 py-4 text-sm text-on-surface/80">监控员</td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">已启用</span>
+                    </td>
+                    <td class="px-6 py-4 text-right space-x-4">
+                        <button class="text-xs text-primary hover:underline">编辑</button>
+                        <button class="text-xs text-secondary hover:underline">禁用</button>
+                        <button class="text-xs text-error hover:underline">删除</button>
+                    </td>
+                </tr>
+                <tr class="hover:bg-white/[0.02] transition-colors">
+                    <td class="px-6 py-4 text-sm font-medium text-on-surface">1953056337429766144</td>
+                    <td class="px-6 py-4 text-sm text-on-surface/80">运营001</td>
+                    <td class="px-6 py-4 text-sm text-on-surface/80">yunying</td>
+                    <td class="px-6 py-4 text-sm font-label-mono text-mute">0xafb6e5e4...6622e658</td>
+                    <td class="px-6 py-4 text-sm text-on-surface/80">运营商</td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">已启用</span>
+                    </td>
+                    <td class="px-6 py-4 text-right space-x-4">
+                        <button class="text-xs text-primary hover:underline">编辑</button>
+                        <button class="text-xs text-secondary hover:underline">禁用</button>
+                        <button class="text-xs text-error hover:underline">删除</button>
+                    </td>
+                </tr>
+                <tr class="hover:bg-white/[0.02] transition-colors">
+                    <td class="px-6 py-4 text-sm font-medium text-on-surface">1952644617607512064</td>
+                    <td class="px-6 py-4 text-sm text-on-surface/80">监管</td>
+                    <td class="px-6 py-4 text-sm text-on-surface/80">jianguan</td>
+                    <td class="px-6 py-4 text-sm font-label-mono text-mute">0xe1be663b...3758d4f9</td>
+                    <td class="px-6 py-4 text-sm text-on-surface/80">监管</td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">已启用</span>
+                    </td>
+                    <td class="px-6 py-4 text-right space-x-4">
+                        <button class="text-xs text-primary hover:underline">编辑</button>
+                        <button class="text-xs text-secondary hover:underline">禁用</button>
+                        <button class="text-xs text-error hover:underline">删除</button>
+                    </td>
+                </tr>
+                <tr class="hover:bg-white/[0.02] transition-colors">
+                    <td class="px-6 py-4 text-sm font-medium text-on-surface">1952644616231780352</td>
+                    <td class="px-6 py-4 text-sm text-on-surface/80">超级管理员</td>
+                    <td class="px-6 py-4 text-sm text-on-surface/80">admin</td>
+                    <td class="px-6 py-4 text-sm font-label-mono text-mute">0x0591f196...b7b5f66a</td>
+                    <td class="px-6 py-4 text-sm text-on-surface/80">超级管理员</td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary border border-primary/20">已启用</span>
+                    </td>
+                    <td class="px-6 py-4 text-right space-x-4">
+                        <button class="text-xs text-primary hover:underline">编辑</button>
+                        <button class="text-xs text-secondary hover:underline text-mute/50 cursor-not-allowed" disabled="">禁用</button>
+                        <button class="text-xs text-error hover:underline text-mute/50 cursor-not-allowed" disabled="">删除</button>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-black border-t border-white/10 w-full py-md mt-auto">
+<div class="flex flex-col md:flex-row justify-between items-center px-gutter w-full max-w-max-width mx-auto">
+<span class="text-label-mono text-mute opacity-80 text-xs">© 2024 智御全城 城市无人机治理平台</span>
+<div class="flex gap-lg mt-md md:mt-0 text-caption">
+<a class="text-mute hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">隐私政策</a>
+<a class="text-mute hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">服务条款</a>
+<a class="text-mute hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">联系我们</a>
+</div>
+</div>
+</footer>
+<!-- Floating Action Button -->
+<div class="fixed bottom-xl right-xl z-40">
+
+</div>
+<script>
+    // Micro-interaction: Smooth hover states for filter dropdowns
+    document.querySelectorAll('select').forEach(select => {
+        select.addEventListener('focus', () => {
+            select.parentElement.classList.add('ring-1', 'ring-primary/30');
+        });
+        select.addEventListener('blur', () => {
+            select.parentElement.classList.remove('ring-1', 'ring-primary/30');
+        });
+    });
+
+    // Search bar activation effect
+    const searchInput = document.querySelector('input[type="text"]');
+    if(searchInput) {
+        searchInput.addEventListener('focus', () => {
+            searchInput.parentElement.classList.add('shadow-[0_0_20px_rgba(1,233,131,0.05)]');
+        });
+        searchInput.addEventListener('blur', () => {
+            searchInput.parentElement.classList.remove('shadow-[0_0_20px_rgba(1,233,131,0.05)]');
+        });
+    }
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+</body></html>

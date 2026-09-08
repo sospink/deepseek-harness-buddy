@@ -20,6 +20,30 @@ import { ConversationEventRegistry } from './event-registry.ts'
 import { HistoricalImageCache } from './historical-images.ts'
 import { ConversationViewRegistry } from './view-registry.ts'
 
+/** Versioned browser acknowledgement for the cinematic product welcome. */
+const WELCOME_DISMISSED_KEY = 'dsh.conversation.welcomeDismissed.v1'
+
+/** Read the initial welcome visibility; restricted storage fails open. */
+function readWelcomeVisibility(): boolean {
+  if (typeof localStorage === 'undefined') return true
+  try {
+    return localStorage.getItem(WELCOME_DISMISSED_KEY) !== '1'
+  } catch {
+    return true
+  }
+}
+
+/** Persist or clear the welcome acknowledgement when storage is available. */
+function writeWelcomeDismissed(dismissed: boolean): void {
+  if (typeof localStorage === 'undefined') return
+  try {
+    if (dismissed) localStorage.setItem(WELCOME_DISMISSED_KEY, '1')
+    else localStorage.removeItem(WELCOME_DISMISSED_KEY)
+  } catch {
+    // Privacy-restricted browsers still keep the in-memory store usable.
+  }
+}
+
 /** Observable faces published for one Session's Conversation assembly. */
 export interface ConversationBinding {
   readonly snapshot: ObservableSnapshot<ConversationSnapshot>
@@ -142,6 +166,8 @@ export class UiConversation extends Service {
   readonly events: ConversationEventRegistry
   /** Registry of target View definitions. */
   readonly views: ConversationViewRegistry
+  /** Whether the resident blank-session shell presents the product welcome. */
+  readonly welcome = createSnapshotStore(readWelcomeVisibility())
   private readonly bindings = new Map<SessionId, BindingRecord>()
   private readonly images: HistoricalImageCache
 
@@ -175,6 +201,18 @@ export class UiConversation extends Service {
         for (const record of [...this.bindings.values()]) this.drop(record, true)
       }
     }, 'ui-conversation assembly')
+  }
+
+  /** Show the product welcome and clear its browser acknowledgement. */
+  showWelcome(): void {
+    writeWelcomeDismissed(false)
+    this.welcome.set(true)
+  }
+
+  /** Leave the product welcome and remember the browser acknowledgement. */
+  dismissWelcome(): void {
+    writeWelcomeDismissed(true)
+    this.welcome.set(false)
   }
 
   /**

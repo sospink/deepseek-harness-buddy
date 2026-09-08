@@ -84,7 +84,11 @@ function fakeResponse(): {
   return { response, state }
 }
 
-async function mounted(config?: { trustedHosts?: string[]; proxyOrigin?: string }): Promise<{
+async function mounted(config?: {
+  trustedHosts?: string[]
+  proxyOrigin?: string
+  allowUnauthenticatedLoopback?: boolean
+}): Promise<{
   routes: WebRoute[]
   upgrades: WebUpgradeRoute[]
   connection: HostConnectionHandle
@@ -237,6 +241,31 @@ describe('connection node half', () => {
       host: 'harness.example',
       cookie: browserCookie(connection, 'harness.example'),
     }))).toBeUndefined()
+    await dispose()
+  })
+
+  it('permits clean loopback access only when the local distribution opts in', async () => {
+    const { routes, connection, dispose } = await mounted({
+      trustedHosts: ['harness.example'],
+      allowUnauthenticatedLoopback: true,
+    })
+    expect(connection.authenticatedUrl('http://127.0.0.1:3080')).toBe('http://127.0.0.1:3080/')
+    expect(connection.authenticatedUrl('http://localhost:3080')).toBe('http://localhost:3080/')
+    expect(new URL(connection.authenticatedUrl('http://harness.example')).searchParams.has('token')).toBe(true)
+
+    const loopback = fakeResponse()
+    await routes[0]!.handler(fakeRequest({ host: '127.0.0.1:3080' }), loopback.response)
+    expect(loopback.state.status).toBe(404)
+    expect(connection.requestRejection(fakeRequest({ host: 'localhost:3080' }))).toBeUndefined()
+    expect(connection.requestRejection(fakeRequest({ host: '[::1]:3080' }))).toBeUndefined()
+
+    const declared = fakeRequest({ host: 'harness.example' })
+    expect(connection.requestRejection(declared)).toBe(401)
+    const untrusted = fakeRequest({ host: 'evil.example' })
+    expect(connection.requestRejection(untrusted)).toBe(403)
+    expect(connection.requestRejection(fakeRequest({
+      host: '127.0.0.1:3080', origin: 'http://evil.example', 'sec-fetch-site': 'cross-site',
+    }))).toBe(403)
     await dispose()
   })
 

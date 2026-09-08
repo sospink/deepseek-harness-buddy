@@ -9,7 +9,7 @@ kind: "package-bundle"
 
 ## 概述
 
-`@sospink/dsh-buddy-drive-app` 是完整 Buddy 资料云盘栈的可选 Bundle 层。在 `@deepseek-ai/dsh-web-app` 之后应用；Patch 会在 `$DSH_HOME/buddy-drive` 挂载本地 Drive Provider、生成式 Remote 与认证二进制 API、独立浏览器 UI，以及只读定位安全 Agent Preset/Tool 包。移除本 Bundle 即可移除 Buddy Drive Row，无需修改上游 Package。
+`@sospink/dsh-buddy-drive-app` 是 Buddy 产品栈的可选 Bundle 层。在 `@deepseek-ai/dsh-web-app` 之后应用；Patch 会在 `$DSH_HOME/buddy-drive` 挂载本地 Drive Provider、生成式 Remote 与认证二进制 API、独立浏览器 UI、专业 Agent 身份选择器、开发管理交付流程，以及只读定位安全 Agent Preset/Tool 包。移除本 Bundle 即可移除 Buddy Row，无需修改上游 Package。
 
 ## 目录
 
@@ -42,12 +42,15 @@ kind: "package-bundle"
 
 ## 实现说明
 
-本包包含一个 `cordis.patch.yml` 和一个 Marker Loader Plugin。Patch 插入三个 Drive Row，并替换完整的 `agent-presets` 配置以加入 Tool 包的 `presets/` 目录。Preset Root 通过 `@sospink/dsh-buddy-drive-app/package.json` 及其包内依赖解析，因此无论 pnpm 嵌套还是提升 `tool-drive` 都可工作。Cordis Injection 会让 Drive Row 等待前置原生层提供的 Storage Domain、WebServer、Connection、Typert、Remote、Locale 和 Slot Service。
+本包包含一个 `cordis.patch.yml` 和一个 Marker Loader Plugin。Patch 插入 Drive Row、Host/Client 专业身份 Row 和 Host/Client 开发管理 Row，并替换完整的 `agent-presets` 配置以加入 Tool 包的 `presets/` 目录。Cordis Injection 会让 Buddy Row 等待前置原生层提供的 Storage Domain、WebServer、Connection、Typert、Subprocess、Remote、Locale 和 Slot Service。
+
+开发管理数据保存在 `$DSH_HOME/development-management`；仓库只能位于 `DSH_BUDDY_REPOSITORY_ROOT`（或启动目录）之下，并在给出合并建议前执行配置的 Typecheck、测试 和构建命令。默认远程提供方是 `none`，因此在部署明确配置 GitLab 前，必须回填真实的人工 MR/PR URL。
 
 ## 进一步阅读
 
 - [Buddy 包地图](../README.zh.md)——本层挂载的 Package。
 - [开发 TODO](../../../BUDDY_DRIVE_TODO.md)——分阶段验收证据。
+- [开发管理验收台账](../../../docs/buddy-development-management-ledger.zh.md)——角色流程与交付验收证据。
 
 ## 模型体验
 
@@ -55,7 +58,7 @@ kind: "package-bundle"
 
 #### 模型看到什么
 
-本 Bundle 增加一个可选的定位安全 Agent Preset。普通/默认 Session 仍使用 `standard`；只有显式选择 `positioning-safety` 的 Session 才会获得固定的不可信证据 Persona 和三个只读 Drive Tool。
+本 Bundle 增加一个可选的定位安全 Agent Preset、独立的专业身份选择器，以及有人值守的开发管理交付 Agent。普通/默认 Session 仍使用 `standard`；只有显式选择 `positioning-safety` 的 Session 才会获得固定的不可信证据 Persona 和三个只读 Drive Tool。专业身份只改变工作方法，不改变这套工具组合。只有被指派工程师显式申请交付审查时，开发管理才会调用受管 Git 和配置的检查命令。
 
 #### Token 影响
 
@@ -70,6 +73,7 @@ kind: "package-bundle"
 - **本地 Provider Bundle**——本层选择本地磁盘 Provider；远程对象存储部署需要不同 Bundle 或后续 Row 覆盖。
 - **尚不是上游内置 Profile Template**——在 Buddy 产品 Profile 和品牌通过验收前，本 Bundle 有意保持可选。
 - **预览与 Agent Tool 是独立边界**——本层只负责组合；浏览器 Viewer 的安全/性能预算由 Client UI 包负责，只读模型工具与来源/回放边界由 Tool Drive 包负责。
+- **远程合并集成由部署负责**——默认层只生成 MR 内容并要求人工 URL 证据；自动 GitLab 创建/合并需要显式配置服务、项目与 Token。
 
 ### 开发备注
 

@@ -331,6 +331,8 @@
     { "path": "./packages/buddy/drive-local" },
     { "path": "./packages/buddy/api-drive" },
     { "path": "./packages/buddy/drive-app" },
-    { "path": "./packages/buddy/tool-drive" }
+    { "path": "./packages/buddy/tool-drive" },
+    { "path": "./packages/buddy/agent-role" },
+    { "path": "./packages/buddy/development-management" }
   ]
 }

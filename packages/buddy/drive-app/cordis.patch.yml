@@ -1,4 +1,19 @@
 # Buddy Drive application layer. Apply after @deepseek-ai/dsh-web-app.
+- id: plugin-package-inventory-deepseek
+  # The inventory is optional request metadata. The Buddy delivery launcher
+  # uses a direct workspace checkout, so disabling this non-functional
+  # extension avoids package-resolution failures before model requests.
+  disabled: true
+
+# The Buddy delivery is bound to 127.0.0.1 and intended for an attended local
+# operator. Keep Host/Origin trust checks while allowing the clean root URL.
+- id: connection
+  name: '@deepseek-ai/dsh-client-connection'
+  inject: [webRuntime]
+  config:
+    trustedHosts: !!js ctx.webRuntime.trustedHosts
+    allowUnauthenticatedLoopback: true
+
 - insert:
     - id: buddy-drive-local
       name: '@sospink/dsh-buddy-drive-local'
@@ -14,8 +29,36 @@
     - id: buddy-api-drive
       name: '@sospink/dsh-buddy-api-drive'
 
+    - id: buddy-agent-role
+      name: '@sospink/dsh-buddy-agent-role'
+
+    - id: buddy-development-management
+      name: '@sospink/dsh-buddy-development-management'
+      config:
+        root: !!js dshHomePath('development-management')
+        repositoryRoots:
+          - !!js "process.env.DSH_BUDDY_REPOSITORY_ROOT ?? process.cwd()"
+        maxFileBytes: 2147483648
+        maxTaskBytes: 21474836480
+        maxCommandOutputBytes: 262144
+        commandTimeoutMs: 600000
+        checkCommands:
+          - pnpm run typecheck
+          - pnpm run test
+          - pnpm run build
+        integrationProvider: !!js "process.env.DSH_BUDDY_GIT_PROVIDER ?? 'none'"
+        integrationBaseUrl: !!js "process.env.DSH_BUDDY_GIT_BASE_URL"
+        integrationProject: !!js "process.env.DSH_BUDDY_GIT_PROJECT"
+        integrationToken: !!js "process.env.DSH_BUDDY_GIT_TOKEN"
+
     - id: buddy-client-ui-drive
       name: '@sospink/dsh-buddy-client-ui-drive'
+
+    - id: buddy-client-ui-agent-role
+      name: '@sospink/dsh-buddy-client-ui-agent-role'
+
+    - id: buddy-client-ui-development-management
+      name: '@sospink/dsh-buddy-client-ui-development-management'
 
 # A later bundle layer replaces a row's whole config. Restate every official
 # default while adding the fork-owned read-only preset root.
@@ -24,7 +67,7 @@
   config:
     default: standard
     roots:
-      - path: !!js "process.getBuiltinModule('node:path').join(process.getBuiltinModule('node:path').dirname(process.getBuiltinModule('node:module').createRequire(baseUrl).resolve('@sospink/dsh-buddy-drive-app/package.json')), 'node_modules', '@sospink', 'dsh-buddy-tool-drive', 'presets')"
+      - path: !!js "process.env.DSH_BUDDY_PRESET_ROOT ?? (() => { throw new Error('DSH_BUDDY_PRESET_ROOT is required by the Buddy product layer') })()"
         trust: system
     includeShippedRoot: true
     includeUserRoot: true

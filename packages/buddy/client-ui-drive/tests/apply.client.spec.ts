@@ -10,6 +10,8 @@ import type { DriveBaseline, DriveFollowFrame } from '@sospink/dsh-buddy-api-dri
 import { apply, inject } from '../src/client/index.ts'
 import { DriveOverlay } from '../src/client/DriveOverlay.tsx'
 import { DriveTrigger } from '../src/client/DriveTrigger.tsx'
+import { PrototypeCanvas } from '../src/client/PrototypeCanvas.tsx'
+import { PrototypeToolRow } from '../src/client/PrototypeToolRow.tsx'
 import type { DriveUiInjected } from '../src/client/DriveTrigger.tsx'
 
 const now = '2026-08-29T00:00:00.000Z'
@@ -49,6 +51,7 @@ class RemoteDouble extends Service {
 async function bench(declareBefore: boolean, initialFailure = false) {
   const ctx = new Context()
   await ctx.plugin(SlotRegistry).await()
+  ctx.provide('sessions', { scope: () => undefined } as never)
   const locale = new LocaleRuntime(ctx)
   locale.setLocale('zh')
   ctx.provide('locale', locale)
@@ -64,6 +67,8 @@ async function bench(declareBefore: boolean, initialFailure = false) {
     children: {
       'sidebar.footer.action': { kind: 'list', scope: 'root' },
       'shell.overlay': { kind: 'list', scope: 'root' },
+      'conversation.view': { kind: 'list', scope: 'session' },
+      'tool.call.toolview': { kind: 'keyed', scope: 'session' },
     },
   } as never, () => null)
   if (declareBefore) declare()
@@ -76,7 +81,7 @@ async function bench(declareBefore: boolean, initialFailure = false) {
 
 describe('buddy-client-ui-drive apply', () => {
   it('declares the exact services it uses', () => {
-    expect(inject).toEqual(['remote', 'slots', 'locale'])
+    expect(inject).toEqual(['remote', 'slots', 'locale', 'sessions'])
   })
 
   it.each([true, false])('mounts Remote and fills slots when declarations exist before=%s', async (before) => {
@@ -84,13 +89,20 @@ describe('buddy-client-ui-drive apply', () => {
     expect(b.remote.mounted).toHaveLength(1)
     const trigger = b.ctx.slots.entries('sidebar.footer.action')[0]!
     const overlay = b.ctx.slots.entries('shell.overlay')[0]!
+    const prototype = b.ctx.slots.entries('conversation.view')[0]!
     expect(trigger.component).toBe(DriveTrigger)
     expect(trigger.options).toMatchObject({ id: 'buddy-drive', order: 20 })
     expect(overlay.component).toBe(DriveOverlay)
     expect(overlay.options).toMatchObject({ id: 'buddy-drive', order: 10 })
+    expect(prototype.component).toBe(PrototypeCanvas)
+    expect(prototype.options).toMatchObject({ id: 'prototype', order: 20 })
+    expect(resolveSlotLabel(prototype.options.label)).toBe('原型')
+    expect(b.ctx.slots.entries('tool.call.toolview').map(entry => [entry.options.key, entry.component])).toEqual([
+      ['generate_prototype', PrototypeToolRow], ['update_prototype', PrototypeToolRow],
+    ])
     expect(trigger.locale).toBe('buddy-drive')
-    expect(b.locale.bind('buddy-drive')('trigger')).toBe('资料云盘')
-    expect(resolveSlotLabel(trigger.options.label)).toBe('资料云盘')
+    expect(b.locale.bind('buddy-drive')('trigger')).toBe('资料库')
+    expect(resolveSlotLabel(trigger.options.label)).toBe('资料库')
     const injected = (trigger.inject as unknown as () => DriveUiInjected)()
     const overlayInjected = (overlay.inject as unknown as () => DriveUiInjected)()
     expect(overlayInjected.client).toBe(injected.client)
@@ -99,6 +111,8 @@ describe('buddy-client-ui-drive apply', () => {
     expect(b.remote.unmounted).toHaveLength(1)
     expect(b.ctx.slots.entries('sidebar.footer.action')).toEqual([])
     expect(b.ctx.slots.entries('shell.overlay')).toEqual([])
+    expect(b.ctx.slots.entries('conversation.view')).toEqual([])
+    expect(b.ctx.slots.entries('tool.call.toolview')).toEqual([])
   })
 
   it('publishes initial refresh failures on the mounted client', async () => {
@@ -116,6 +130,7 @@ describe('buddy-client-ui-drive apply', () => {
   it('unmounts a contribution that provides no drive namespace', async () => {
     const ctx = new Context()
     await ctx.plugin(SlotRegistry).await()
+    ctx.provide('sessions', { scope: () => undefined } as never)
     ctx.provide('locale', new LocaleRuntime(ctx))
     class MissingNamespaceRemote extends RemoteDouble {
       override async $mount(contribution: TypertRemoteContribution): Promise<() => Promise<void>> {
@@ -133,6 +148,7 @@ describe('buddy-client-ui-drive apply', () => {
   it('unmounts the Remote contribution when stream construction fails', async () => {
     const ctx = new Context()
     await ctx.plugin(SlotRegistry).await()
+    ctx.provide('sessions', { scope: () => undefined } as never)
     ctx.provide('locale', new LocaleRuntime(ctx))
     class FailingRemote extends RemoteDouble {
       override $stream<Item>(): RemoteStream<Item> { throw new Error('stream construction failed') }

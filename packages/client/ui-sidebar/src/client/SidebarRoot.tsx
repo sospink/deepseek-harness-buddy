@@ -52,6 +52,7 @@ function localBuildVersion(): string | undefined {
 export function SidebarRoot({
   collapsed,
   width,
+  showWelcome,
   startSession,
   toggleSidebar,
   t,
@@ -138,14 +139,14 @@ export function SidebarRoot({
       onPointerLeave={() => { armLinger() }}
     >
       <div className={css.logoRow}>
-        {/* Expanded, the brand doubles as a New Session shortcut; the
-            collapsed rail's logo is the expand toggle below instead. */}
+        {/* Expanded, the brand reopens the product welcome; the collapsed
+            rail's logo remains the expand toggle below. */}
         {wide && (
           <button
             type="button"
             className={clsx(css.brand, css.wide)}
-            aria-label={t('session.new.label')}
-            onClick={() => { startSession() }}
+            aria-label={t('welcome.open')}
+            onClick={() => { showWelcome() }}
           >
             <span className={css.brandIdentity} aria-hidden="true">
               <span className={css.brandMark}>

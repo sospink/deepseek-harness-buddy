@@ -1,0 +1,4 @@
+.trigger { width: calc(100% + 4px); height: 42px; margin: 4px -2px; padding: 0 10px 0 8px; box-sizing: border-box; display: flex; align-items: center; gap: 8px; border: 0; border-radius: 12px; background: transparent; color: var(--dsw-alias-label-primary); cursor: pointer; font: inherit; font-size: 14px; line-height: 22px; }
+.trigger:hover { color: var(--dsw-alias-label-primary); background: rgba(255, 255, 255, 0.055); }
+.trigger span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rail { width: 36px; height: 36px; margin: 8px 0 10px; padding: 0; justify-content: center; border-radius: 50%; }

@@ -12,6 +12,7 @@ import { bridge, type FetchHandler } from './http-bridge.ts'
 import { isTrustedApiRequest } from './api-request-trust.ts'
 import { API_PATH } from './api-path.ts'
 import type { BrowserAuth } from './browser-auth.ts'
+import { isLoopbackHostname } from './loopback-hostname.ts'
 import type {
   ConnectionIndexRequest,
   ConnectionIndexResponse,
@@ -71,6 +72,7 @@ export class HostConnectionService extends Service implements HostConnectionHand
     private readonly trustedHosts: readonly string[],
     private readonly browserAuth: BrowserAuth,
     private readonly publicOrigin?: string,
+    private readonly allowUnauthenticatedLoopback = false,
   ) {
     super(ctx, 'connection')
   }
@@ -96,6 +98,7 @@ export class HostConnectionService extends Service implements HostConnectionHand
   /** Apply the configured Host/Origin fence, then browser authentication. */
   requestRejection(request: ConnectionTrustRequest): ConnectionRequestRejection {
     if (!isTrustedApiRequest(request, this.trustedHosts, this.publicOrigin)) return 403
+    if (this.permitsUnauthenticatedLoopback(request)) return undefined
     return this.browserAuth.isAuthenticated(request) ? undefined : 401
   }
 
@@ -109,12 +112,35 @@ export class HostConnectionService extends Service implements HostConnectionHand
       response.end(request.method === 'HEAD' ? undefined : 'forbidden')
       return false
     }
+    if (this.permitsUnauthenticatedLoopback(request)) return true
     return this.browserAuth.authorizeIndex(request, response)
   }
 
   /** Add this process's launch token to the clean application URL. */
   authenticatedUrl(baseUrl: string): string {
+    if (this.allowUnauthenticatedLoopback) {
+      const url = new URL(baseUrl)
+      if (isLoopbackHostname(url.hostname)) {
+        url.pathname = '/'
+        url.search = ''
+        url.hash = ''
+        return url.href
+      }
+    }
     return this.browserAuth.authenticatedUrl(baseUrl)
+  }
+
+  private permitsUnauthenticatedLoopback(request: ConnectionTrustRequest): boolean {
+    if (!this.allowUnauthenticatedLoopback) return false
+    const host = request.headers instanceof Headers
+      ? request.headers.get('host') ?? undefined
+      : typeof request.headers['host'] === 'string' ? request.headers['host'] : undefined
+    if (host === undefined) return false
+    try {
+      return isLoopbackHostname(new URL(`http://${host}`).hostname)
+    } catch {
+      return false
+    }
   }
 
   /**

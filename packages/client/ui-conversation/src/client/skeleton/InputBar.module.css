@@ -82,13 +82,32 @@
   height: 94px;
   min-height: 94px;
   padding-top: 10px;
-  /* Input stroke: black/0.10 light, white/0.06 dark (figma darkmode note says
-     the input border is one notch weaker than buttons) — exactly the
-     l2-darkmode-thin pair. Fill: the input surface token (elevated in dark). */
-  border: 1px solid var(--dsw-alias-border-l2-darkmode-thin);
+  /* One shared near-black optical-glass material for both creation and active
+     conversation composers. The layered fill remains readable if backdrop
+     filtering is unavailable. */
+  border: 1px solid rgb(225 240 255 / 10%);
   border-radius: 22px;
-  background: var(--dsw-specific-input-major);
-  box-shadow: var(--dsw-shadow-lv2);
+  background:
+    radial-gradient(
+      110% 150% at 92% -34%,
+      rgb(86 148 255 / 18%) 0%,
+      rgb(35 82 155 / 8%) 34%,
+      transparent 66%
+    ),
+    linear-gradient(
+      132deg,
+      rgb(5 8 14 / 86%) 0%,
+      rgb(7 12 21 / 76%) 48%,
+      rgb(10 21 39 / 68%) 100%
+    );
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 10%),
+    inset 0 -1px 0 rgb(4 9 18 / 58%),
+    inset 18px 0 40px rgb(0 0 0 / 12%),
+    0 22px 52px rgb(0 4 12 / 34%),
+    0 5px 16px rgb(0 7 20 / 22%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  backdrop-filter: blur(22px) saturate(150%);
   overflow: visible;
   transition:
     height 320ms cubic-bezier(0.22, 1, 0.36, 1),
@@ -111,6 +130,53 @@
      (see ui-theme styles/scrollbar.css for the rebinding contract). */
   --dsh-scrollbar-thumb: var(--dsw-alias-scrollbar-bg-l2);
   --dsh-scrollbar-thumb-hover: var(--dsw-alias-scrollbar-hover-l2);
+  --dsh-composer-pointer-x: 50%;
+  --dsh-composer-pointer-y: 50%;
+}
+
+/* A pointer-positioned edge light, distilled from React Bits' Border Glow and
+   Spotlight Card language. It is a real child because the card's pseudo
+   elements already carry the submitting and workspace-picker strokes. */
+.edgeGlow {
+  position: absolute;
+  inset: -1px;
+  z-index: 4;
+  padding: 1px;
+  border-radius: inherit;
+  background: radial-gradient(
+    150px circle at var(--dsh-composer-pointer-x) var(--dsh-composer-pointer-y),
+    rgb(236 249 255 / 90%) 0,
+    rgb(109 185 255 / 68%) 24%,
+    rgb(62 122 255 / 28%) 52%,
+    transparent 76%
+  );
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease-out;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+}
+
+.card:not(.cardWorkspaceTrigger):hover .edgeGlow {
+  opacity: 0.4;
+}
+
+.card:not(.cardWorkspaceTrigger):focus-within .edgeGlow {
+  opacity: 0.52;
+}
+
+.hero .card:not(.cardWorkspaceTrigger):hover .edgeGlow {
+  opacity: 0.76;
+}
+
+.hero .card:not(.cardWorkspaceTrigger):focus-within .edgeGlow {
+  opacity: 0.88;
+}
+
+.cardBusy .edgeGlow,
+.cardWorkspaceTrigger .edgeGlow {
+  opacity: 0;
 }
 
 .cardCollapsed {
@@ -194,13 +260,18 @@
 }
 
 .card:not(.cardWorkspaceTrigger):focus-within {
-  border-color: var(--dsw-alias-state-business-primary);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--dsw-alias-state-business-primary) 14%, transparent), var(--dsw-shadow-lv2);
+  border-color: rgb(142 190 255 / 24%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 13%),
+    inset 0 -1px 0 rgb(4 9 18 / 58%),
+    inset 18px 0 40px rgb(0 0 0 / 12%),
+    0 0 0 1px rgb(79 145 255 / 8%),
+    0 24px 58px rgb(0 4 14 / 38%),
+    0 6px 18px rgb(0 10 30 / 24%);
 }
 
 .cardHasDraft {
   height: auto;
-  background: var(--dsw-specific-input-major);
 }
 
 .cardHasAttachments {
@@ -210,6 +281,38 @@
 
 .cardBusy {
   border-color: color-mix(in srgb, var(--dsw-alias-state-business-primary) 56%, var(--dsw-alias-border-l2-darkmode-thin));
+}
+
+/* Real adjudicating/submitting state: a quiet traveling highlight gives the
+   whole input surface a loading pulse while the primary action uses the
+   reference's slow spinner. */
+.cardBusy::before {
+  content: '';
+  position: absolute;
+  inset: -1px;
+  z-index: 5;
+  border-radius: inherit;
+  background: linear-gradient(
+    105deg,
+    transparent 18%,
+    color-mix(in srgb, var(--dsw-alias-state-business-primary) 18%, transparent) 45%,
+    rgb(255 255 255 / 28%) 50%,
+    color-mix(in srgb, var(--dsw-alias-state-business-primary) 18%, transparent) 55%,
+    transparent 82%
+  );
+  background-size: 240% 100%;
+  opacity: 0.7;
+  pointer-events: none;
+  animation: composer-loading-sweep 1.8s ease-in-out infinite;
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  padding: 1px;
+}
+
+@keyframes composer-loading-sweep {
+  from { background-position: 130% 0; }
+  to { background-position: -130% 0; }
 }
 
 /* No-workspace trigger state: dashed l4 stroke marks the card as a pick-a-
@@ -350,10 +453,39 @@
   cursor: pointer;
 }
 
-/* Hero (centered empty-state) keeps the 2-line floor (figma min-h 52 = ~2 × 24
-   line + 4pt); the docked composer collapses to the content height. */
+/* The blank-session variant changes only geometry. Material stays identical
+   to the active-conversation composer so the first prompt transitions into a
+   conversation without a visual system switch. */
+.hero .card {
+  height: 132px;
+  min-height: 132px;
+}
+
 .hero .input {
-  min-height: 52px;
+  min-height: 90px;
+}
+
+/* Controls sit inside the same glass sheet instead of reading as small opaque
+   cards. The primary action keeps its established business-blue fill. */
+.row button:not(.primary) {
+  background-color: rgb(255 255 255 / 5%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 5%);
+}
+
+.row button:not(.primary):hover:not(:disabled) {
+  background-color: rgb(255 255 255 / 9%);
+}
+
+.loadingIndicator {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  animation: composer-loading-spin 2s linear infinite;
+}
+
+@keyframes composer-loading-spin {
+  to { transform: rotate(360deg); }
 }
 
 /* Toolbar: attach + Plan + Read-only on the left; model + send on the right
@@ -471,6 +603,7 @@
    #679EFE dark — the info-fill pair (500→400), NOT button-primary (ink);
    white glyph; empty text = 0.4 opacity. */
 .primary {
+  position: relative;
   display: grid;
   place-items: center;
   flex: none;
@@ -483,12 +616,49 @@
      fill in both themes (design 34:10465). */
   color: #fff;
   cursor: pointer;
-  transition: background-color 100ms ease;
+  transition:
+    background-color 100ms ease,
+    box-shadow 180ms ease,
+    transform 160ms ease;
   /* Opts out of the row's 2px downward shift (.row top pad): the send circle
      keeps its original seat while the smaller chips sit lower. Transform, not
      margin, so flex centering math is untouched. */
   transform: translateY(-2px);
   overflow: hidden;
+}
+
+/* The first actionable draft gets one quiet confirmation sweep. Re-entering
+   hover uses the same glint as an affordance, without adding persistent noise. */
+.primary::after {
+  content: '';
+  position: absolute;
+  inset: -35% auto -35% -42%;
+  z-index: 0;
+  width: 34%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 78%), transparent);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-180%) skewX(-18deg);
+}
+
+.primary:not(:disabled)::after {
+  animation: composer-send-ready-sweep 560ms cubic-bezier(0.22, 1, 0.36, 1) 80ms both;
+}
+
+.primary:not(:disabled):hover::after {
+  animation: composer-send-hover-sweep 480ms ease-out both;
+}
+
+@keyframes composer-send-ready-sweep {
+  0% { opacity: 0; transform: translateX(-180%) skewX(-18deg); }
+  22% { opacity: 0.82; }
+  100% { opacity: 0; transform: translateX(620%) skewX(-18deg); }
+}
+
+@keyframes composer-send-hover-sweep {
+  0% { opacity: 0; transform: translateX(-180%) skewX(-18deg); }
+  28% { opacity: 0.68; }
+  100% { opacity: 0; transform: translateX(620%) skewX(-18deg); }
 }
 
 .primary svg {
@@ -536,8 +706,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .morph, .attachmentShelf, .card, .row, .row button, .row select, .primary, .primary svg {
+  .morph, .attachmentShelf, .card, .cardBusy::before,
+  .row, .row button, .row select, .primary, .primary svg, .primary::after,
+  .edgeGlow, .loadingIndicator {
     transition: none;
     animation: none;
+  }
+
+  .primary::after {
+    display: none;
   }
 }

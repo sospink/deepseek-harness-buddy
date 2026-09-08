@@ -16,6 +16,11 @@ packages:
 # builds must resolve those matching names to this workspace's pinned sources.
 linkWorkspacePackages: true
 
+# Customer delivery runs scripts only after the documented frozen-lockfile
+# install. Avoid pnpm 11's interactive dependency-state prompt during normal
+# launches; it can otherwise try to reinstall a healthy pnpm 10 workspace.
+verifyDepsBeforeRun: false
+
 overrides:
   '@deepseek-ai/cosmokit': 'link:vendor/cosmokit'
   '@deepseek-ai/schemastery': 'link:vendor/schemastery'

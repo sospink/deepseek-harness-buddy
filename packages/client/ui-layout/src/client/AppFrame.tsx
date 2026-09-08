@@ -11,7 +11,7 @@
  * zero self-made hooks.
  */
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
 import type {
   PropsLocale, PropsRenderSlots, PropsRuntime, PropsStore,
 } from '@deepseek-ai/dsh-client-ui-slots'
@@ -19,6 +19,9 @@ import { computeColumns, SIDEBAR_AUTO_COLLAPSE, SIDEBAR_DEFAULT } from './column
 import { DocumentTitle } from './DocumentTitle.tsx'
 import type { createLayoutStore } from './stores.ts'
 import css from './AppFrame.module.css'
+
+/** Breathing room around the task-card sidebar in the docked grid. */
+export const SIDEBAR_CARD_INSET = 12
 
 /** Full composed props: runtime share + child-slot render share + store share. */
 export type AppFrameProps =
@@ -101,6 +104,10 @@ export function AppFrame({
     const current = s.current
     return current !== undefined && s.byId[current]?.blank === false ? current : undefined
   })
+  const blankSession = useSessions((s) => {
+    const current = s.current
+    return current !== undefined && s.byId[current]?.blank === true
+  })
   const documentTitle = useSessions((s) => {
     const current = s.current
     return current === undefined ? undefined : s.byId[current]?.title
@@ -145,11 +152,19 @@ export function AppFrame({
   // absorbs the squeeze.
   const narrow = viewport < SIDEBAR_AUTO_COLLAPSE
   useEffect(() => { actions.setNarrow(narrow) }, [actions, narrow])
-  const sidebarCollapsed = narrow ? !panels.narrowExpanded : panels.sidebar === 0
+  useLayoutEffect(() => { actions.setBlank(blankSession) }, [actions, blankSession])
+  const sidebarCollapsed = blankSession
+    ? !panels.blankExpanded
+    : narrow ? !panels.narrowExpanded : panels.sidebar === 0
   const sidebarPreference = sidebarCollapsed
     ? 0
     : panels.sidebar === 0 ? SIDEBAR_DEFAULT : panels.sidebar
-  const cols = computeColumns(viewport, sidebarPreference, detailsSession === undefined ? 0 : panels.details)
+  const solvedViewport = blankSession ? viewport : Math.max(0, viewport - SIDEBAR_CARD_INSET * 2)
+  const cols = computeColumns(solvedViewport, sidebarPreference, detailsSession === undefined ? 0 : panels.details)
+  // Docked conversations reserve the card width plus its two outer insets.
+  // The sidebar itself still receives the unmodified contract width, so its
+  // controls, resize preference, and collapsed rail geometry stay unchanged.
+  const sidebarTrack = blankSession ? 0 : cols.sidebar + SIDEBAR_CARD_INSET * 2
   const colsRef = useRef(cols)
   colsRef.current = cols
 
@@ -176,7 +191,16 @@ export function AppFrame({
     <div
       ref={frameRef}
       className={css.frame}
-      style={{ gridTemplateColumns: `${cols.sidebar}px minmax(0, 1fr) ${cols.details}px` }}
+      style={{
+        gridTemplateColumns: `${sidebarTrack}px minmax(0, 1fr) ${cols.details}px`,
+        '--dsh-floating-sidebar-width': `${cols.sidebar}px`,
+        '--dsh-sidebar-card-width': `${cols.sidebar}px`,
+        '--dsh-floating-sidebar-clearance': blankSession && !sidebarCollapsed
+          ? `${cols.sidebar + 36}px`
+          : '0px',
+      } as CSSProperties}
+      data-sidebar-card="true"
+      data-sidebar-floating={blankSession || undefined}
       data-sidebar-collapsed={sidebarCollapsed || undefined}
       data-details-collapsed={cols.details === 0 || undefined}
       data-dragging={dragging || undefined}
@@ -211,7 +235,7 @@ export function AppFrame({
         {renderSlot('shell.overlay', {})}
       </div>
       {/* The collapsed rail is fixed-width: no resize handle while closed. */}
-      {!sidebarCollapsed && <DragHandle side="sidebar" left={cols.sidebar} onStart={onSidebarStart} onDrag={onSidebarDrag} onEnd={onDragEnd} />}
+      {!sidebarCollapsed && <DragHandle side="sidebar" left={SIDEBAR_CARD_INSET + cols.sidebar} onStart={onSidebarStart} onDrag={onSidebarDrag} onEnd={onDragEnd} />}
       {cols.details > 0 && <DragHandle side="details" left={viewport - cols.details} onStart={onDetailsStart} onDrag={onDetailsDrag} onEnd={onDragEnd} />}
     </div>
   )

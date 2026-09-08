@@ -413,8 +413,42 @@
   padding-bottom: 32px;
   /* Card cap + both clearances: the hero input card lands at exactly the same
      width as the docked composer at every viewport. */
-  width: min(calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance)), 100%);
+  width: min(
+    calc(var(--dsh-composer-card-max-width) + 2 * var(--dsh-composer-side-clearance)),
+    calc(100% - var(--dsh-floating-sidebar-clearance, 0px))
+  );
+  transform: translateX(calc(var(--dsh-floating-sidebar-clearance, 0px) / 2));
+  transition:
+    width var(--ds-transition-duration-slow) var(--ds-ease-in-out),
+    transform var(--ds-transition-duration-slow) var(--ds-ease-in-out);
   z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .composerHero {
+    transition: none;
+  }
+}
+
+/* The workspace and preset controls arrive just ahead of the creation capsule,
+   echoing the reference page's staged hero reveal without remounting either
+   control. */
+.root[data-phase='hero']:not([data-welcome]) .heroWorkspaceRow {
+  animation: hero-tools-enter 600ms 90ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes hero-tools-enter {
+  from {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(14px);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: translateY(0);
+  }
 }
 
 /* Blue backdrop ellipse (figma 313:14109), centered on the input card: the
@@ -433,26 +467,131 @@
   pointer-events: none;
 }
 
+/* The reference hero places its quiet radial field relative to the content,
+   not the viewport. The resident composer is that content anchor here. */
+.heroFocusScrim {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: -1;
+  width: 160%;
+  height: 150%;
+  background: radial-gradient(ellipse at center, #050606 0%, rgb(5 6 6 / 78%) 45%, transparent 72%);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
 .heroWorkspaceRow {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 2px;
+  align-self: flex-start;
   min-width: 0;
   margin-top: 4px;
-  /* figma drew px 8; nudged +12 so the chip's folder glyph lines up closer to
-     the card's inner controls below. */
-  padding-left: 20px;
+  margin-left: 20px;
+  padding: 4px;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 22px;
+  background: rgb(8 10 13 / 72%);
+  box-shadow:
+    0 12px 34px rgb(0 0 0 / 22%),
+    inset 0 1px 0 rgb(255 255 255 / 5%);
+  backdrop-filter: blur(18px) saturate(135%);
+  -webkit-backdrop-filter: blur(18px) saturate(135%);
+}
+
+@media (max-width: 640px) {
+  .heroWorkspaceRow {
+    max-width: calc(100% - 32px);
+    margin-left: 16px;
+  }
 }
 
 /* Hero: the composer sits inside the session scroll body; center there so
    the tree seat matches active (sticky footer) without a Root remount. */
 .root[data-phase='hero'] .scrollBody {
+  position: relative;
+  z-index: 1;
   justify-content: center;
   overflow-y: auto;
+}
+
+/* After the cinematic welcome, the blank-session workspace becomes a dark
+   full-canvas security field. The background component owns its visual and
+   fallback layers; this rule only supplies the enclosing material. */
+.root[data-phase='hero']:not([data-welcome]) {
+  background: #050606;
+}
+
+/* The Buddy welcome surface occupies the whole application canvas. The
+   resident composer stays mounted below it for draft continuity and becomes
+   visible when Get Started dismisses the landing page. */
+.root[data-welcome] .scrollBody {
+  justify-content: stretch;
+  overflow: hidden;
+  scrollbar-gutter: auto;
+}
+
+.root[data-welcome] .composerSeat,
+.root[data-welcome] .composerHero {
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  flex: 1;
+  padding: 0;
+}
+
+.root[data-welcome] .composerHero {
+  gap: 0;
+  /* The blank-session composer normally shifts by half the expanded floating
+     sidebar clearance. Reopening Welcome reuses that same mounted node, so
+     explicitly cancel both the inherited offset and its easing; otherwise
+     the landing page slides left from the old sidebar-adjusted position. */
+  transform: none;
+  transition: none;
+}
+
+.root[data-welcome] .composerHero > :not([data-welcome-landing]) {
+  display: none;
+}
+
+/* Slot-chain wrappers intentionally use inline display:contents, so hiding
+   the wrapper alone cannot win the cascade. Collapse their mounted children
+   as well: state remains resident while the welcome surface gets the entire
+   viewport rather than leaving an invisible composer-sized strip. */
+.root[data-welcome] .composerHero > :not([data-welcome-landing]) > * {
+  display: none !important;
 }
 
 /* Settling (session replaying, hero/docked unknown): keep the composer seat
    mounted but invisible so no wrong layout flashes before the phase lands. */
 .root[data-phase='settling'] .composerSeat {
   visibility: hidden;
+}
+
+/* A full-canvas Conversation View keeps the composer mounted for draft
+   continuity, but removes it from layout. Width handles, scrollbar space, and
+   the composer's fade band must leave the view completely; otherwise a canvas
+   surface inherits a chat-only vertical seam at its lower edge. */
+.root:has([data-conversation-fullscreen-view]) .composerSeat,
+.root:has([data-conversation-fullscreen-view]) .widthHandle {
+  display: none;
+}
+
+.root:has([data-conversation-fullscreen-view]) .scrollBody {
+  overflow: hidden;
+  scrollbar-gutter: auto;
+}
+
+.root:has([data-conversation-fullscreen-view]) .viewArea {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root[data-phase='hero']:not([data-welcome]) .heroWorkspaceRow {
+    animation: none;
+  }
 }

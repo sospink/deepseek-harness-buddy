@@ -23,13 +23,15 @@
 }
 
 .sidebarCol {
+  grid-column: 1;
   min-width: 0;
   overflow: hidden;
   background: var(--dsw-specific-sidebar-fill);
-  border-right: 1px solid var(--dsw-alias-border-l1);
+  border-right: none;
 }
 
 .centerCol {
+  grid-column: 2;
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -37,9 +39,74 @@
 }
 
 .detailsCol {
+  grid-column: 3;
   min-width: 0;
   overflow: hidden;
   border-left: 1px solid var(--dsw-alias-border-l2);
+}
+
+/* The sidebar is one continuous, borderless deep-blue task card in both blank
+   creation and active conversation states. Its diagonal material and shadow
+   alone separate the surface from the canvas. */
+.frame[data-sidebar-card] .sidebarCol {
+  --dsw-specific-sidebar-fill: rgb(12 14 21 / 97%);
+  --dsw-alias-label-primary: rgb(248 249 252 / 96%);
+  --dsw-alias-label-secondary: rgb(225 231 241 / 74%);
+  --dsw-alias-label-tertiary: rgb(194 203 218 / 55%);
+  --dsw-alias-interactive-bg-hover: rgb(24 144 255 / 12%);
+  --dsw-alias-interactive-bg-active: rgb(24 144 255 / 18%);
+  --dsw-alias-button-elevated-fill: rgb(255 255 255 / 6%);
+  --dsw-alias-button-floating-hover: rgb(24 144 255 / 16%);
+  --dsw-specific-sidebar-nav-item-hover: rgb(24 144 255 / 10%);
+  --dsw-specific-sidebar-nav-item-active: rgb(24 144 255 / 16%);
+  z-index: 12;
+  width: var(--dsh-sidebar-card-width);
+  height: calc(100% - 24px);
+  margin: 12px;
+  box-sizing: border-box;
+  border: none;
+  border-radius: 44px;
+  background: linear-gradient(
+    45deg,
+    rgb(13 13 18 / 98%) 0%,
+    rgb(15 16 22 / 98%) 42%,
+    rgb(16 29 45 / 98%) 68%,
+    rgb(18 57 93 / 98%) 100%
+  );
+  box-shadow:
+    0 34px 88px rgb(0 0 0 / 52%),
+    0 10px 30px rgb(0 0 0 / 30%);
+  backdrop-filter: blur(22px) saturate(128%);
+  -webkit-backdrop-filter: blur(22px) saturate(128%);
+  transition: width var(--ds-transition-duration-slow) var(--ds-ease-in-out);
+}
+
+/* On the blank canvas the card overlays the full-bleed field. In an active
+   conversation it remains a normal grid item with the same twelve-pixel air. */
+.frame[data-sidebar-floating] .sidebarCol {
+  position: absolute;
+  top: 12px;
+  bottom: 12px;
+  left: 12px;
+  width: var(--dsh-floating-sidebar-width);
+  height: auto;
+  margin: 0;
+}
+
+/* SidebarRoot owns the ordinary solid column fill. On the floating creation
+   canvas the acrylic material belongs to the AppFrame surface instead, so the
+   mounted sidebar content must let that one continuous material show through. */
+.frame[data-sidebar-card] .sidebarCol > * {
+  border-radius: inherit;
+  background: transparent;
+}
+
+.frame[data-sidebar-card][data-dragging] .sidebarCol {
+  transition: none;
+}
+
+.frame[data-sidebar-card] .handle[data-side='sidebar'] {
+  z-index: 13;
 }
 
 /* The details subtree stays mounted at zero width, so its border must not paint
@@ -71,6 +138,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .handle {
+    transition: none;
+  }
+
+  .frame[data-sidebar-card] .sidebarCol {
     transition: none;
   }
 }
@@ -116,4 +187,30 @@
 
 .overlayLayer > * {
   pointer-events: auto;
+}
+
+/* A blank Buddy session is a full-bleed welcome canvas. The existing columns
+   stay mounted at zero width and return as soon as Get Started reveals the
+   resident composer or a real conversation begins. */
+.frame:has([data-welcome-landing]) {
+  grid-template-columns: 0 minmax(0, 1fr) 0 !important;
+  background: #000;
+  /* Reopening Welcome from an expanded active-session sidebar must occupy
+     the first painted frame at full width. Otherwise the ordinary track
+     transition animates 304px -> 0 and briefly leaves a black gutter where
+     the sidebar used to be. */
+  transition: none;
+}
+
+.frame:has([data-welcome-landing]) .sidebarCol,
+.frame:has([data-welcome-landing]) .detailsCol,
+.frame:has([data-welcome-landing]) .handle {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.frame:has([data-welcome-landing]) .sidebarCol *,
+.frame:has([data-welcome-landing]) .detailsCol * {
+  visibility: hidden !important;
 }

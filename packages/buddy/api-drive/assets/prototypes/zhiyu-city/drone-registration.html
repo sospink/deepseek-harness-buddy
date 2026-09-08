@@ -1,0 +1,524 @@
+<!DOCTYPE html><html class="dark" lang="zh-CN" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>智御全城 - 无人机注册中心</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/geist@1.3.0/dist/fonts/geist.min.css" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "on-secondary": "#003548",
+                        "surface": "#131313",
+                        "outline": "#849586",
+                        "inverse-primary": "#006d3a",
+                        "on-primary": "#00391b",
+                        "inverse-on-surface": "#303030",
+                        "surface-dim": "#131313",
+                        "surface-variant": "#353535",
+                        "primary-fixed-dim": "#00e380",
+                        "inverse-surface": "#e2e2e2",
+                        "secondary": "#8fd8ff",
+                        "on-tertiary-fixed": "#2a1700",
+                        "on-secondary-fixed": "#001e2b",
+                        "secondary-fixed-dim": "#75d1ff",
+                        "surface-bright": "#393939",
+                        "on-error": "#690005",
+                        "on-background": "#e2e2e2",
+                        "on-error-container": "#ffdad6",
+                        "primary": "#8cffb1",
+                        "on-secondary-fixed-variant": "#004d67",
+                        "tertiary-fixed-dim": "#f9bb6b",
+                        "surface-container-high": "#2a2a2a",
+                        "on-secondary-container": "#004b65",
+                        "surface-tint": "#00e380",
+                        "on-tertiary": "#462a00",
+                        "tertiary-fixed": "#ffddb7",
+                        "surface-container": "#1f1f1f",
+                        "on-primary-fixed": "#00210e",
+                        "error": "#ffb4ab",
+                        "background": "#000000",
+                        "on-primary-fixed-variant": "#00522a",
+                        "on-tertiary-container": "#794c01",
+                        "primary-container": "#01e983",
+                        "error-container": "#93000a",
+                        "on-surface-variant": "#bacbbb",
+                        "surface-container-highest": "#353535",
+                        "on-primary-container": "#006334",
+                        "tertiary": "#ffe3c6",
+                        "secondary-container": "#00c1fd",
+                        "on-tertiary-fixed-variant": "#653e00",
+                        "tertiary-container": "#ffc070",
+                        "surface-container-lowest": "#0e0e0e",
+                        "surface-container-low": "#1b1b1b",
+                        "secondary-fixed": "#c2e8ff",
+                        "primary-fixed": "#5dff9e",
+                        "outline-variant": "#3b4a3e",
+                        "on-surface": "#e2e2e2",
+                        "canvas-accent": "#101826",
+                        "primary-glow": "rgba(1,233,131,0.35)",
+                        "mute": "#64748B",
+                        "ink": "#F8FAFC",
+                        "hairline": "rgba(255,255,255,0.08)"
+                    },
+                    borderRadius: {
+                        DEFAULT: "0.25rem",
+                        lg: "0.5rem",
+                        xl: "0.75rem",
+                        full: "9999px"
+                    },
+                    spacing: {
+                        xxs: "4px",
+                        md: "16px",
+                        gutter: "24px",
+                        xl: "32px",
+                        "3xl": "48px",
+                        section: "160px",
+                        "4xl": "64px",
+                        lg: "24px",
+                        sm: "12px",
+                        "max-width": "1440px",
+                        xs: "8px",
+                        base: "4px",
+                        "2xl": "40px"
+                    },
+                    fontFamily: {
+                        headline: ["Geist"],
+                        display: ["Geist"],
+                        body: ["Geist"],
+                        label: ["geistMono"],
+                        "label-mono": ["Geist Mono"]
+                    },
+                    fontSize: {
+                        "body-md": ["16px", {lineHeight: "24px", letterSpacing: "0px", fontWeight: "400"}],
+                        "display-hero": ["72px", {lineHeight: "80px", letterSpacing: "-4px", fontWeight: "600"}],
+                        caption: ["12px", {lineHeight: "16px", letterSpacing: "0px", fontWeight: "400"}],
+                        "display-md": ["24px", {lineHeight: "32px", letterSpacing: "-0.5px", fontWeight: "600"}],
+                        "body-lg": ["18px", {lineHeight: "28px", letterSpacing: "0px", fontWeight: "400"}],
+                        "display-lg": ["32px", {lineHeight: "40px", letterSpacing: "-1px", fontWeight: "600"}],
+                        "display-xl": ["48px", {lineHeight: "56px", letterSpacing: "-2px", fontWeight: "600"}],
+                        "label-mono": ["12px", {lineHeight: "16px", letterSpacing: "0.05em", fontWeight: "500"}],
+                        "body-sm": ["14px", {lineHeight: "20px", letterSpacing: "0px", fontWeight: "400"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #000000;
+            color: #e2e2e2;
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .aspect-16-9-container {
+            aspect-ratio: 16 / 9;
+            width: 100%;
+            max-width: 1920px;
+            margin: 0 auto;
+            position: relative;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .primary-hover-glow:hover {
+            box-shadow: 0 0 32px rgba(1, 233, 131, 0.12);
+            border-color: rgba(1, 233, 131, 0.3);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .scan-line {
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(to right, transparent, #8cffb1, transparent);
+            position: absolute;
+            top: 0;
+            animation: scan 3s linear infinite;
+            opacity: 0.2;
+        }
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+        /* Ensure layout takes up appropriate space for 16:9 feel on larger screens */
+        main {
+            flex-grow: 1;
+        }
+    </style>
+</head>
+<body class="font-body text-body-md overflow-x-hidden">
+<!-- Top Navigation Bar -->
+<nav class="fixed top-0 w-full z-50 bg-black/50 backdrop-blur-xl border-b border-white/10 h-16">
+<div class="flex justify-between items-center h-full px-gutter max-w-max-width mx-auto">
+<div class="flex items-center gap-xl flex-grow">
+<div class="flex items-center gap-xs">
+<div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center">
+<span class="material-symbols-outlined text-black" style="font-variation-settings: &quot;FILL&quot; 1;">deployed_code</span>
+</div>
+<span class="text-display-md font-bold text-on-surface font-extrabold">智御全城</span>
+</div>
+<div class="hidden md:flex items-center gap-lg ml-auto text-lg">
+<a class="text-mute font-medium hover:text-primary transition-colors duration-200" href="#">首页</a>
+<a class="text-mute font-medium hover:text-primary transition-colors duration-200" href="#">航迹监控</a>
+<a class="text-mute font-medium hover:text-primary transition-colors duration-200" href="#">城市治理大模型</a>
+<a class="text-primary font-bold border-b-2 border-primary pb-1" href="#">无人机注册中心</a>
+<a class="text-mute font-medium hover:text-primary transition-colors duration-200" href="#">区块链数据中心</a>
+<a class="text-mute font-medium hover:text-primary transition-colors duration-200" href="#">用户管理</a>
+</div>
+</div>
+<div class="flex items-center gap-md ml-lg">
+<button class="material-symbols-outlined text-on-surface hover:text-primary transition-transform active:scale-90" data-icon="notifications" style="font-size: 28px;">notifications</button>
+<button class="material-symbols-outlined text-on-surface hover:text-primary transition-transform active:scale-90" data-icon="account_circle" style="font-size: 28px;">account_circle</button>
+</div>
+</div>
+</nav>
+<!-- Main Content Wrapper optimized for wide layout -->
+<main class="px-gutter max-w-max-width mx-auto w-full pt-6 mt-10">
+<!-- Hero Title Section -->
+<header class="flex flex-col gap-sm py-8"><div class="relative p-8 rounded-2xl overflow-hidden border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent group shadow-[0_0_40px_rgba(1,233,131,0.05)] backdrop-blur-xl"><div class="absolute -top-32 -left-32 w-64 h-64 bg-primary/20 blur-[120px] rounded-full group-hover:bg-primary/30 transition-all duration-700"></div><div class="absolute -bottom-32 -right-32 w-64 h-64 bg-secondary/10 blur-[120px] rounded-full group-hover:bg-secondary/20 transition-all duration-700"></div>
+
+    <div class="absolute -top-24 -left-24 w-48 h-48 bg-primary/10 blur-[100px] rounded-full group-hover:bg-primary/20 transition-all duration-700"></div>
+    <div class="relative z-10">
+        <div class="flex items-center gap-xs mb-sm">
+            <span class="text-label-mono text-[10px] tracking-[0.2em] text-primary bg-primary/10 px-xs py-0.5 rounded border border-primary/20">REGISTRY HUB</span>
+            <div class="h-px w-8 bg-primary/30"></div>
+        </div>
+        <div class="flex flex-col md:flex-row justify-between items-end gap-md">
+            <div>
+                <h1 class="text-display-xl tracking-tight font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-primary-fixed to-secondary">
+                    无人机注册中心
+                </h1>
+                <p class="text-body-lg mt-xs font-light tracking-wide max-w-2xl italic text-zinc-300">
+                    全城低空资源数字化底座，实现一机一码全球唯一身份追溯
+                </p>
+            </div>
+            <div class="hidden lg:flex items-center gap-md">
+                <div class="text-right">
+
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div></header>
+<!-- Filters Row -->
+<div class="glass-panel rounded-2xl p-md flex flex-col md:flex-row gap-md items-center shadow-lg mb-8">
+<div class="relative flex-grow w-full">
+<span class="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-mute text-sm">search</span>
+<input class="w-full bg-white/5 border border-white/10 rounded-xl pl-12 pr-md text-body-sm text-on-surface focus:outline-none focus:border-primary transition-colors placeholder:text-mute h-10" placeholder="搜索设备 UDID, 运营商名称..." type="text">
+</div>
+<div class="flex gap-sm w-full md:w-auto">
+<select class="bg-surface-container-low border border-white/10 rounded-xl px-md text-body-sm text-on-surface focus:outline-none focus:border-primary cursor-pointer transition-colors min-w-[140px] appearance-none h-10">
+<option>全部运营商</option>
+<option>美团低空配送</option>
+<option>顺丰速运</option>
+<option>迅蚁科技</option>
+</select>
+<select class="bg-surface-container-low border border-white/10 rounded-xl px-md text-body-sm text-on-surface focus:outline-none focus:border-primary cursor-pointer transition-colors min-w-[140px] appearance-none h-10">
+<option>全部状态</option>
+<option>已审批</option>
+<option>待审批</option>
+<option>异常</option>
+</select>
+<select class="bg-surface-container-low border border-white/10 rounded-xl px-md text-body-sm text-on-surface focus:outline-none focus:border-primary cursor-pointer transition-colors min-w-[140px] appearance-none h-10">
+<option>全部机型</option>
+<option>DJI Mavic 3</option>
+<option>DJI Matrice 350</option>
+<option>多旋翼</option>
+</select>
+<button class="bg-surface-container-highest rounded-xl hover:bg-surface-bright transition-colors border border-white/10 flex items-center justify-center aspect-square h-10 w-10" style="background-color: rgb(1, 233, 131); color: rgb(4, 19, 13);"><span class="text-xl font-bold">+</span></button>
+</div>
+</div>
+<!-- Drone Grid -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-gutter mb-xl">
+<!-- Card 1 -->
+<div class="glass-panel rounded-xl overflow-hidden primary-hover-glow transition-all duration-300 group relative">
+<div class="relative h-48 bg-black overflow-hidden">
+
+<img alt="Industrial delivery drone" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC-pOqfRox4qRjv_Ex7cwdh3ReNN_K3Edq3C-TpXAzjwmCwPWJgS6zJCk3lHqAsv4Iena6ZqMcQ_tfm_GUV4MXWKB5LuK1BnaorO-JxKlDX99GnDD6NMAMkaS_QaAVbHchHZ8rS9D2ewMxAXn_7NBYx3itPOp9FmnJUpqu0xAtAuLtZ5xbL1hty3Olq4aID_SYSBa56HuCTiVIH9Je3FA9HOPcOw29ZHaFGm6gn9d4BdP2d-16126WqJs4QTfni61Q2g-0zpKRVaYU">
+<div class="absolute top-sm left-sm px-xs py-xxs bg-primary/20 backdrop-blur-md border border-primary/30 rounded-md">
+<span class="text-[10px] text-primary font-bold">已审批</span>
+</div>
+<div class="absolute bottom-xs right-xs opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-primary text-md">open_in_new</span>
+</div>
+</div>
+<div class="p-md flex flex-col gap-sm">
+<div class="flex flex-col">
+<span class="text-caption text-mute">Drone UDID</span>
+<h3 class="text-body-md font-bold text-on-surface group-hover:text-primary transition-colors">0TQZM47CNT04YU</h3>
+</div>
+<div class="space-y-xxs pt-sm border-t border-white/5">
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">运营商:</span>
+<span class="text-body-sm text-on-surface">化工巡检无人机</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">类型:</span>
+<span class="text-body-sm text-on-surface">无人机</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">机型:</span>
+<span class="text-body-sm text-on-surface">DJI 专业版</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 2 -->
+<div class="glass-panel rounded-xl overflow-hidden primary-hover-glow transition-all duration-300 group relative">
+<div class="relative h-48 bg-black overflow-hidden">
+<img alt="Agricultural spraying drone" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBWzDaYNkzQbdGN8POp4LLNGlCnKiU_7cL0ol12AauVEXsfSimF7zaKjkUkHO-qsSZ7OVMFY3cONRdF7ZBzJyVyVNceJJSpDeu_5CKd8RRFRbieCSz63sgiJ7y4MyXch_I2lzdCHB8_vtw-pMoMmZPoGMb044zkioxBHI2_K7PjpJYE_NOGBLbUTypMfm9NG9S2piUQNqybT-GYR5Tbh1mq2CKe2vz54AqSBDPUr8hSrpkgAXgals_b2fYyLiugd7coNcVkCiS6SYk">
+<div class="absolute top-sm left-sm px-xs py-xxs bg-warning/20 backdrop-blur-md border border-warning/30 rounded-md">
+<span class="text-[10px] text-yellow-400 font-bold">待审批</span>
+</div>
+</div>
+<div class="p-md flex flex-col gap-sm">
+<div class="flex flex-col">
+<span class="text-caption text-mute">Drone UDID</span>
+<h3 class="text-body-md font-bold text-on-surface group-hover:text-primary transition-colors">0TQZM3QCNT01GP</h3>
+</div>
+<div class="space-y-xxs pt-sm border-t border-white/5">
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">运营商:</span>
+<span class="text-body-sm text-on-surface">智慧物流无人机</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">类型:</span>
+<span class="text-body-sm text-on-surface">四旋翼</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">机型:</span>
+<span class="text-body-sm text-on-surface">DJI 企业版</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 3 -->
+<div class="glass-panel rounded-xl overflow-hidden primary-hover-glow transition-all duration-300 group relative">
+<div class="relative h-48 bg-black overflow-hidden">
+<img alt="Cinematic drone" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCS3hdcVqUa4_093GKIwWeu-cpSbmNRwcs5RESE_-B15QzEqyXmHcVhaBiNJMabT3OQh8C0wo_f9yjW_3qePXQ2mb1VOhNRhF0VCJnoU8towhE76w4xEnkl6OYt1taRXXfguGx3qkdpmEvy5mqJ-xmZJkho-HiQjBnWM8Y-v5TR7HHgQghglQC1NEuiiDn0QWFYMQqErxSIhECSSPGEl4mTIjtP4VpCCzzGamNzqaRhMPVq_OC_LjjTAko8Dym3pSVQyrA7sHb_n0o">
+<div class="absolute top-sm left-sm px-xs py-xxs bg-primary/20 backdrop-blur-md border border-primary/30 rounded-md">
+<span class="text-[10px] text-primary font-bold">已审批</span>
+</div>
+</div>
+<div class="p-md flex flex-col gap-sm">
+<div class="flex flex-col">
+<span class="text-caption text-mute">Drone UDID</span>
+<h3 class="text-body-md font-bold text-on-surface group-hover:text-primary transition-colors">DJI-687952</h3>
+</div>
+<div class="space-y-xxs pt-sm border-t border-white/5">
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">运营商:</span>
+<span class="text-body-sm text-on-surface">无人机低空外卖运营商</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">类型:</span>
+<span class="text-body-sm text-on-surface">无人机</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">机型:</span>
+<span class="text-body-sm text-on-surface">DJI 企业版</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 4 -->
+<div class="glass-panel rounded-xl overflow-hidden primary-hover-glow transition-all duration-300 group relative">
+<div class="relative h-48 bg-black overflow-hidden">
+<img alt="Heavy lifting octocopter" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkzjPGWkBkKWU3D2jS6Gls7eoft6nYDrTepXMEJg7mk8KP3uKdoTloodGuaHhEsHoM6ZMfECIF3iDYjIwbwZGZc7cknFjkiDmP8JGVdX_GpY9TNunF5QY9RMI49SkLhsey-iZIaLggEZxmjHQHwwL1dP9FSZ9eR1QhVm_w5vFezbycYf8e8miw3Zs9qe0TU1bTPHzsTtwBBhiQCOeak4YqmIQPF5X8bq_lhU9NBcyHo0pLHqtX9-Hu7quHYfr7uaKJY7wzt-VuHFM">
+<div class="absolute top-sm left-sm px-xs py-xxs bg-primary/20 backdrop-blur-md border border-primary/30 rounded-md">
+<span class="text-[10px] text-primary font-bold">已审批</span>
+</div>
+</div>
+<div class="p-md flex flex-col gap-sm">
+<div class="flex flex-col">
+<span class="text-caption text-mute">Drone UDID</span>
+<h3 class="text-body-md font-bold text-on-surface group-hover:text-primary transition-colors">DJI-5897</h3>
+</div>
+<div class="space-y-xxs pt-sm border-t border-white/5">
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">运营商:</span>
+<span class="text-body-sm text-on-surface">智慧物流无人机</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">类型:</span>
+<span class="text-body-sm text-on-surface">无人机</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">机型:</span>
+<span class="text-body-sm text-on-surface">DJI 企业版</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 5 -->
+<div class="glass-panel rounded-xl overflow-hidden primary-hover-glow transition-all duration-300 group relative">
+<div class="relative h-48 bg-black overflow-hidden">
+<img alt="Delivery drone detail" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDpFGSyxuBwBIi2MsJboWrWsqFEQXgalGEKaJAZhjunfF4mbx46DfcO8wywD4B4jpwmb4vL0p55bD7miB8JMl2Cyi5lNRIQ9RjzoH4G8mjUafE1TTqvkQDnRCMrTcT8W-vSKgVSR9KUf7PrkKoMrA0b-3awgpjmP0v5Jqv3ecEn7nbGGc9Dr43BzffY7C11b99ILNlFsYNFOPxm3NaNiOUkeKeBma1osoY_BSUAOfRVTcyQ_9HJqo2ClHnh_yuEU1h1ZTVbqtCsgbE">
+<div class="absolute top-sm left-sm px-xs py-xxs bg-primary/20 backdrop-blur-md border border-primary/30 rounded-md">
+<span class="text-[10px] text-primary font-bold">已审批</span>
+</div>
+</div>
+<div class="p-md flex flex-col gap-sm">
+<div class="flex flex-col">
+<span class="text-caption text-mute">Drone UDID</span>
+<h3 class="text-body-md font-bold text-on-surface group-hover:text-primary transition-colors">DJI-684789</h3>
+</div>
+<div class="space-y-xxs pt-sm border-t border-white/5">
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">运营商:</span>
+<span class="text-body-sm text-on-surface">无人机低空外卖运营商</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">类型:</span>
+<span class="text-body-sm text-on-surface">无人机</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">机型:</span>
+<span class="text-body-sm text-on-surface">DJI 企业版</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 6 -->
+<div class="glass-panel rounded-xl overflow-hidden primary-hover-glow transition-all duration-300 group relative">
+<div class="relative h-48 bg-black overflow-hidden">
+<img alt="Educational drone" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCdEyNCTuYcvKBzj5xOpwJU4rTgfx4xtdoNFEUPpCGLHstkQHKjt1dYFr3V1ImneI7Zgy3RtOglaSofeuMsEhq7xz_Jh4qfLYIIZ_izhWb1YPKJt502qZ-TEJ9l7skA3w880Mir3vrLrozkrfB5JRbniIH6bGUOpKy3zUClyIk2xV6IofWNJcyOOd2QkPmk2SohchNHYnyf5720-B519V8nm9uQz8QJNmHuCogRWehqzJEziVW5H4Mcjbee5rZbToH6H_Y2OLe99rY">
+<div class="absolute top-sm left-sm px-xs py-xxs bg-primary/20 backdrop-blur-md border border-primary/30 rounded-md">
+<span class="text-[10px] text-primary font-bold">已审批</span>
+</div>
+</div>
+<div class="p-md flex flex-col gap-sm">
+<div class="flex flex-col">
+<span class="text-caption text-mute">Drone UDID</span>
+<h3 class="text-body-md font-bold text-on-surface group-hover:text-primary transition-colors">DJI-FDS5467</h3>
+</div>
+<div class="space-y-xxs pt-sm border-t border-white/5">
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">运营商:</span>
+<span class="text-body-sm text-on-surface">教育用途无人机</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">类型:</span>
+<span class="text-body-sm text-on-surface">无人机</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">机型:</span>
+<span class="text-body-sm text-on-surface">DJI 教育版</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 7 -->
+<div class="glass-panel rounded-xl overflow-hidden primary-hover-glow transition-all duration-300 group relative">
+<div class="relative h-48 bg-black overflow-hidden">
+<img alt="Six-rotor industrial drone" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAmEkJdTQvHmqUcOYcHrk1nOcsMnkdcsvEGOm2GMUKFkiGMW-ZQjH8grQ8wieB6PEaP2Eicn8XGP5BJL2ibpAdX_pVBEZtPMHq4Bw6dqt8yRWiIMPoMOvkgI8_HSCpuIJR55WLTkPkzYIa95_Xf5sN6lEHj0Vy3gVgrAs0w6Wivy2yS9v81v2FCIyAfSttJAQCpY2XhONyEp6HfNrbF1X7rG2gFl5wG_GDXWnjEWonCFuCHccBXUaGdmRRk0HDiomaYASr7bZCpLkM">
+<div class="absolute top-sm left-sm px-xs py-xxs bg-primary/20 backdrop-blur-md border border-primary/30 rounded-md">
+<span class="text-[10px] text-primary font-bold">已审批</span>
+</div>
+</div>
+<div class="p-md flex flex-col gap-sm">
+<div class="flex flex-col">
+<span class="text-caption text-mute">Drone UDID</span>
+<h3 class="text-body-md font-bold text-on-surface group-hover:text-primary transition-colors">DJI-DFS4654651</h3>
+</div>
+<div class="space-y-xxs pt-sm border-t border-white/5">
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">运营商:</span>
+<span class="text-body-sm text-on-surface">无人机低空外卖运营商</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">类型:</span>
+<span class="text-body-sm text-on-surface">六旋翼</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">机型:</span>
+<span class="text-body-sm text-on-surface">DJI 企业版</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 8 -->
+<div class="glass-panel rounded-xl overflow-hidden primary-hover-glow transition-all duration-300 group relative">
+<div class="relative h-48 bg-black overflow-hidden">
+<img alt="White consumer drone" class="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBgLVGEc-5Ae6RtiNe-KTl4uhqb8DYmod1Xndi5m6DcYjqV-jvr_3jwnI8PwiuZnYr4PbQk-Gt6scx_w6BXwz09FqELACLFBWMjMTiKo_meYzpYrwVnB5mXu2S9F4lX3iqw3I76c9_4I-XMsmo2EBXpMijFHGGj81j4CTK-jbFD9QnrZwxvk64cZx7fMzAYphZit4Ni3Ry-K_sZQwpy-a-4Qo4U_vucAmXsdKhvglLfwm_aM4zeiKl6HBuXKpU35qiZbZQ6BZjPzO4">
+<div class="absolute top-sm left-sm px-xs py-xxs bg-primary/20 backdrop-blur-md border border-primary/30 rounded-md">
+<span class="text-[10px] text-primary font-bold">已审批</span>
+</div>
+</div>
+<div class="p-md flex flex-col gap-sm">
+<div class="flex flex-col">
+<span class="text-caption text-mute">Drone UDID</span>
+<h3 class="text-body-md font-bold text-on-surface group-hover:text-primary transition-colors">DJI-1534567</h3>
+</div>
+<div class="space-y-xxs pt-sm border-t border-white/5">
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">运营商:</span>
+<span class="text-body-sm text-on-surface">智慧物流无人机</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">类型:</span>
+<span class="text-body-sm text-on-surface">无人机</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-caption text-mute">机型:</span>
+<span class="text-body-sm text-on-surface">DJI 专业版</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-black border-t border-white/10 w-full py-md mt-auto">
+<div class="flex flex-col md:flex-row justify-between items-center px-gutter w-full max-w-max-width mx-auto">
+<span class="text-label-mono text-mute opacity-80 text-xs">© 2024 智御全城 城市无人机治理平台</span>
+<div class="flex gap-lg mt-md md:mt-0 text-caption">
+<a class="text-mute hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">隐私政策</a>
+<a class="text-mute hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">服务条款</a>
+<a class="text-mute hover:text-primary transition-colors opacity-80 hover:opacity-100" href="#">联系我们</a>
+</div>
+</div>
+</footer>
+<!-- Floating Action Button -->
+<div class="fixed bottom-xl right-xl z-40">
+
+</div>
+<script>
+    // Micro-interaction: Smooth hover states for filter dropdowns
+    document.querySelectorAll('select').forEach(select => {
+        select.addEventListener('focus', () => {
+            select.parentElement.classList.add('ring-1', 'ring-primary/30');
+        });
+        select.addEventListener('blur', () => {
+            select.parentElement.classList.remove('ring-1', 'ring-primary/30');
+        });
+    });
+
+    // Search bar activation effect
+    const searchInput = document.querySelector('input[type="text"]');
+    if(searchInput) {
+        searchInput.addEventListener('focus', () => {
+            searchInput.parentElement.classList.add('shadow-[0_0_20px_rgba(1,233,131,0.05)]');
+        });
+        searchInput.addEventListener('blur', () => {
+            searchInput.parentElement.classList.remove('shadow-[0_0_20px_rgba(1,233,131,0.05)]');
+        });
+    }
+</script>
+
+
+
+
+
+
+</body></html>

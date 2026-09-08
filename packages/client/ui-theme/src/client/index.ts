@@ -1,11 +1,9 @@
 /**
  * Browser theme registry over the `--dsw-*` token stylesheets. The service
- * owns the live theme preference (light/dark/system), resolves `system` through
- * `prefers-color-scheme`, and publishes immutable snapshots; it never touches
+ * fixes the product palette to dark and publishes immutable snapshots; it never touches
  * the DOM — ui-layout's presenter consumes the resolved snapshot. The Host
- * settings scope loads and stores the preference in the user-settings
- * document. The plugin also registers the Appearance preference row into the
- * settings General section — the theme feature owns its own settings surface.
+ * settings scope supplies the user-settings document, but the runtime adopts
+ * only its font size. The plugin registers only the font-size row in Settings.
  */
 import type { Context as ClientContext } from '@deepseek-ai/cordis'
 import type { BoundActions } from '@deepseek-ai/dsh-client-ui-slots'
@@ -16,16 +14,14 @@ import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client'
 import type {} from '@deepseek-ai/dsh-client-locale/client'
 // Type-only: pulls the SlotRegistry service merge (ctx.slots).
 import type {} from '@deepseek-ai/dsh-client-ui-renderer/client'
-import type { AppearanceRowInjected } from './AppearanceRow.tsx'
-import { AppearanceRow } from './AppearanceRow.tsx'
 import type { FontSizeRowInjected } from './FontSizeRow.tsx'
 import { FontSizeRow } from './FontSizeRow.tsx'
-import { createAppearanceRowStore, createFontSizeRowStore } from './settings-store.ts'
+import { createFontSizeRowStore } from './settings-store.ts'
 import { installThemeStyles } from './styles.ts'
 import { en, zh, type ThemeKey } from './locales.ts'
 import {
-  DEFAULT_FONT_SIZE, DEFAULT_PREFERENCE, FONT_SIZE_FIELD, FONT_SIZE_MAX, FONT_SIZE_MIN,
-  isThemePreference, THEME_PREFERENCE_FIELD, THEME_SETTINGS_NAMESPACE,
+  DEFAULT_FONT_SIZE, FONT_SIZE_FIELD, FONT_SIZE_MAX, FONT_SIZE_MIN,
+  THEME_SETTINGS_NAMESPACE,
   type ThemePreference, type ThemeSettings,
 } from '../theme-settings.ts'
 
@@ -40,7 +36,7 @@ export const SETTINGS_NS = 'settings.theme'
 
 declare module '@deepseek-ai/dsh-client-ui-slots' {
   interface LocaleNamespaceMap {
-    /** The Appearance settings row's copy. */
+    /** The theme settings copy used by the font-size row. */
     'settings.theme': ThemeKey
   }
 }
@@ -78,13 +74,12 @@ export interface ThemeDefinition {
 
 /** Immutable theme state published on every change. */
 export interface ThemeSnapshot {
-  /** The persisted preference (may be `system`). */
+  /** Product preference, always `dark`. */
   preference: ThemePreference
   /** Conversation content font size in px (integer within FONT_SIZE_MIN..FONT_SIZE_MAX). */
   fontSize: number
   /**
-   * The resolved active theme (`system` resolved via prefers-color-scheme)
-   * with override layers folded into its tokens (seq order, later layers win
+   * The active dark theme with override layers folded into its tokens (seq order, later layers win
    * per-token; each value picked for the active color scheme).
    */
   active: ThemeDefinition
@@ -114,8 +109,7 @@ declare module '@deepseek-ai/cordis' {
   }
   interface Events {
     /**
-     * Theme state changed (preference switched, registry updated, or the OS
-     * color scheme changed while the preference is `system`).
+     * Theme state changed (font size, registry, or token overrides).
      * @param snapshot - Current immutable theme snapshot.
      * @mode emit
      */
@@ -145,15 +139,12 @@ const BUILTIN_INSPECT_TOKENS: readonly ThemeTokenInspection[] = Object.freeze([
 ])
 
 /**
- * Theme registry and preference owner. `light`/`dark` are built in (the base
- * stylesheets carry both palettes); third-party themes register alias-layer
- * overrides. Reads go through {@link getTheme}; preference writes only
- * through {@link setTheme}; continuous sync only through the `theme/change`
- * event. {@link overrideTokens} stacks partial token layers over the active
- * theme without touching the registry.
- * The service holds the `prefers-color-scheme` media query (environment
- * sensing, not presentation) and re-emits when the OS scheme flips while the
- * preference is `system`.
+ * Theme registry and fixed-dark product palette owner. The base stylesheets
+ * retain both built-in palettes for token compatibility, while third-party
+ * themes register alias-layer overrides. Reads go through {@link getTheme};
+ * {@link setTheme} accepts only `dark`; continuous sync uses `theme/change`.
+ * {@link overrideTokens} stacks partial token layers over the active theme
+ * without touching the registry.
  */
 export class ThemeRuntime {
   private readonly ctx: ClientContext
@@ -163,7 +154,6 @@ export class ThemeRuntime {
   private fontSize: number = bootstrapFontSize()
   private revision = 0
   private snapshot: ThemeSnapshot
-  private readonly media: MediaQueryList | undefined
   /** Override layers by source; seq (monotonic) is the stacking order. */
   private readonly overrides = new Map<string, { seq: number; tokens: ThemeTokenOverrides }>()
   private overrideSeq = 0
@@ -176,21 +166,8 @@ export class ThemeRuntime {
   constructor(ctx: ClientContext, host: SettingsScope<ThemeSettings>) {
     this.ctx = ctx
     this.host = host
-    this.preference = DEFAULT_PREFERENCE
-    // Non-browser runs (node e2e booting the client tree) have no matchMedia.
-    this.media = typeof matchMedia === 'undefined' ? undefined : matchMedia('(prefers-color-scheme: dark)')
+    this.preference = 'dark'
     this.snapshot = this.buildSnapshot()
-    if (this.media !== undefined) {
-      const media = this.media
-      const onChange = (): void => {
-        if (this.preference !== 'system') return
-        this.publish()
-      }
-      ctx.effect(() => {
-        media.addEventListener('change', onChange)
-        return () => { media.removeEventListener('change', onChange) }
-      }, 'ui-theme: prefers-color-scheme listener')
-    }
     ctx.effect(() => host.subscribe(() => { this.adopt() }), 'ui-theme: settings scope adoption')
     this.adopt()
   }
@@ -223,19 +200,11 @@ export class ThemeRuntime {
   }
 
   /**
-   * Switch the theme preference — the only user preference write entry.
-   * Built-in preferences are written through the settings scope and every
-   * accepted value emits `theme/change`.
-   * @param id - a registered theme id or `system`; unknown ids throw.
+ * Assert the product's fixed theme selection.
+ * @param id - `dark`; every other id throws.
    */
   setTheme(id: string): void {
-    if (id !== 'system' && !this.themes.some(t => t.id === id)) {
-      throw new Error(`theme "${id}" is not registered`)
-    }
-    if (this.preference === id) return
-    this.preference = id as ThemePreference
-    if (isThemePreference(id)) void this.host.set(THEME_PREFERENCE_FIELD, id)
-    this.publish()
+    if (id !== 'dark') throw new Error('this product supports only the dark theme')
   }
 
   /**
@@ -254,12 +223,11 @@ export class ThemeRuntime {
     this.publish()
   }
 
-  /** Adopt the scope's accepted durable preference without writing it back. */
+  /** Adopt only the scope's durable font size without writing it back. */
   private adopt(): void {
     const section = this.host.getSnapshot().value
     if (section === undefined) return
-    if (this.preference === section.preference && this.fontSize === section.fontSize) return
-    this.preference = section.preference
+    if (this.fontSize === section.fontSize) return
     this.fontSize = section.fontSize
     this.publish()
   }
@@ -268,9 +236,7 @@ export class ThemeRuntime {
    * Register a theme. Duplicate id throws (single occupant per id; the
    * built-in pair counts; `system` is a preference, not a registrable id).
    * @param definition - theme id, colorScheme, and alias-token overrides.
-   * @returns disposer. Disposing the theme backing the active preference
-   * resets the preference to the default so the UI never keeps tokens of an
-   * unregistered theme.
+   * @returns disposer removing the registered extension theme.
    */
   register(definition: ThemeDefinition): () => void {
     if (definition.id === 'system') throw new Error('"system" is a preference, not a registrable theme id')
@@ -282,9 +248,6 @@ export class ThemeRuntime {
     return () => {
       if (!this.themes.some(t => t.id === definition.id)) return
       this.themes = this.themes.filter(t => t.id !== definition.id)
-      if (this.preference === definition.id) {
-        this.preference = DEFAULT_PREFERENCE
-      }
       this.publish()
     }
   }
@@ -317,11 +280,8 @@ export class ThemeRuntime {
   }
 
   private buildSnapshot(): ThemeSnapshot {
-    const resolvedId = this.preference === 'system'
-      ? (this.media?.matches === true ? 'dark' : 'light')
-      : this.preference
-    // Both built-ins always exist; a registered preference id resolves or has
-    // been reset by its disposer, so the lookup cannot miss.
+    const resolvedId = 'dark'
+    // The dark built-in always exists and cannot be disposed.
     const active = this.themes.find(t => t.id === resolvedId)
     /* v8 ignore next 2 -- needs a registry without light/dark, which register()/dispose() cannot produce */
     if (active === undefined) throw new Error(`theme registry lost "${resolvedId}"`)
@@ -413,7 +373,7 @@ function dynamicToken(name: string): ThemeTokenInspection {
 }
 
 /**
- * Required services: settings transport plus slots/locale for the Appearance
+ * Required services: settings transport plus slots/locale for the font-size
  * row. `remote` carries the forwarded settings invalidation that
  * `ctx.settingsScope.bind(spec)` subscribes to on this context.
  */
@@ -421,7 +381,7 @@ export const inject = ['slots', 'locale', 'connection', 'remote', 'settingsScope
 
 /**
  * Client plugin body: provide the theme service and register the
- * feature-owned Appearance preference row into the General section's item
+ * feature-owned font-size row into the General section's item
  * slot (a feature owns its settings surface).
  * @param ctx - client cordis context.
  */
@@ -433,33 +393,12 @@ export function apply(ctx: ClientContext): void {
 
   ctx.effect(() => ctx.locale.register(SETTINGS_NS, { zh, en }), 'ui-theme: settings row dictionaries')
 
-  const store = createAppearanceRowStore()
-  let bound: BoundActions<typeof store> | undefined
   const fontSizeStore = createFontSizeRowStore()
   let fontSizeBound: BoundActions<typeof fontSizeStore> | undefined
   const sync = (snapshot: ThemeSnapshot): void => {
-    bound?.sync(snapshot.preference, snapshot.revision)
     fontSizeBound?.sync(snapshot.fontSize, snapshot.revision)
   }
   ctx.on('theme/change', sync)
-  const injected = (actions: BoundActions<typeof store>): AppearanceRowInjected => {
-    bound = actions
-    // Re-sync from the getter so no event is lost between registration and
-    // first render (the store's revision guard drops stale duplicates).
-    sync(theme.getTheme())
-    return {
-      setTheme: (id) => { theme.setTheme(id) },
-    }
-  }
-  ctx.slots.inject('settings.general.item', () => ctx.slots.register({
-    name: 'settings.general.item',
-    id: 'appearance',
-    order: 10,
-    store,
-    locale: SETTINGS_NS,
-    inject: injected,
-  }, AppearanceRow))
-
   const fontSizeInjected = (actions: BoundActions<typeof fontSizeStore>): FontSizeRowInjected => {
     fontSizeBound = actions
     sync(theme.getTheme())
@@ -470,7 +409,7 @@ export function apply(ctx: ClientContext): void {
   ctx.slots.inject('settings.general.item', () => ctx.slots.register({
     name: 'settings.general.item',
     id: 'font-size',
-    order: 11,
+    order: 10,
     store: fontSizeStore,
     locale: SETTINGS_NS,
     inject: fontSizeInjected,

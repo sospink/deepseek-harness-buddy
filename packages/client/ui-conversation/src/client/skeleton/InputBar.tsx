@@ -14,10 +14,12 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { CSSProperties, FocusEvent, KeyboardEvent, MouseEvent, ReactNode } from 'react'
+import type {
+  CSSProperties, FocusEvent, KeyboardEvent, MouseEvent, PointerEvent as ReactPointerEvent, ReactNode,
+} from 'react'
 import clsx from 'clsx'
 import {
-  IconPlusOutline16, IconWarningOutline16, Toast, Tooltip,
+  IconLoadingOutline16, IconPlusOutline16, IconWarningOutline16, Toast, Tooltip,
 } from '@deepseek-ai/dsh-client-ui-primitives'
 // Type-only: the `plan` projection key merge (the TodoDock posture — the
 // composer reads a host-computed value; the domain owns the key).
@@ -264,6 +266,28 @@ export function InputBar({
     setExpanded(false)
   }
 
+  // Feed the border highlight directly through CSS custom properties. Keeping
+  // pointer coordinates out of React state avoids re-rendering the editor on
+  // every mouse move (and therefore cannot disturb focus or caret geometry).
+  const trackComposerGlow = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    const rect = event.currentTarget.getBoundingClientRect()
+    if (rect.width <= 0 || rect.height <= 0) return
+    const clamp = (value: number): number => Math.min(100, Math.max(0, value))
+    event.currentTarget.style.setProperty(
+      '--dsh-composer-pointer-x',
+      `${clamp(((event.clientX - rect.left) / rect.width) * 100)}%`,
+    )
+    event.currentTarget.style.setProperty(
+      '--dsh-composer-pointer-y',
+      `${clamp(((event.clientY - rect.top) / rect.height) * 100)}%`,
+    )
+  }
+
+  const resetComposerGlow = (event: ReactPointerEvent<HTMLDivElement>): void => {
+    event.currentTarget.style.setProperty('--dsh-composer-pointer-x', '50%')
+    event.currentTarget.style.setProperty('--dsh-composer-pointer-y', '50%')
+  }
+
   // The keymap handlers read live bar state through this ref so the editor
   // registration survives re-renders without re-arming per keystroke.
   const gate = useRef({
@@ -433,7 +457,10 @@ export function InputBar({
           onMouseDown={workspaceTrigger ? undefined : activateComposer}
           onClick={workspaceTrigger ? onRequestWorkspace : undefined}
           onPointerDown={workspaceTrigger ? (e) => { e.stopPropagation() } : undefined}
+          onPointerMove={trackComposerGlow}
+          onPointerLeave={resetComposerGlow}
         >
+          <span className={css.edgeGlow} data-composer-edge-glow aria-hidden="true" />
           {overlay !== undefined && <div className={css.overlayAnchor}>{overlay}</div>}
           {accessory !== undefined && <div className={css.accessory}>{accessory}</div>}
           {/* One scrollport, one text surface: the contenteditable grows with
@@ -514,6 +541,7 @@ export function InputBar({
                   type="button"
                   className={css.primary}
                   aria-label={primaryLabel}
+                  aria-busy={machineBusy || undefined}
                   disabled={primaryStops ? stop === undefined : empty || disabled || machineBusy}
                   onMouseDown={keepFocus}
                   onClick={onPrimary}
@@ -522,6 +550,10 @@ export function InputBar({
                     <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
                       <rect x="3" y="3" width="10" height="10" rx="3" fill="currentColor" />
                     </svg>
+                  ) : machineBusy ? (
+                    <span className={css.loadingIndicator} data-loading-indicator="" aria-hidden="true">
+                      <IconLoadingOutline16 size={18} />
+                    </span>
                   ) : (
                     <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden>
                       <path d="M8.3125 0.980183C8.66767 1.0531 8.97902 1.20418 9.2627 1.43233C9.48724 1.61297 9.73029 1.85793 9.97949 2.10714L14.707 6.83468L13.293 8.24874L9 3.95577V15.0417H7V3.95577L2.70703 8.24874L1.29297 6.83468L6.02051 2.10714C6.26971 1.85793 6.51277 1.61297 6.7373 1.43233C6.97662 1.23986 7.28445 1.04402 7.6875 0.980183C7.8973 0.947006 8.1031 0.95516 8.3125 0.980183Z" fill="currentColor" />

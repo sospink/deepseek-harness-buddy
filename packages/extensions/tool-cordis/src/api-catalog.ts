@@ -244,6 +244,19 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
     ],
   },
   {
+    key: 'agentRoles',
+    summary: 'Host service owning role selection, projection, and request-time context.',
+    description: 'Host service owning role selection, projection, and request-time context.',
+    methods: [
+      {
+        signature: '@Remote(\'select\') select(agent: Agent, agentRole: string): AgentRoleId',
+        description: 'Select a role for a blank Session and record the committed value.',
+        parameters: [{ name: 'agent', description: 'Blank-session Agent whose identity becomes fixed.' }, { name: 'agentRole', description: 'Requested stable role identifier.' }],
+        returns: 'The validated and durably selected role identifier.',
+      },
+    ],
+  },
+  {
     key: 'agents',
     summary: 'Agent service (`ctx.agents`): tracks live agents and carries the initiating Agent through one process-local asynchronous driver chain.',
     description: 'Agent service (`ctx.agents`): tracks live agents and carries the initiating Agent through one process-local asynchronous driver chain. Agent *creation* is provided by whichever plugin implements the AgentFactory (`@deepseek-ai/dsh-agent-loop`), registered via setFactory.\n\nInitiator methods provide same-process causal attribution only. Ambient presence is neither liveness proof nor authorization; subjects and owners remain explicit, as does identity at worker, process, persistence, and wire boundaries. Returned Promise boundaries drain during teardown, except a nested lineage that starts an owning-fiber unload is excluded from its own drain.',
@@ -851,6 +864,84 @@ export const SERVICE_API: readonly ServiceApiEntry[] = [
         description: 'Prepare every currently registered field from one immutable base request. Preparation failures reject before HTTP dispatch. Field values are cloned and frozen; providers retain no mutable alias to the outgoing request.',
         parameters: [{ name: 'request', description: 'exact serialized request facts before extension fields.' }],
         returns: 'detached fields and their idempotent joint acceptance transaction.',
+      },
+    ],
+  },
+  {
+    key: 'developmentManagement',
+    summary: 'Host Remote service backing the browser development-management workspace.',
+    description: 'Host Remote service backing the browser development-management workspace.',
+    methods: [
+      {
+        signature: '@Remote(\'baseline\') baseline(): DevelopmentBaseline',
+        description: 'Return the complete current browser projection.',
+        parameters: [],
+        returns: 'The complete current browser projection.',
+      },
+      {
+        signature: '@Remote(\'selectRole\') selectRole(request: SelectDevelopmentRoleRequest): Promise<DevelopmentBaseline>',
+        description: 'Persist the active operator role.',
+        parameters: [{ name: 'request', description: 'Role selection request.' }],
+        returns: 'The refreshed durable projection.',
+      },
+      {
+        signature: '@Remote(\'createTask\') createTask(request: CreateDevelopmentTaskRequest): Promise<DevelopmentTask>',
+        description: 'Create one product requirement.',
+        parameters: [{ name: 'request', description: 'Requirement content and discipline.' }],
+        returns: 'The created draft task.',
+      },
+      {
+        signature: '@Remote(\'submitReview\') submitReview(request: DevelopmentTaskRequest): Promise<DevelopmentTask>',
+        description: 'Submit a draft for review.',
+        parameters: [{ name: 'request', description: 'Task identifier.' }],
+        returns: 'The task in pending-review state.',
+      },
+      {
+        signature: '@Remote(\'assignTask\') assignTask(request: AssignDevelopmentTaskRequest): Promise<DevelopmentTask>',
+        description: 'Assign a reviewed task.',
+        parameters: [{ name: 'request', description: 'Task and discipline-compatible assignee.' }],
+        returns: 'The assigned task.',
+      },
+      {
+        signature: '@Remote(\'startTask\') startTask(request: DevelopmentTaskRequest): Promise<DevelopmentTask>',
+        description: 'Accept an assigned task.',
+        parameters: [{ name: 'request', description: 'Task identifier.' }],
+        returns: 'The task in progress.',
+      },
+      {
+        signature: '@Remote(\'configureDelivery\') configureDelivery(request: ConfigureDeliveryRequest): Promise<DevelopmentTask>',
+        description: 'Configure the local checkout and branch comparison.',
+        parameters: [{ name: 'request', description: 'Permitted repository path and Git refs.' }],
+        returns: 'The task with repository configuration.',
+      },
+      {
+        signature: '@Remote(\'requestDeliveryCheck\') requestDeliveryCheck(request: DevelopmentTaskRequest): Promise<DevelopmentTask>',
+        description: 'Mark a development task ready for Agent checks.',
+        parameters: [{ name: 'request', description: 'Task identifier.' }],
+        returns: 'The task pending delivery review.',
+      },
+      {
+        signature: '@Remote(\'runDeliveryCheck\') runDeliveryCheck(request: DevelopmentTaskRequest): Promise<DeliveryReview>',
+        description: 'Execute and persist the Agent delivery review.',
+        parameters: [{ name: 'request', description: 'Task identifier.' }],
+        returns: 'The evidence-backed delivery review.',
+      },
+      {
+        signature: '@Remote(\'addNote\') addNote(request: AddDevelopmentNoteRequest): Promise<void>',
+        description: 'Add a durable history note.',
+        parameters: [{ name: 'request', description: 'Task identifier and note text.' }],
+      },
+      {
+        signature: '@Remote(\'confirmMergeRequest\') confirmMergeRequest(request: ConfirmMergeRequestRequest): Promise<DeliveryReview>',
+        description: 'Human-confirm and submit the generated MR.',
+        parameters: [{ name: 'request', description: 'Task identifier and optional manual MR URL.' }],
+        returns: 'The review with submitted MR evidence.',
+      },
+      {
+        signature: '@Remote(\'mergeTask\') mergeTask(request: MergeDevelopmentRequest): Promise<DeliveryTaskAndReview>',
+        description: 'Merge a submitted MR using configured integration or manual evidence.',
+        parameters: [{ name: 'request', description: 'Task identifier and optional manual merged URL.' }],
+        returns: 'The merged task and updated delivery review.',
       },
     ],
   },
@@ -3310,6 +3401,14 @@ export const EVENT_API: readonly EventApiEntry[] = [
     parameters: [{ name: 'ref', description: 'the reference whose stored value changed.' }],
   },
   {
+    name: 'development-management/changed',
+    mode: 'emit',
+    signature: '\'development-management/changed\'(): void',
+    summary: 'One development-management mutation became durable.',
+    description: 'One development-management mutation became durable. @mode emit',
+    parameters: [],
+  },
+  {
     name: 'domain/changed',
     mode: 'emit',
     signature: '\'domain/changed\'(change: DomainChanged): void',
@@ -3606,6 +3705,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface AdapterRegistrationHandle {\n    (): void;\n    replace(providers: string[]): void;\n}',
   },
   {
+    name: 'AddDevelopmentNoteRequest',
+    declaration: 'export interface AddDevelopmentNoteRequest extends DevelopmentTaskRequest {\n    readonly note: string;\n}',
+  },
+  {
     name: 'Agent',
     declaration: 'export interface Agent {\n    readonly id: SessionId;\n}',
   },
@@ -3644,6 +3747,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'AgentPresetRow',
     declaration: 'export interface AgentPresetRow {\n    readonly id: string;\n    readonly trust: PresetTrust;\n    readonly isDefault: boolean;\n    readonly name?: string;\n    readonly description?: string;\n    readonly broken?: string;\n}',
+  },
+  {
+    name: 'AgentRoleId',
+    declaration: 'export type AgentRoleId = \'general\' | \'business-requirements-analyst\' | \'product-solution-designer\' | \'prototype-designer\' | \'software-architect\' | \'ai-application-engineer\' | \'blockchain-engineer\' | \'code-review-expert\';',
   },
   {
     name: 'AgentSetup',
@@ -3724,6 +3831,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'AssembledSection',
     declaration: 'export interface AssembledSection {\n    name: string;\n    text: string;\n}',
+  },
+  {
+    name: 'AssignDevelopmentTaskRequest',
+    declaration: 'export interface AssignDevelopmentTaskRequest extends DevelopmentTaskRequest {\n    readonly assigneeRole: Exclude<DevelopmentRole, \'product-manager\'>;\n}',
   },
   {
     name: 'AssistantMessage',
@@ -3894,12 +4005,20 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export type CompactionTrigger = \'pressure\' | \'context-overflow\';',
   },
   {
+    name: 'ConfigureDeliveryRequest',
+    declaration: 'export interface ConfigureDeliveryRequest extends DevelopmentTaskRequest {\n    readonly repositoryPath: string;\n    readonly sourceRef: string;\n    readonly targetRef: string;\n}',
+  },
+  {
     name: 'ConfinedArgv',
     declaration: 'export interface ConfinedArgv {\n    argv: string[];\n    enforcement: SandboxEnforcement;\n    denialSignatures: readonly string[];\n    runnerFailureRules: readonly RunnerFailureRule[];\n}',
   },
   {
     name: 'ConfinedSandboxMode',
     declaration: 'export type ConfinedSandboxMode = Exclude<SandboxMode, \'danger-full-access\'>;',
+  },
+  {
+    name: 'ConfirmMergeRequestRequest',
+    declaration: 'export interface ConfirmMergeRequestRequest extends DevelopmentTaskRequest {\n    readonly manualRemoteUrl?: string;\n}',
   },
   {
     name: 'ContentBlockMap',
@@ -4014,6 +4133,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface CreateAgentOptions {\n    readonly sessionId: SessionId;\n    readonly meta?: {\n        readonly cwd?: string;\n        readonly parentSession?: SessionId;\n        readonly seedLength?: number;\n        readonly origin?: \'subagent\';\n        readonly delegationDepth?: number;\n        readonly agentPreset?: string;\n    };\n    readonly seed?: readonly SessionEvent[];\n    readonly agentOptions?: AgentOptions;\n    readonly signal?: AbortSignal;\n    readonly setup?: AgentSetup;\n}',
   },
   {
+    name: 'CreateDevelopmentTaskRequest',
+    declaration: 'export interface CreateDevelopmentTaskRequest {\n    readonly title: string;\n    readonly discipline: DevelopmentDiscipline;\n    readonly priority: DevelopmentPriority;\n    readonly description: string;\n    readonly acceptanceCriteria: string;\n}',
+  },
+  {
     name: 'CreateDriveFolderInput',
     declaration: 'export interface CreateDriveFolderInput {\n    readonly libraryId: DriveLibraryId;\n    readonly parentId?: DriveFolderId;\n    readonly name: string;\n    readonly mutation?: DriveMutationContext;\n}',
   },
@@ -4080,6 +4203,70 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'DeleteDriveFileInput',
     declaration: 'export interface DeleteDriveFileInput {\n    readonly fileId: DriveFileId;\n    readonly mutation?: DriveMutationContext;\n}',
+  },
+  {
+    name: 'DeliveryChangedFile',
+    declaration: 'export interface DeliveryChangedFile {\n    readonly path: string;\n    readonly status: string;\n    readonly additions: number;\n    readonly deletions: number;\n}',
+  },
+  {
+    name: 'DeliveryCheckResult',
+    declaration: 'export interface DeliveryCheckResult {\n    readonly label: string;\n    readonly command: string;\n    readonly status: \'passed\' | \'failed\' | \'skipped\';\n    readonly exitCode: number | null;\n    readonly stdout: string;\n    readonly stderr: string;\n    readonly durationMs: number;\n}',
+  },
+  {
+    name: 'DeliveryConflictRisk',
+    declaration: 'export interface DeliveryConflictRisk {\n    readonly path: string;\n    readonly reason: string;\n    readonly suggestion: string;\n}',
+  },
+  {
+    name: 'DeliveryRepository',
+    declaration: 'export interface DeliveryRepository {\n    readonly path: string;\n    readonly sourceRef: string;\n    readonly targetRef: string;\n}',
+  },
+  {
+    name: 'DeliveryReview',
+    declaration: 'export interface DeliveryReview {\n    readonly id: string;\n    readonly taskId: string;\n    readonly repositoryPath: string;\n    readonly currentBranch: string;\n    readonly workingTreeChanges: readonly string[];\n    readonly changedFiles: readonly DeliveryChangedFile[];\n    readonly suspectedConflicts: readonly DeliveryConflictRisk[];\n    readonly checks: readonly DeliveryCheckResult[];\n    readonly summary: string;\n    readonly conclusion: \'recommend-merge\' | \'pause-merge\';\n    readonly mergeRequest: MergeRequestDraft;\n    readonly createdAt: string;\n}',
+  },
+  {
+    name: 'DeliveryTaskAndReview',
+    declaration: 'export interface DeliveryTaskAndReview {\n    readonly task: DevelopmentTask;\n    readonly review: DeliveryReview;\n}',
+  },
+  {
+    name: 'DevelopmentArtifact',
+    declaration: 'export interface DevelopmentArtifact {\n    readonly id: string;\n    readonly taskId: string;\n    readonly uploaderRole: DevelopmentRole;\n    readonly rootName: string;\n    readonly relativePath: string;\n    readonly name: string;\n    readonly mediaType: string;\n    readonly bytes: number;\n    readonly digest: string;\n    readonly createdAt: string;\n}',
+  },
+  {
+    name: 'DevelopmentAuditEvent',
+    declaration: 'export interface DevelopmentAuditEvent {\n    readonly id: string;\n    readonly taskId: string;\n    readonly actorRole: DevelopmentRole | \'delivery-agent\';\n    readonly action: string;\n    readonly detail: string;\n    readonly createdAt: string;\n}',
+  },
+  {
+    name: 'DevelopmentBaseline',
+    declaration: 'export interface DevelopmentBaseline {\n    readonly activeRole: DevelopmentRole;\n    readonly tasks: readonly DevelopmentTask[];\n    readonly artifacts: readonly DevelopmentArtifact[];\n    readonly reviews: readonly DeliveryReview[];\n    readonly audit: readonly DevelopmentAuditEvent[];\n    readonly integration: DevelopmentIntegrationStatus;\n    readonly uploadLimits: {\n        readonly maxFileBytes: number;\n        readonly maxTaskBytes: number;\n    };\n}',
+  },
+  {
+    name: 'DevelopmentDiscipline',
+    declaration: 'export type DevelopmentDiscipline = \'blockchain\' | \'algorithm\' | \'agent-application\';',
+  },
+  {
+    name: 'DevelopmentIntegrationStatus',
+    declaration: 'export interface DevelopmentIntegrationStatus {\n    readonly provider: \'none\' | \'gitlab\' | \'github\';\n    readonly configured: boolean;\n    readonly label: string;\n}',
+  },
+  {
+    name: 'DevelopmentPriority',
+    declaration: 'export type DevelopmentPriority = 1 | 2 | 3 | 4;',
+  },
+  {
+    name: 'DevelopmentRole',
+    declaration: 'export type DevelopmentRole = \'product-manager\' | \'blockchain-architect-engineer\' | \'algorithm-engineer\' | \'agent-application-development-engineer\';',
+  },
+  {
+    name: 'DevelopmentTask',
+    declaration: 'export interface DevelopmentTask {\n    readonly id: string;\n    readonly sequence: number;\n    readonly title: string;\n    readonly discipline: DevelopmentDiscipline;\n    readonly priority: DevelopmentPriority;\n    readonly status: DevelopmentTaskStatus;\n    readonly description: string;\n    readonly acceptanceCriteria: string;\n    readonly creatorRole: \'product-manager\';\n    readonly assigneeRole?: Exclude<DevelopmentRole, \'product-manager\'> | undefined;\n    readonly reviewerRole: \'product-manager\';\n    readonly phase: string;\n    readonly repository?: DeliveryRepository | undefined;\n    readonly latestReviewId?: string | undefined;\n    readonly createdAt: string;\n    readonly updatedAt: string;\n}',
+  },
+  {
+    name: 'DevelopmentTaskRequest',
+    declaration: 'export interface DevelopmentTaskRequest {\n    readonly taskId: string;\n}',
+  },
+  {
+    name: 'DevelopmentTaskStatus',
+    declaration: 'export type DevelopmentTaskStatus = \'draft\' | \'pending-review\' | \'assigned\' | \'in-progress\' | \'pending-delivery-check\' | \'checking\' | \'awaiting-human-confirmation\' | \'mr-submitted\' | \'merged\' | \'merge-paused\';',
   },
   {
     name: 'DiffCallView',
@@ -4698,6 +4885,14 @@ export const TYPE_API: readonly TypeApiEntry[] = [
     declaration: 'export interface ManualCompactAgentContext extends CompactionAgentContext {\n    runMaintenance<T>(task: (signal: AbortSignal) => Promise<T>): Promise<T>;\n}',
   },
   {
+    name: 'MergeDevelopmentRequest',
+    declaration: 'export interface MergeDevelopmentRequest extends DevelopmentTaskRequest {\n    readonly manualMergedUrl?: string;\n}',
+  },
+  {
+    name: 'MergeRequestDraft',
+    declaration: 'export interface MergeRequestDraft {\n    readonly title: string;\n    readonly description: string;\n    readonly sourceRef: string;\n    readonly targetRef: string;\n    readonly provider: \'none\' | \'gitlab\' | \'github\' | \'manual\';\n    readonly status: \'draft\' | \'submitted\' | \'merged\';\n    readonly remoteId?: string | undefined;\n    readonly remoteUrl?: string | undefined;\n}',
+  },
+  {
     name: 'Message',
     declaration: 'export interface Message {\n    readonly id: MessageId;\n    readonly role: \'system\' | \'user\' | \'assistant\';\n    readonly content: ContentBlock[];\n    readonly source: MessageSource;\n}',
   },
@@ -5108,6 +5303,10 @@ export const TYPE_API: readonly TypeApiEntry[] = [
   {
     name: 'SearchResultView',
     declaration: 'export type SearchResultView = SearchMatchesResultView | SearchPathsResultView;',
+  },
+  {
+    name: 'SelectDevelopmentRoleRequest',
+    declaration: 'export interface SelectDevelopmentRoleRequest {\n    readonly role: DevelopmentRole;\n}',
   },
   {
     name: 'SendTeamMessageRequest',

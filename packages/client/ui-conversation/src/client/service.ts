@@ -62,6 +62,11 @@ export interface IConversation {
    * @returns completion of the page pull.
    */
   loadOlder(): Promise<void>
+  /** Select one registered Conversation View in the caller's Session.
+   * @param view - Registered View id.
+   * @param focus - Target-owned focus identity.
+   */
+  openView(view: string, focus: string): void
 }
 
 /** Create one browser-only draft descriptor; only its id enters input state. */
@@ -150,6 +155,7 @@ export class ConversationController extends Service implements IConversation {
   /** The per-session composer-block registry. */
   readonly blocks: ComposerBlocks
   private readonly draftAttachments = new Map<DraftAttachmentId, ComposerAttachment>()
+  private readonly viewOpeners = new Map<SessionId, (view: string, focus: string) => void>()
 
   /**
    * @param ctx - owning root context (the plugin apply context; the service
@@ -331,6 +337,22 @@ export class ConversationController extends Service implements IConversation {
   /** Pull one older history page for the scoped Session. */
   async loadOlder(): Promise<void> {
     await this.scopedSession('loadOlder').loadOlder()
+  }
+
+  /** Attach the Session-owned Conversation store action used by external View features.
+   * @param sessionId - Session whose View state the action owns.
+   * @param open - Store-backed View action.
+   */
+  attachViewOpener(sessionId: SessionId, open: (view: string, focus: string) => void): void {
+    this.viewOpeners.set(sessionId, open)
+  }
+
+  /** Select a registered View in the caller scope. */
+  openView(view: string, focus: string): void {
+    const id = this.scopeId('openView')
+    const open = this.viewOpeners.get(id)
+    if (open === undefined) throw new Error(`conversation.openView: session "${id}" has no mounted View store`)
+    open(view, focus)
   }
 
   /** Resolve the caller scope's session face or throw on root contexts. */

@@ -1,0 +1,66 @@
+.root {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  background: #050606;
+  pointer-events: none;
+  animation: security-background-enter 1.6s 100ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.fallback,
+.canvas,
+.topGlow {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.fallback {
+  object-fit: cover;
+  opacity: 0;
+}
+
+.canvas {
+  display: block;
+  opacity: 0;
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 25%, #000 80%, transparent 100%);
+}
+
+.root[data-renderer='webgl'] .canvas {
+  opacity: 0.6;
+}
+
+.root[data-renderer='webgl'] .fallback {
+  opacity: 0;
+}
+
+.root[data-renderer='fallback'] .fallback {
+  opacity: 0.18;
+}
+
+.topGlow {
+  background: radial-gradient(60% 48% at 50% -5%, rgb(194 225 255 / 10%), transparent 72%);
+}
+
+@keyframes security-background-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 600px) {
+  .root[data-renderer='webgl'] .canvas {
+    opacity: 0.6;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root {
+    animation: none;
+  }
+
+  .fallback {
+    opacity: 0.16;
+  }
+}
