@@ -15,6 +15,8 @@ Application code is maintained on [`dev`](https://github.com/sospink/deepseek-ha
 - **Acceptance review:** engineers submit results with a summary; product managers approve them or return them with a required reason. Acceptance records persist across refreshes and restarts.
 - **Delivery checks:** inspect a configured local Git repository after acceptance, with human confirmation before merge-request submission. See [development management](packages/buddy/development-management/README.md) for requirements and limitations.
 
+<a id="run"></a>
+
 ## Run from source
 
 Use Node.js `22.19.x` or a later `22.x` release, or Node.js `24+`, and pnpm `11.7.0`. Git is required for a repository checkout. Read the [safety notice](SAFETY.md) before running agent tools.

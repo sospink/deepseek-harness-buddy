@@ -15,6 +15,9 @@
 - **成果验收：** 工程师填写成果说明并提交，产品经理验收通过或填写必填原因后退回；验收记录在刷新和重启后保留。
 - **交付检查：** 验收后检查已配置的本地 Git 仓库，并在提交合并请求前保留人工确认。要求和限制见[开发管理说明](packages/buddy/development-management/README.zh.md)。
 
+<a id="run"></a>
+<a id="run-from-source"></a>
+
 ## 从源码启动
 
 使用 Node.js `22.19.x` 或更新的 `22.x` 版本，或 Node.js `24+`，以及 pnpm `11.7.0`。从仓库部署需要安装 Git。运行 agent 工具前，请阅读[安全说明](SAFETY.zh.md)。
